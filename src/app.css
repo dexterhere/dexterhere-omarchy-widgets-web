@@ -1,0 +1,11 @@
+/* Placeholder; the token system and themes arrive in the theme PR. */
+:root {
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
+  --font-sans: 'Geist Variable', system-ui, sans-serif;
+}
+body {
+  margin: 0;
+  font: 16px/24px var(--font-mono);
+  background: #1a1b26;
+  color: #c0caf5;
+}
