@@ -192,7 +192,9 @@ describe('serve-local handler', () => {
     ] as const) {
       const r = await get(h, p);
       expect(r.headers.get('x-content-type-options'), `${h}${p}`).toBe('nosniff');
-      expect(r.headers.get('referrer-policy')).toBe('same-origin');
+      expect(r.headers.get('referrer-policy')).toBe('strict-origin-when-cross-origin');
+      expect(r.headers.get('x-frame-options')).toBe('DENY');
+      expect(r.headers.get('content-security-policy')).toBe("frame-ancestors 'none'");
       expect(r.headers.get('cache-control')).toBe('no-store');
     }
   });

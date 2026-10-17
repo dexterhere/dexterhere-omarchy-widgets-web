@@ -4,6 +4,7 @@ import {
   OUTPUTS,
   caddyfile,
   ctxFor,
+  netlifyHeaders,
   netlifyRedirects,
   nginxConf,
   vercelJson
@@ -29,8 +30,12 @@ describe('emit-host-config', () => {
     expect(t).toContain('https://docs.example.com {');
     expect(t).toContain('@static path /_app/* /pagefind/* /favicon.svg /theme-boot.js /robots.txt');
     expect(t.indexOf('handle @static')).toBeLessThan(t.indexOf('rewrite * /docs{path}'));
-    expect(t).toContain('redir https://docs.example.com{re.old.1}?{query} 308');
-    expect(t).toContain('redir @home https://docs.example.com/next/start/what-it-is/?{query} 302');
+    expect(t).toContain('uri strip_prefix /docs\n\t\t\tredir https://docs.example.com{uri} 308');
+    expect(t).not.toContain('{re.old');
+    expect(t).not.toMatch(/\?\{query\}/);
+    expect(t).toContain(
+      'uri replace / /next/start/what-it-is/ 1\n\t\t\tredir https://docs.example.com{uri} 302'
+    );
     expect(t).not.toContain('{host}');
   });
 
@@ -60,11 +65,39 @@ describe('emit-host-config', () => {
   it('Vercel: valid JSON, rewrites carry a host condition, redirects go to the docs origin', () => {
     const j = JSON.parse(vercelJson(c));
     for (const r of j.rewrites)
-      expect(r.has).toEqual([{ type: 'host', value: 'docs.example.com' }]);
+      expect(r.has).toEqual([{ type: 'host', value: '^docs\\.example\\.com$' }]);
     expect(j.rewrites.at(-1)).toMatchObject({ source: '/:path*', destination: '/docs/:path*' });
     expect(j.rewrites[0].source).toBe('/_app/:path*');
     for (const r of j.redirects)
       expect(r.destination.startsWith('https://docs.example.com/')).toBe(true);
+  });
+
+  it('unknown hosts get 421 (nginx default_server, Caddy catch-all)', () => {
+    expect(nginxConf(c)).toMatch(/listen 80 default_server;\n\tserver_name _;\n\treturn 421;/);
+    expect(caddyfile(c)).toContain('http://:80 {\n\trespond "Unknown host" 421\n}');
+    const local = ctxFor(
+      {
+        PUBLIC_SITE_ORIGIN: 'http://localhost:4300',
+        PUBLIC_DOCS_ORIGIN: 'http://docs.localhost:4300'
+      },
+      HOME
+    );
+    expect(caddyfile(local)).toContain('http://:4300 {');
+  });
+
+  it('every template sends the security headers', () => {
+    const H = ['nosniff', 'strict-origin-when-cross-origin', 'DENY', "frame-ancestors 'none'"];
+    for (const t of [caddyfile(c), nginxConf(c), netlifyHeaders(), vercelJson(c)])
+      for (const h of H) expect(t).toContain(h);
+    expect(nginxConf(c).match(/add_header .* always;/g)).toHaveLength(8);
+  });
+
+  it('pagefind content types: wasm and the pf_* index files', () => {
+    expect(caddyfile(c)).toContain('header @wasm Content-Type application/wasm');
+    expect(caddyfile(c)).toContain('header @pfbin Content-Type application/octet-stream');
+    expect(nginxConf(c)).toContain('application/wasm pagefind;');
+    expect(netlifyHeaders()).toContain('/pagefind/wasm.*\n  Content-Type: application/wasm');
+    expect(vercelJson(c)).toContain('application/wasm');
   });
 
   it('uses the configured origins', () => {
@@ -74,7 +107,7 @@ describe('emit-host-config', () => {
     );
     expect(caddyfile(o)).toContain('https://help.acme.dev:8443 {');
     expect(nginxConf(o)).toContain('server_name help.acme.dev;');
-    expect(vercelJson(o)).toContain('"value": "help.acme.dev"');
+    expect(vercelJson(o)).toContain('"value": "^help\\\\.acme\\\\.dev$"');
   });
 
   // Config injection: nothing that could close a block, add a directive or a header may get in.

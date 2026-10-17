@@ -4,7 +4,7 @@
 // Everything interpolated is validated first: origins by parseOrigin(), the start page by SAFE_PATH.
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { RULES, type HostCtx } from '../src/lib/hosts.ts';
+import { RULES, SECURITY_HEADERS, type HostCtx } from '../src/lib/hosts.ts';
 import { parseOrigins } from '../src/lib/origins.ts';
 import { docsHome, ROOT } from './host-env.ts';
 
@@ -31,17 +31,38 @@ const assetPaths = () => [
   ...RULES.docsPassthroughFiles
 ];
 
+const PF_WASM = '^/pagefind/wasm\\..*\\.pagefind$';
+const hdrLines = (indent: string, sep: string) =>
+  Object.entries(SECURITY_HEADERS)
+    .map(([k, v]) => `${indent}${k}${sep}${/[ ']/.test(v) ? `"${v}"` : v}`)
+    .join('\n');
+
+/** Port of the catch-all that answers 421 for unknown hosts (HTTPS origins use the port-80 listener). */
+const catchAllPort = (c: HostCtx) => {
+  const u = new URL(c.siteOrigin);
+  return u.protocol === 'http:' ? u.port || '80' : '80';
+};
+
 export function caddyfile(c: HostCtx): string {
+  const common = `	root * ${ROOT_DIR}
+	encode zstd gzip
+	header {
+${hdrLines('\t\t', ' ')}
+	}`;
+  // Redirects sit in handle + route so they run first, in the written order: strip /docs from the request
+  // first, then redirect to the fixed docs origin plus {uri}, the ESCAPED path and query as sent
+  // (never the decoded path).
   return `# ${GEN}
 # One build, two hostnames. Copy build/ to ${ROOT_DIR}.
-# A redirect without a query string ends in a bare "?": harmless.
 
 ${c.siteOrigin} {
-	root * ${ROOT_DIR}
-	encode zstd gzip
-	@oldDocs path_regexp old ^/docs(/.*)?$
+${common}
+	@oldDocs path /docs /docs/*
 	handle @oldDocs {
-		redir ${c.docsOrigin}{re.old.1}?{query} ${RULES.docsMovedStatus}
+		route {
+			uri strip_prefix /docs
+			redir ${c.docsOrigin}{uri} ${RULES.docsMovedStatus}
+		}
 	}
 	handle {
 		file_server
@@ -53,14 +74,25 @@ ${c.siteOrigin} {
 }
 
 ${c.docsOrigin} {
-	root * ${ROOT_DIR}
-	encode zstd gzip
+${common}
 	@home path /
-	redir @home ${c.docsOrigin}${start(c)}?{query} ${RULES.rootRedirectStatus}
-	@oldDocs path_regexp old ^/docs(/.*)?$
-	handle @oldDocs {
-		redir ${c.docsOrigin}{re.old.1}?{query} ${RULES.docsMovedStatus}
+	handle @home {
+		route {
+			uri replace / ${start(c)} 1
+			redir ${c.docsOrigin}{uri} ${RULES.rootRedirectStatus}
+		}
 	}
+	@oldDocs path /docs /docs/*
+	handle @oldDocs {
+		route {
+			uri strip_prefix /docs
+			redir ${c.docsOrigin}{uri} ${RULES.docsMovedStatus}
+		}
+	}
+	@wasm path_regexp ${PF_WASM}
+	header @wasm Content-Type application/wasm
+	@pfbin path_regexp ^/pagefind/.*\\.pf_[a-z]+$
+	header @pfbin Content-Type application/octet-stream
 	@static path ${assetPaths().join(' ')}
 	handle @static {
 		file_server
@@ -74,14 +106,30 @@ ${c.docsOrigin} {
 		file_server
 	}
 }
+
+# Any other Host header: 421, nothing is served.
+http://:${catchAllPort(c)} {
+	respond "Unknown host" 421
+}
 `;
 }
 
 export function nginxConf(c: HostCtx): string {
   const docs = host(c.docsOrigin);
   const site = host(c.siteOrigin);
+  const hdr = Object.entries(SECURITY_HEADERS)
+    .map(([k, v]) => `	add_header ${k} "${v}" always;`)
+    .join('\n');
   const statics = [
-    ...RULES.docsPassthroughPrefixes.map((p) => `	location ^~ ${p} { try_files $uri =404; }`),
+    ...RULES.docsPassthroughPrefixes.map((p) =>
+      p === '/pagefind/'
+        ? `	location ^~ ${p} {
+		types { application/wasm pagefind; text/javascript js; text/css css; application/json json; }
+		default_type application/octet-stream;
+		try_files $uri =404;
+	}`
+        : `	location ^~ ${p} { try_files $uri =404; }`
+    ),
     ...RULES.docsPassthroughFiles.map((f) => `	location = ${f} { try_files $uri =404; }`)
   ].join('\n');
   return `# ${GEN}
@@ -98,11 +146,19 @@ map $request_uri $ow_slashless {
 	"~^(?<p>(?:/[^/?]+)*/[^/.?]+)(?<q>\\?.*)?$" "$p/$q";
 }
 
+# Any other Host header: 421, nothing is served.
+server {
+	listen 80 default_server;
+	server_name _;
+	return 421;
+}
+
 server {
 	listen 80;
 	server_name ${site};
 	root ${ROOT_DIR};
 	error_page 404 /404.html;
+${hdr}
 	if ($ow_old_docs ~ ^r(.*)$) { return ${RULES.docsMovedStatus} ${c.docsOrigin}$1; }
 	if ($ow_slashless) { return 301 ${c.siteOrigin}$ow_slashless; }
 	location / { try_files $uri $uri/index.html =404; }
@@ -113,6 +169,7 @@ server {
 	server_name ${docs};
 	root ${ROOT_DIR};
 	error_page 404 /404.html;
+${hdr}
 	if ($ow_old_docs ~ ^r(.*)$) { return ${RULES.docsMovedStatus} ${c.docsOrigin}$1; }
 	if ($ow_slashless) { return 301 ${c.docsOrigin}$ow_slashless; }
 	location = / { return ${RULES.rootRedirectStatus} ${c.docsOrigin}${start(c)}$is_args$args; }
@@ -122,6 +179,24 @@ ${statics}
 		try_files $uri $uri/index.html =404;
 	}
 }
+`;
+}
+
+export function netlifyHeaders(): string {
+  const h = Object.entries(SECURITY_HEADERS)
+    .map(([k, v]) => `  ${k}: ${v}`)
+    .join('\n');
+  return `# ${GEN}
+/*
+${h}
+/pagefind/wasm.*
+  Content-Type: application/wasm
+/pagefind/index/*
+  Content-Type: application/octet-stream
+/pagefind/fragment/*
+  Content-Type: application/octet-stream
+/pagefind/filter/*
+  Content-Type: application/octet-stream
 `;
 }
 
@@ -147,11 +222,27 @@ export function netlifyRedirects(c: HostCtx): string {
 }
 
 export function vercelJson(c: HostCtx): string {
-  const dHost = [{ type: 'host', value: host(c.docsOrigin) }];
-  const sHost = [{ type: 'host', value: host(c.siteOrigin) }];
+  // has.value is a regular expression: anchor it and escape the dots
+  const rx = (o: string) => `^${host(o).replace(/\./g, '\\.')}$`;
+  const dHost = [{ type: 'host', value: rx(c.docsOrigin) }];
+  const sHost = [{ type: 'host', value: rx(c.siteOrigin) }];
   const config = {
     $schema: 'https://openapi.vercel.sh/vercel.json',
     trailingSlash: true,
+    headers: [
+      {
+        source: '/(.*)',
+        headers: Object.entries(SECURITY_HEADERS).map(([key, value]) => ({ key, value }))
+      },
+      {
+        source: '/pagefind/:file(wasm\\..+\\.pagefind)',
+        headers: [{ key: 'Content-Type', value: 'application/wasm' }]
+      },
+      {
+        source: '/pagefind/:dir(index|fragment|filter)/:rest*',
+        headers: [{ key: 'Content-Type', value: 'application/octet-stream' }]
+      }
+    ],
     redirects: [
       {
         source: '/docs/:path*',
@@ -188,6 +279,7 @@ export const OUTPUTS = (c: HostCtx): Record<string, string> => ({
   Caddyfile: caddyfile(c),
   'nginx.conf': nginxConf(c),
   'netlify/_redirects': netlifyRedirects(c),
+  'netlify/_headers': netlifyHeaders(),
   'vercel.json': vercelJson(c)
 });
 

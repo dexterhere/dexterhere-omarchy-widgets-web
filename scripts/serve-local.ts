@@ -4,16 +4,12 @@
 // Local only: binds loopback, no TLS, no cache. Production uses deploy/ configs instead.
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { decide, hostKindOf, type HostCtx } from '../src/lib/hosts';
+import { SECURITY_HEADERS, decide, hostKindOf, type HostCtx } from '../src/lib/hosts';
 import { HOSTS_DIR, ensureHostBuild } from './build-hosts';
 import { hostCtx, localPort, ROOT } from './host-env';
 import { contentType, resolveStatic } from './static-resolve';
 
-const HEADERS = {
-  'cache-control': 'no-store',
-  'x-content-type-options': 'nosniff',
-  'referrer-policy': 'same-origin'
-};
+const HEADERS = { 'cache-control': 'no-store', ...SECURITY_HEADERS };
 
 const text = (status: number, body: string, extra: Record<string, string> = {}) =>
   new Response(body, {
