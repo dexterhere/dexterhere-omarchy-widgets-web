@@ -156,8 +156,11 @@
         Fonts are self-hosted.
       </li>
       <li>
-        It sends a strict Content-Security-Policy: scripts and connections are same-origin only, and
-        the one inline theme script is allowed by hash.
+        It carries a Content-Security-Policy as a meta tag: scripts, fonts, images and connections
+        are same-origin only, and the single inline script SvelteKit generates is allowed by its
+        hash. Styles allow inline declarations because Svelte needs them; they cannot load anything
+        from other sites. A meta tag cannot set every protection a response header can, so a
+        header-based policy is planned for the host.
       </li>
       <li>
         Rule: listings are data. The build reads them and never executes anything from a listing or
