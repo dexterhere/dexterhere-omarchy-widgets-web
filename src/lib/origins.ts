@@ -9,6 +9,8 @@ export interface Origins {
   docs: string;
 }
 
+const LOOPBACK = /^(localhost|([a-z0-9-]+\.)+localhost|127\.0\.0\.1|\[::1\])$/;
+
 export const PATH_MODE: Origins = { site: '', docs: '' };
 
 /** Returns the normalised origin, or throws. Only http(s) origins: no path, query, hash, credentials. */
@@ -25,9 +27,24 @@ export function parseOrigin(name: string, value: string): string {
   if (u.username || u.password) throw new Error(`${name}: credentials are not allowed`);
   if ((u.pathname !== '/' && u.pathname !== '') || u.search || u.hash || /[?#]/.test(v))
     throw new Error(`${name}: must be an origin only (no path, query or fragment)`);
-  // The raw text must be a plain origin too: the URL parser silently repairs things like "\\".
-  if (!/^https?:\/\/[A-Za-z0-9.[\]:-]+\/?$/.test(v))
-    throw new Error(`${name}: "${value}" is not a plain origin`);
+  // The raw text must be a plain origin too: the URL parser silently repairs odd spellings.
+  const m = /^https?:\/\/(\[[0-9a-f:]+\]|[A-Za-z0-9.-]+)(?::(\d{1,5}))?\/?$/i.exec(v);
+  if (!m) throw new Error(`${name}: "${value}" is not a plain origin`);
+  const host = m[1]!.toLowerCase();
+  if (m[2] !== undefined && (Number(m[2]) < 1 || Number(m[2]) > 65535))
+    throw new Error(`${name}: port must be 1-65535`);
+  if (!host.startsWith('[')) {
+    if (host.endsWith('.')) throw new Error(`${name}: no trailing dot in the host`);
+    if (!host.split('.').every((l) => /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(l)))
+      throw new Error(`${name}: "${host}" is not a valid host name`);
+    // 0x7f.1, 2130706433, 127.1 ... all normalise to loopback: only the plain spelling is accepted
+    if (/^[0-9a-fx.]+$/.test(host) && host !== u.hostname)
+      throw new Error(`${name}: write IP addresses in plain dotted form`);
+  }
+  if (u.protocol === 'http:' && !LOOPBACK.test(host))
+    throw new Error(
+      `${name}: http: is only allowed for localhost, *.localhost, 127.0.0.1 and [::1]`
+    );
   return u.origin;
 }
 

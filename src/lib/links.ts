@@ -17,7 +17,7 @@ export interface Links {
 const DOCS_PREFIX = /^\/docs(?=$|[/?#])/;
 
 function check(p: string): string {
-  if (!p.startsWith('/') || p.startsWith('//') || /[\\\u0000-\u001f]/.test(p))
+  if (!p.startsWith('/') || p.startsWith('//') || /[\\\u0000-\u001f\u007f-\u009f]/.test(p))
     throw new Error(`not an app path: ${JSON.stringify(p)}`);
   return p;
 }
@@ -34,7 +34,10 @@ export function makeLinks(o: Origins, resolveFn: (p: string) => string): Links {
   const inDocs = (p: string) => {
     check(p);
     if (!DOCS_PREFIX.test(p)) throw new Error(`not a docs path: ${p}`);
-    return slashed(p.replace(DOCS_PREFIX, '') || '/');
+    const rest = p.replace(DOCS_PREFIX, '') || '/';
+    // "/docs//evil.com" would become the protocol-relative "//evil.com": never produce that.
+    if (rest.startsWith('//') || rest.startsWith('/\\')) throw new Error(`not a docs path: ${p}`);
+    return slashed(rest);
   };
   return {
     hosts,
@@ -42,4 +45,14 @@ export function makeLinks(o: Origins, resolveFn: (p: string) => string): Links {
     docsUrl: (p) => (hosts ? o.docs + inDocs(p) : resolveFn(check(p))),
     sitePath: (p) => (hosts ? o.site + slashed(check(p)) : resolveFn(check(p)))
   };
+}
+
+/**
+ * Final check for a rewritten href: a single-slash app path, or an absolute URL on one of the two
+ * configured origins. Anything else (protocol-relative, backslashes, controls) is unsafe.
+ */
+export function isSafeHref(h: string, o: Origins): boolean {
+  if (/[\\\u0000-\u001f\u007f-\u009f\s]/.test(h)) return false;
+  if (h.startsWith('/')) return !h.startsWith('//');
+  return [o.site, o.docs].some((x) => !!x && h.startsWith(x + '/'));
 }

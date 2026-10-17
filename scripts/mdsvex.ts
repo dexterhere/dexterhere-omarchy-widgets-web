@@ -10,7 +10,7 @@ import { toString } from 'hast-util-to-string';
 import { randomUUID } from 'node:crypto';
 import { SKIP, visit } from 'unist-util-visit';
 import type { mdsvex } from 'mdsvex';
-import { makeLinks } from '../src/lib/links.ts';
+import { isSafeHref, makeLinks } from '../src/lib/links.ts';
 import type { Origins } from '../src/lib/origins.ts';
 
 export interface TocItem {
@@ -220,9 +220,17 @@ export function rehypeHostLinks(o: Origins) {
     visit(tree as never, 'element', (n: { tagName: string; properties?: { href?: unknown } }) => {
       const h = n.properties?.href;
       if (n.tagName !== 'a' || typeof h !== 'string') return;
-      if (/^\/docs(?=$|[/?#])/.test(h)) n.properties!.href = l.docsPath(h);
-      else if (/^\/(widgets|contribute|security)(?=$|[/?#])/.test(h))
-        n.properties!.href = l.sitePath(h);
+      const docs = /^\/docs(?=$|[/?#])/.test(h);
+      if (!docs && !/^\/(widgets|contribute|security)(?=$|[/?#])/.test(h)) return;
+      // Never abort the build on a hostile link, and never emit an unsafe one (all pages).
+      try {
+        const out = docs ? l.docsPath(h) : l.sitePath(h);
+        if (!isSafeHref(out, o)) throw new Error('unsafe result');
+        n.properties!.href = out;
+      } catch {
+        console.warn(`mdsvex: unsafe internal link replaced by "#": ${JSON.stringify(h)}`);
+        n.properties!.href = '#';
+      }
     });
   };
 }

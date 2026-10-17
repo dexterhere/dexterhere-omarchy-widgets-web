@@ -25,6 +25,17 @@ export const RULES = {
   docsMovedStatus: 308
 } as const;
 
+/**
+ * Response headers every host sends. frame-ancestors cannot be set from the page's meta CSP, so it
+ * goes here (the meta CSP stays for everything else).
+ */
+export const SECURITY_HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'X-Frame-Options': 'DENY',
+  'Content-Security-Policy': "frame-ancestors 'none'"
+} as const;
+
 export interface HostCtx {
   siteOrigin: string;
   docsOrigin: string;
@@ -82,4 +93,18 @@ export function hostKindOf(hostHeader: string | null | undefined, ctx: HostCtx):
   if (name === new URL(ctx.siteOrigin).hostname) return 'site';
   if (name === new URL(ctx.docsOrigin).hostname) return 'docs';
   return null;
+}
+
+/**
+ * Client router: on the docs host the build's /docs/x lives at /x, so route /x as /docs/x.
+ * Returns undefined when the path is left alone (root, anything already under /docs, other hosts).
+ */
+export function rerouteDocs(
+  hostname: string,
+  pathname: string,
+  docsHost: string | null
+): string | undefined {
+  if (!docsHost || hostname !== docsHost) return undefined;
+  if (pathname === '/' || pathname === '/docs' || pathname.startsWith('/docs/')) return undefined;
+  return '/docs' + pathname;
 }
