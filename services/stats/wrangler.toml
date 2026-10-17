@@ -9,11 +9,22 @@ ALLOWED_ORIGINS = "https://example.org"
 # Optional: restrict counters to known widget ids (comma-separated).
 # WIDGET_IDS = "io.github.example.clock"
 
-[[kv_namespaces]]
-binding = "STATS"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+# D1 gives atomic counters. Create it, then apply schema.sql:
+#   wrangler d1 create omarchy-widgets-stats
+#   wrangler d1 execute omarchy-widgets-stats --remote --file=schema.sql
+[[d1_databases]]
+binding = "DB"
+database_name = "omarchy-widgets-stats"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
 
-# Secret (not in this file):  wrangler secret put STATS_SECRET
-# Disable request logging for this Worker so nothing about visitors is kept:
+# Daily purge of expired dedupe and rate-limit rows.
+[triggers]
+crons = ["17 3 * * *"]
+
+# Secrets (not in this file):
+#   wrangler secret put STATS_SECRET
+#   wrangler secret put STATS_SECRET_PREVIOUS   (only while rotating)
+
+# No request logging for this Worker, so nothing about visitors is kept:
 [observability]
 enabled = false

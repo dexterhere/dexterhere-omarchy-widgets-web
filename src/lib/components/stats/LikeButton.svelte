@@ -48,6 +48,7 @@
   onclick={toggle}
 >
   <span aria-hidden="true">{liked ? 'Liked' : 'Like'}</span>
+  {#if count == null}<span class="n" aria-hidden="true">(saved on this device)</span>{/if}
   {#if count != null}<span class="n" aria-hidden="true">{count.toLocaleString('en-US')}</span>{/if}
 </button>
 <span class="sr" role="status" aria-live="polite">{message}</span>

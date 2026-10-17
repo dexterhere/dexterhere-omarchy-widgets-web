@@ -3,11 +3,12 @@ import { isWidgetId } from '../../src/lib/stats/id';
 import { LIKED_KEY, LocalStatsProvider, MAX_LIKED } from '../../src/lib/stats/local';
 import { connectSrc, statsOrigin } from '../../src/lib/stats/origin';
 import {
-  CLIENT_KEY,
+  TOKEN_KEY,
   MAX_RESPONSE_BYTES,
   RemoteStatsProvider,
   TIMEOUT_MS
 } from '../../src/lib/stats/remote';
+import { leadingZeroBits, solvePow } from '../../src/lib/stats/pow';
 import { _clearMemory } from '../../src/lib/stats/store';
 
 function fakeStorage() {
@@ -173,61 +174,117 @@ describe('RemoteStatsProvider', () => {
   });
 
   describe('writes', () => {
-    it('sends the client token only on writes, only to the stats origin, never as a cookie', async () => {
-      const f = vi.fn(async () => new Response(null, { status: 204 }));
-      const p = new RemoteStatsProvider(ORIGIN, f as unknown as typeof fetch);
+    const BITS = 6;
+    const farFuture = Math.floor(Date.now() / 1000) + 30 * 86400;
+    const TOKEN = `v1.${'a'.repeat(32)}.${farFuture}.${'b'.repeat(64)}`;
+    /** A stats server that hands out a challenge and a token, and records every call. */
+    function server(over: { token?: string; writeStatus?: number } = {}) {
+      const calls: { url: string; init: RequestInit }[] = [];
+      const f = vi.fn(async (url: string, init: RequestInit) => {
+        calls.push({ url, init });
+        const path = url.slice(ORIGIN.length);
+        if (path === '/challenge') return json({ challenge: 'c'.repeat(40), bits: BITS });
+        if (path === '/token') return json({ token: over.token ?? TOKEN, expires: farFuture });
+        return new Response(null, { status: over.writeStatus ?? 204 });
+      });
+      return { f: f as unknown as typeof fetch, calls };
+    }
+    const paths = (c: { url: string }[]) => c.map((x) => x.url.slice(ORIGIN.length));
+
+    it('gets a token with proof of work, stores it, and sends it only on writes to the stats origin', async () => {
+      const { f, calls } = server();
+      const p = new RemoteStatsProvider(ORIGIN, f);
       await p.like(A);
       await p.unlike(A);
       await p.recordView(A);
-      const token = ls.m.get(CLIENT_KEY)!;
-      expect(token).toMatch(/^[0-9a-f]{32}$/);
-      expect(f.mock.calls.map((c) => (c as unknown as [string, RequestInit])[0])).toEqual([
-        `${ORIGIN}/like/${A}`,
-        `${ORIGIN}/like/${A}`,
-        `${ORIGIN}/view/${A}`
+      await p.settled();
+      expect(paths(calls)).toEqual([
+        '/challenge',
+        '/token',
+        `/like/${A}`,
+        `/like/${A}`,
+        `/view/${A}`
       ]);
-      for (const [url, init] of f.mock.calls as unknown as [string, RequestInit][]) {
+      expect(ls.m.get(TOKEN_KEY)).toBe(TOKEN);
+      for (const { url, init } of calls) {
         expect(url.startsWith(ORIGIN + '/')).toBe(true);
-        expect(init.headers).toEqual({ 'x-client-token': token });
         expect(init.credentials).toBe('omit');
         expect(init.referrerPolicy).toBe('no-referrer');
       }
-      expect((f.mock.calls as unknown as [string, RequestInit][]).map((c) => c[1].method)).toEqual([
-        'POST',
-        'DELETE',
-        'POST'
-      ]);
+      const headers = calls.map((c) => c.init.headers as Record<string, string>);
+      expect(headers[0]).toEqual({}); // challenge: nothing attached
+      expect(headers[1]['x-challenge']).toBe('c'.repeat(40));
+      expect(await powOkClient('c'.repeat(40), headers[1]['x-pow'], BITS)).toBe(true);
+      for (const h of headers.slice(2)) expect(h).toEqual({ 'x-client-token': TOKEN });
+      expect(calls.map((c) => c.init.method)).toEqual(['GET', 'POST', 'POST', 'DELETE', 'POST']);
+      expect(
+        paths(
+          calls.filter(
+            (c) => (c.init.headers as object) && 'x-client-token' in (c.init.headers as object)
+          )
+        )
+      ).toHaveLength(3);
+    });
+    it('does not fetch a new token while the stored one has more than a day left', async () => {
+      ls.m.set(TOKEN_KEY, TOKEN);
+      const { f, calls } = server();
+      const p = new RemoteStatsProvider(ORIGIN, f);
+      await p.like(A);
+      await p.settled();
+      expect(paths(calls)).toEqual([`/like/${A}`]);
+    });
+    it('rejects a malformed token from the server and a stored token that looks wrong', async () => {
+      ls.m.set(TOKEN_KEY, 'not-a-token');
+      const { f, calls } = server({ token: 'evil\r\nheader' });
+      const p = new RemoteStatsProvider(ORIGIN, f);
+      await p.like(A);
+      await p.settled();
+      expect(paths(calls)).toEqual(['/challenge', '/token']);
+      expect(p.isLiked(A)).toBe(true); // kept locally
+    });
+    it('drops the token after a 401 so the next write gets a fresh one', async () => {
+      const { f } = server({ writeStatus: 401 });
+      const p = new RemoteStatsProvider(ORIGIN, f);
+      await p.like(A);
+      await p.settled();
+      expect(ls.m.get(TOKEN_KEY)).toBe('');
     });
     it('keeps the like locally when the service fails', async () => {
       const p = new RemoteStatsProvider(ORIGIN, (async () => {
         throw new Error('down');
       }) as unknown as typeof fetch);
       expect(await p.like(A)).toBe(true);
+      await p.settled();
       expect(p.isLiked(A)).toBe(true);
     });
     it('records a view at most once per widget per UTC day', async () => {
       let t = Date.UTC(2026, 9, 17, 10);
-      const f = vi.fn(async () => new Response(null, { status: 204 }));
-      const p = new RemoteStatsProvider(ORIGIN, f as unknown as typeof fetch, () => t);
+      ls.m.set(
+        TOKEN_KEY,
+        `v1.${'a'.repeat(32)}.${Math.floor(t / 1000) + 30 * 86400}.${'b'.repeat(64)}`
+      );
+      const { f, calls } = server();
+      const p = new RemoteStatsProvider(ORIGIN, f, () => t);
       await p.recordView(A);
       await p.recordView(A);
       await p.recordView(B);
-      expect(f).toHaveBeenCalledTimes(2);
+      await p.settled();
+      expect(calls).toHaveLength(2);
       t = Date.UTC(2026, 9, 18, 0, 1);
-      await new RemoteStatsProvider(ORIGIN, f as unknown as typeof fetch, () => t).recordView(A);
-      expect(f).toHaveBeenCalledTimes(3);
+      await new RemoteStatsProvider(ORIGIN, f, () => t).recordView(A);
+      expect(calls).toHaveLength(3);
     });
     it('does not record views under Do Not Track or Global Privacy Control', async () => {
-      const f = vi.fn(async () => new Response(null, { status: 204 }));
+      const { f, calls } = server();
       for (const nav of [{ doNotTrack: '1' }, { doNotTrack: null, globalPrivacyControl: true }]) {
         vi.stubGlobal('navigator', nav);
-        await new RemoteStatsProvider(ORIGIN, f as unknown as typeof fetch).recordView(A);
+        const p = new RemoteStatsProvider(ORIGIN, f);
+        await p.recordView(A);
+        await p.settled();
       }
-      expect(f).not.toHaveBeenCalled();
-      expect(ls.m.has(CLIENT_KEY)).toBe(false); // no identifier is even created
-      // likes are explicit actions and still work
-      await new RemoteStatsProvider(ORIGIN, f as unknown as typeof fetch).like(A);
-      expect(f).toHaveBeenCalledTimes(1);
+      expect(calls).toHaveLength(0); // no token request either
+      await new RemoteStatsProvider(ORIGIN, f).like(A); // explicit action still works
+      expect(calls.length).toBeGreaterThan(0);
     });
     it('rejects invalid ids without a request', async () => {
       const f = vi.fn();
@@ -236,6 +293,40 @@ describe('RemoteStatsProvider', () => {
       await p.recordView('../x');
       expect(f).not.toHaveBeenCalled();
     });
+  });
+});
+
+async function powOkClient(challenge: string, solution: string, bits: number) {
+  const d = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(`${challenge}:${solution}`)
+  );
+  return leadingZeroBits(new Uint8Array(d)) >= bits;
+}
+
+describe('solvePow', () => {
+  it('solves within a time budget and yields between slices', async () => {
+    let yields = 0;
+    let fake = 0;
+    const started = performance.now();
+    const sol = await solvePow('abc', 12, {
+      sliceMs: 1,
+      clock: () => (fake += 0.5), // 2 hashes per slice
+      yieldFn: async () => void yields++
+    });
+    expect(sol).not.toBeNull();
+    expect(await powOkClient('abc', sol!, 12)).toBe(true);
+    expect(performance.now() - started).toBeLessThan(5000);
+    expect(yields).toBeGreaterThan(10);
+  });
+  it('gives up after maxMs', async () => {
+    let fake = 0;
+    expect(
+      await solvePow('abc', 200, { maxMs: 10, clock: () => (fake += 1), yieldFn: async () => {} })
+    ).toBeNull();
+  });
+  it('leadingZeroBits', () => {
+    expect(leadingZeroBits(new Uint8Array([0, 0x10]))).toBe(11);
   });
 });
 

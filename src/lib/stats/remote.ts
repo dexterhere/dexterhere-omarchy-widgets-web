@@ -1,12 +1,15 @@
 import { isWidgetId } from './id';
 import { LocalStatsProvider } from './local';
+import { solvePow } from './pow';
 import { readItem, writeItem } from './store';
 import type { Stats, StatsProvider } from './types';
 
 export const TIMEOUT_MS = 3000;
 export const MAX_RESPONSE_BYTES = 16 * 1024;
 export const MAX_IDS = 50;
-export const CLIENT_KEY = 'ow-client';
+export const TOKEN_KEY = 'ow-token';
+const MAX_POW_BITS = 24;
+const TOKEN_RE = /^v1\.[0-9a-f]{32}\.[0-9]{1,12}\.[0-9a-f]{64}$/;
 export const VIEWED_KEY = 'ow-viewed';
 const MAX_VIEWED = 500;
 const BACKOFF_MS = 60_000;
@@ -15,6 +18,13 @@ const isCount = (n: unknown): n is number => Number.isSafeInteger(n) && (n as nu
 const has = (o: object, k: string) => Object.prototype.hasOwnProperty.call(o, k);
 const isObj = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
+
+/** The stored token if it is well formed and has more than a day left. */
+function readToken(nowMs: number): string | null {
+  const t = readItem(TOKEN_KEY);
+  if (!t || !TOKEN_RE.test(t)) return null;
+  return Number(t.split('.')[2]) * 1000 - nowMs > 86_400_000 ? t : null;
+}
 
 export class RemoteStatsProvider implements StatsProvider {
   private local = new LocalStatsProvider();
@@ -26,15 +36,51 @@ export class RemoteStatsProvider implements StatsProvider {
     private now: () => number = Date.now
   ) {}
 
-  /** Random 128-bit id kept in localStorage (never a cookie). Sent only to the stats origin. */
-  private token(): string {
-    const cur = readItem(CLIENT_KEY);
-    if (cur && /^[0-9a-f]{32}$/.test(cur)) return cur;
-    const b = crypto.getRandomValues(new Uint8Array(16));
-    const t = Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
-    writeItem(CLIENT_KEY, t);
-    return t;
+  /**
+   * A server-issued token (proves a small proof-of-work was done), kept in localStorage, never a
+   * cookie, and sent only to the stats origin on writes. Fetched lazily, shared by concurrent calls.
+   */
+  private tokenPromise: Promise<string | null> | undefined;
+  private getToken(): Promise<string | null> {
+    const cur = readToken(this.now());
+    if (cur) return Promise.resolve(cur);
+    this.tokenPromise ??= this.acquireToken().finally(() => (this.tokenPromise = undefined));
+    return this.tokenPromise;
   }
+
+  private async acquireToken(): Promise<string | null> {
+    const c = await this.call('GET', '/challenge');
+    const j = c.ok && isObj(c.json) ? c.json : null;
+    if (!j || typeof j.challenge !== 'string' || j.challenge.length > 160) return null;
+    const bits = j.bits;
+    if (!Number.isInteger(bits) || (bits as number) < 0 || (bits as number) > MAX_POW_BITS)
+      return null;
+    const solution = await solvePow(j.challenge, bits as number);
+    if (solution === null) return null;
+    const t = await this.call('POST', '/token', {
+      'x-challenge': j.challenge,
+      'x-pow': solution
+    });
+    const r = t.ok && isObj(t.json) ? t.json : null;
+    if (!r || typeof r.token !== 'string' || !TOKEN_RE.test(r.token)) return null;
+    writeItem(TOKEN_KEY, r.token);
+    return r.token;
+  }
+
+  /** Authenticated write. Runs in the background; a failure keeps the action local. */
+  private async write(method: string, path: string): Promise<void> {
+    const token = await this.getToken();
+    if (!token) return;
+    const r = await this.call(method, path, { 'x-client-token': token });
+    if (r.status === 401) writeItem(TOKEN_KEY, ''); // expired or rotated: get a new one next time
+  }
+
+  private pending: Promise<unknown> = Promise.resolve();
+  private background(p: Promise<void>) {
+    this.pending = Promise.allSettled([this.pending, p]);
+  }
+  /** Resolves when background writes finish (for tests). */
+  settled = () => this.pending;
 
   private tracking(): boolean {
     if (typeof navigator === 'undefined') return true;
@@ -42,18 +88,16 @@ export class RemoteStatsProvider implements StatsProvider {
     return n.doNotTrack !== '1' && n.globalPrivacyControl !== true;
   }
 
-  /** One bounded request. Never throws; any failure pauses remote calls for a minute. */
+  /** One bounded request. Never throws; network errors and 5xx pause remote calls for a minute. */
   private async call(
     method: string,
     path: string,
-    withToken: boolean
-  ): Promise<{ ok: boolean; json?: unknown }> {
+    headers: Record<string, string> = {}
+  ): Promise<{ ok: boolean; status?: number; json?: unknown }> {
     if (this.now() < this.downUntil) return { ok: false };
     const ctl = new AbortController();
     const timer = setTimeout(() => ctl.abort(), TIMEOUT_MS);
     try {
-      const headers: Record<string, string> = {};
-      if (withToken) headers['x-client-token'] = this.token();
       const res = await this.f(this.origin + path, {
         method,
         headers,
@@ -63,9 +107,16 @@ export class RemoteStatsProvider implements StatsProvider {
         redirect: 'error',
         cache: 'no-store'
       });
-      if (!res.ok) throw new Error('status');
+      if (!res.ok) {
+        if (res.status >= 500 || res.status === 429) this.downUntil = this.now() + BACKOFF_MS;
+        return { ok: false, status: res.status };
+      }
       const text = await readCapped(res, MAX_RESPONSE_BYTES);
-      return { ok: true, json: text ? (JSON.parse(text) as unknown) : undefined };
+      return {
+        ok: true,
+        status: res.status,
+        json: text ? (JSON.parse(text) as unknown) : undefined
+      };
     } catch {
       this.downUntil = this.now() + BACKOFF_MS;
       return { ok: false };
@@ -80,7 +131,7 @@ export class RemoteStatsProvider implements StatsProvider {
     const valid = [...new Set(ids.filter(isWidgetId))];
     for (let i = 0; i < valid.length; i += MAX_IDS) {
       const chunk = valid.slice(i, i + MAX_IDS);
-      const r = await this.call('GET', `/stats?ids=${chunk.join(',')}`, false);
+      const r = await this.call('GET', `/stats?ids=${chunk.join(',')}`);
       const stats = r.ok && isObj(r.json) && has(r.json, 'stats') ? r.json.stats : null;
       if (!isObj(stats)) continue;
       for (const id of chunk) {
@@ -111,18 +162,18 @@ export class RemoteStatsProvider implements StatsProvider {
       VIEWED_KEY,
       JSON.stringify(Object.fromEntries(Object.entries(seen).slice(-MAX_VIEWED)))
     );
-    await this.call('POST', `/view/${id}`, true);
+    this.background(this.write('POST', `/view/${id}`));
   }
 
   async like(id: string): Promise<boolean> {
     if (!(await this.local.like(id))) return false;
-    await this.call('POST', `/like/${id}`, true); // a failure keeps the like on this device
+    this.background(this.write('POST', `/like/${id}`)); // a failure keeps the like on this device
     return true;
   }
 
   async unlike(id: string): Promise<boolean> {
     if (!(await this.local.unlike(id))) return false;
-    await this.call('DELETE', `/like/${id}`, true);
+    this.background(this.write('DELETE', `/like/${id}`));
     return true;
   }
 
