@@ -25,6 +25,8 @@ jobs:
         run: bun scripts/check-review-changes.ts
       - run: bunx vitest run --passWithNoTests
       - run: bun run build
+        env:
+          STATS_DEMO: '1' # keeps the unlinked test route for e2e; production builds prune it
       - run: bunx playwright install --with-deps chromium
       - run: bunx playwright test --pass-with-no-tests
       - name: dependency audit
