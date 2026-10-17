@@ -281,3 +281,26 @@ test('no request leaves the two local hosts', async ({ page }) => {
   expect([...hosts].filter((h) => !LOCAL.has(h))).toEqual([]);
   expect(hosts.has('docs.localhost')).toBe(true);
 });
+
+test('footer links: Docs links on docs.localhost, Site links on localhost, both resolve', async ({
+  page,
+  request
+}) => {
+  for (const from of [`${SITE}/`, `${DOCS}${START}`]) {
+    await page.goto(from);
+    const col = (name: string) =>
+      page
+        .getByRole('navigation', { name: 'Footer' })
+        .locator('.col', { has: page.getByRole('heading', { name }) })
+        .locator('a')
+        .evaluateAll((as) => as.map((a) => a.getAttribute('href')!));
+    const docs = await col('Docs');
+    for (const h of docs) expect(h, from).toMatch(new RegExp(`^${DOCS}/next/`));
+    const explore = await col('Explore');
+    expect(explore).toContain(`${SITE}/widgets/`);
+    expect(explore).toContain(`${SITE}/rss.xml`);
+    expect(explore).toContain(`${DOCS}/`);
+    expect(await col('Project')).toContain(`${SITE}/security/`);
+    for (const h of [...explore, ...docs]) expect((await request.get(h)).status(), h).toBe(200);
+  }
+});

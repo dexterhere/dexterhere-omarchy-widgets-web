@@ -4,7 +4,9 @@
   --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SFMono-Regular', Menlo, monospace;
   --font-sans: 'Geist Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --container: 904px;
-  --container-wide: 1100px;
+  /* Inner width of the header and footer frame; .container.wide uses it too, so they align. */
+  --frame-max: 1100px;
+  --container-wide: var(--frame-max);
   --gutter: 16px;
   --fs-1: 13px;
   --fs-2: 14px;

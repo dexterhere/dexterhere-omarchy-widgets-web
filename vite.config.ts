@@ -46,12 +46,18 @@ export default defineConfig(({ mode }) => {
   const origins = parseOrigins(loadEnv(mode, process.cwd(), 'PUBLIC_'));
   const out = process.env.OW_BUILD_DIR ?? 'build';
   return {
-    define: origins.site
-      ? {
-          __SITE_ORIGIN__: JSON.stringify(origins.site),
-          __DOCS_ORIGIN__: JSON.stringify(origins.docs)
-        }
-      : {},
+    define: {
+      // PUBLIC_BUILD_COMMIT: commit hash for the footer; the app validates it, '' hides it.
+      __BUILD_COMMIT__: JSON.stringify(
+        loadEnv(mode, process.cwd(), 'PUBLIC_').PUBLIC_BUILD_COMMIT ?? ''
+      ),
+      ...(origins.site
+        ? {
+            __SITE_ORIGIN__: JSON.stringify(origins.site),
+            __DOCS_ORIGIN__: JSON.stringify(origins.docs)
+          }
+        : {})
+    },
     plugins: [
       sveltekit({
         extensions: ['.svelte', '.md'],
