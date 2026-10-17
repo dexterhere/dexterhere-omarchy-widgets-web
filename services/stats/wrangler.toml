@@ -1,0 +1,19 @@
+# Example only. Replace the placeholders; never commit real ids or secrets.
+name = "omarchy-widgets-stats"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+[vars]
+# Exact origins of the site (no wildcard, no trailing slash).
+ALLOWED_ORIGINS = "https://example.org"
+# Optional: restrict counters to known widget ids (comma-separated).
+# WIDGET_IDS = "io.github.example.clock"
+
+[[kv_namespaces]]
+binding = "STATS"
+id = "REPLACE_WITH_KV_NAMESPACE_ID"
+
+# Secret (not in this file):  wrangler secret put STATS_SECRET
+# Disable request logging for this Worker so nothing about visitors is kept:
+[observability]
+enabled = false
