@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a vulnerability (private)
+    url: https://github.com/dexterhere/dexterhere-omarchy-widgets-web/security/advisories/new
+    about: Do not file security issues publicly.
+  - name: Vulnerability in the widget software (daemon, vault, CLI)
+    url: https://github.com/dexterhere/omarchy-widgets/security/advisories/new
+    about: Report problems in the code repository privately.
