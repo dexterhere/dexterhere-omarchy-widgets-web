@@ -47,7 +47,14 @@ function main() {
   try {
     maintainers = JSON.parse(git('show', `origin/${base}:registry/MAINTAINERS.json`));
   } catch {
-    // base has no list: nobody is a maintainer
+    // One-time bootstrap: the base branch has no list yet, so the PR that introduces it
+    // supplies it. Once the file exists on the base branch this fallback is never used.
+    try {
+      maintainers = JSON.parse(readFileSync('registry/MAINTAINERS.json', 'utf8'));
+      console.log('check-review-changes: bootstrap, base has no MAINTAINERS.json');
+    } catch {
+      // no list anywhere: nobody is a maintainer
+    }
   }
   const r = checkReviewChanges({
     eventName,
