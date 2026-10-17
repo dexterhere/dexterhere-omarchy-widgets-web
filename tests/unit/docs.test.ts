@@ -21,7 +21,7 @@ import {
   type SectionMeta
 } from '../../src/lib/docs/content';
 import { splitExcerpt } from '../../src/lib/docs/search';
-import { mdsvexOptions } from '../../scripts/mdsvex';
+import { mdsvexOptions, rehypeEscapeSynced, safeUrl } from '../../scripts/mdsvex';
 import { snapshot } from '../../scripts/docs-snapshot';
 import { escapeForMdsvex, fetchText, rawUrl, validRef } from '../../scripts/sync-reference-docs';
 import { THEMES } from '../../src/lib/themes/themes';
@@ -264,5 +264,98 @@ describe('code colours', () => {
       ] as const)
         expect(contrast(c, t.bgDeep), `${t.id} ${name}`).toBeGreaterThanOrEqual(4.5);
     }
+  });
+});
+
+describe('synced content hardening', () => {
+  const synced = (body: string) => md('title: T\nsynced: true', body);
+  const html = (code: string) => code.split('</script>').slice(1).join('</script>');
+  // markup and live expressions, not mere words: escaped text may still say "onerror"
+  const leak = /\{evil\}|<(script|img|iframe|pre|div)\b|href="(javascript|data):/i;
+
+  it('does not trust raw nodes that merely look like shiki output', async () => {
+    const fake =
+      '<pre class="shiki" tabindex="0" onclick="x"><script>alert(1)</script><img src=x onerror=alert(1)> {evil}</pre>';
+    for (const body of [fake, escapeForMdsvex(fake), `text\n\n${fake}\n\ntext`]) {
+      const out = html(await synced(body));
+      expect(out).not.toMatch(leak);
+    }
+  });
+  it('keeps genuine highlighter output, braces escaped, nonce stripped', async () => {
+    const out = html(await synced('```json\n{"a": 1}\n```'));
+    expect(out).toContain('<pre class="shiki');
+    expect(out).toContain('&#123;');
+    expect(out).not.toContain('data-hl');
+    expect(html(await md('title: T', '```json\n{"a": 1}\n```'))).not.toContain('data-hl');
+  });
+  it('rejects a document that guesses the nonce attribute name', async () => {
+    const out = html(await synced('<pre data-hl="guess"><script>{evil}</script></pre>'));
+    expect(out).not.toMatch(leak);
+  });
+
+  it('filters elements: unsafe URLs, attributes, braces in attributes', async () => {
+    const out = html(
+      await synced(
+        '[x](javascript:alert(1)) [d](data:text/html,x) [t](https://e.com "{evil}") ![{evil}](x.png "a") [p](/p/{evil}) [ok](https://example.com) [m](mailto:a@b.c) [f](#frag)'
+      )
+    );
+    expect(out).not.toMatch(/\{evil\}|<(script|iframe|pre|div)\b|href="(javascript|data):/i);
+    expect(out).not.toContain('data:text');
+    expect(out).toContain('href="https://example.com"');
+    expect(out).toContain('href="mailto:a@b.c"');
+    expect(out).toContain('href="#frag"');
+    expect(out).not.toMatch(/="[^"]*\{[^"]*"/); // no brace left inside any attribute value
+  });
+  it('rehype pass drops dangerous tags and attributes from a hand-built tree', () => {
+    const el = (
+      tagName: string,
+      properties: Record<string, unknown>,
+      children: unknown[] = []
+    ) => ({ type: 'element', tagName, properties, children });
+    const tree = {
+      type: 'root',
+      children: [
+        el('script', {}, [{ type: 'text', value: 'alert(1)' }]),
+        el('iframe', { src: 'https://x' }),
+        el('form', { action: '/x' }),
+        el('img', { src: 'x', onError: 'alert(1)', style: 'x', srcSet: 'a 1x', alt: '{evil}' }),
+        el('a', { href: ' JaVa\tScript:alert(1)' }),
+        el('a', { href: 'data:text/html,x', title: '{evil}' })
+      ]
+    };
+    rehypeEscapeSynced()(tree, { data: { fm: { synced: true } } });
+    const kids = tree.children as ReturnType<typeof el>[];
+    expect(kids.map((k) => k.tagName)).toEqual(['img', 'a', 'a']);
+    expect(kids[0]!.properties).toEqual({ src: 'x', alt: '｛evil｝' });
+    expect(kids[1]!.properties.href).toBe('#');
+    expect(kids[2]!.properties).toEqual({ href: '#', title: '｛evil｝' });
+    expect(safeUrl('https://a.b/{x}')).toBe(true);
+    expect(safeUrl('//host/x')).toBe(true);
+    expect(safeUrl('vbscript:x')).toBe(false);
+  });
+
+  it('sync escaping follows CommonMark: known fence and code-span bypasses', async () => {
+    const cases: Record<string, string> = {
+      'backtick fence whose info string has a backtick': '```a`b\n{evil}\n```\n\n{evil}',
+      'code span closed by a run of a different length': '``a` {evil} ` b``` {evil}',
+      'tilde fence then prose': '~~~\ncode\n~~~\n\n{evil} <script>x</script>',
+      'fence indented four spaces is not a fence': '    ```\n\n{evil}\n\n    ```',
+      'longer closing fence required': '````\n```\n````\n\n{evil}',
+      'closing fence with info string does not close': '```\n``` x\n{evil}\n',
+      'span with backslash': '`a\\` {evil}`',
+      'html block': '<div>\n{evil}\n</div>\n\n{evil}'
+    };
+    for (const [name, src] of Object.entries(cases)) {
+      const out = html(await synced(escapeForMdsvex(src)));
+      // Anything outside real code must be inert. Code keeps its text but mdsvex already
+      // escapes it, so no raw `{evil}` may survive in the compiled template at all.
+      expect(out, name).not.toMatch(/\{evil\}|<script|<div>/);
+    }
+  });
+  it('escapes prose braces that a regex fence tracker would have skipped', () => {
+    expect(escapeForMdsvex('```a`b\n{evil}\n```')).toContain('&#123;evil&#125;');
+    expect(escapeForMdsvex('~~~\n{keep}\n~~~')).toContain('{keep}');
+    expect(escapeForMdsvex('`` a` {keep} ``')).toContain('{keep}');
+    expect(escapeForMdsvex('x\n\n    {indented}\n\n{evil}')).toContain('&#123;evil&#125;');
   });
 });

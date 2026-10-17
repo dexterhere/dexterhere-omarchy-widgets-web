@@ -7,7 +7,8 @@ import rehypeSlug from 'rehype-slug';
 import rehypeAutolink from 'rehype-autolink-headings';
 import rehypeExternalLinks from 'rehype-external-links';
 import { toString } from 'hast-util-to-string';
-import { visit } from 'unist-util-visit';
+import { randomUUID } from 'node:crypto';
+import { SKIP, visit } from 'unist-util-visit';
 import type { mdsvex } from 'mdsvex';
 
 export interface TocItem {
@@ -42,24 +43,106 @@ const esc = (t: string) =>
     .replace(/\}/g, '&#125;');
 
 /**
- * Synced pages (frontmatter `synced: true`) come from another repo, so their text must never
- * become Svelte: every text node is rewritten as raw, fully entity-escaped HTML (braces too).
- * Code is already escaped by mdsvex. Authored pages are left alone on purpose, see docs/README.
+ * Synced pages (frontmatter `synced: true`) come from another repo, so nothing in them may
+ * become Svelte or live HTML. Trust is never decided from content:
+ *  - raw nodes survive only if they carry this build's random nonce (set by highlight() on its
+ *    own output, unguessable by a document); every other raw node becomes escaped text;
+ *  - text nodes become fully entity-escaped raw HTML (braces too);
+ *  - elements are filtered: dangerous tags dropped, only http(s)/mailto/relative/fragment URLs,
+ *    no style/srcset/on* attributes, braces neutralised in every string property value.
+ * Authored pages are left alone on purpose, see docs/README.
  */
+const NONCE = randomUUID();
+const BAD_TAGS = new Set([
+  'script',
+  'iframe',
+  'object',
+  'embed',
+  'form',
+  'style',
+  'link',
+  'meta',
+  'base',
+  'input',
+  'button',
+  'textarea',
+  'select',
+  'svg',
+  'math',
+  'frame',
+  'frameset',
+  'applet'
+]);
+const URL_PROPS = new Set(['href', 'src', 'action', 'formAction', 'poster', 'cite', 'data']);
+const braces = (s: string) => s.replace(/\{/g, '&#123;').replace(/\}/g, '&#125;');
+const fullwidth = (s: string) => s.replace(/\{/g, '｛').replace(/\}/g, '｝');
+
+export function safeUrl(v: string): boolean {
+  // Browsers ignore control, space, zero-width and BOM characters inside a scheme: drop them.
+  const u = [...v]
+    .filter((c) => {
+      const n = c.charCodeAt(0);
+      return (
+        n > 0x20 &&
+        !(n >= 0x7f && n <= 0x9f) &&
+        !(n >= 0x200b && n <= 0x200f) &&
+        n !== 0x2028 &&
+        n !== 0x2029 &&
+        n !== 0xfeff
+      );
+    })
+    .join('');
+  const m = /^([a-z][a-z0-9+.-]*):/i.exec(u);
+  return !m || ['http', 'https', 'mailto'].includes(m[1]!.toLowerCase());
+}
+
 export function rehypeEscapeSynced() {
   return (tree: object, file: { data: { fm?: Record<string, unknown> } }) => {
-    if (file.data.fm?.synced !== true) return;
-    type N = { type: string; value: string };
-    // Raw HTML typed by the source author is text here; only shiki's own <pre> stays raw.
+    if (file.data.fm?.synced !== true) {
+      visit(tree as never, 'raw', (n: { value: string }) => {
+        n.value = n.value.replace(` data-hl="${NONCE}"`, '');
+      });
+      return;
+    }
+    type N = {
+      type: string;
+      value: string;
+      tagName?: string;
+      properties?: Record<string, unknown>;
+    };
     visit(tree as never, 'raw', (n: N) => {
-      if (!n.value.startsWith('<pre class="shiki')) {
-        n.type = 'text';
-      }
+      if (n.value.startsWith('<pre ') && n.value.includes(`data-hl="${NONCE}"`)) {
+        n.value = braces(n.value.replace(` data-hl="${NONCE}"`, ''));
+      } else n.type = 'text';
     });
+    visit(
+      tree as never,
+      'element',
+      (n: N, i: number | undefined, parent: { children: unknown[] } | undefined) => {
+        if (BAD_TAGS.has(n.tagName!.toLowerCase()) && parent && i !== undefined) {
+          parent.children.splice(i, 1);
+          return [SKIP, i];
+        }
+        const props = n.properties ?? {};
+        for (const [k, val] of Object.entries(props)) {
+          const lk = k.toLowerCase();
+          if (lk.startsWith('on') || lk === 'style' || lk === 'srcset') delete props[k];
+          else if (URL_PROPS.has(k) && typeof val === 'string')
+            // mdsvex percent-decodes hrefs after this pass, so %7B would turn back into a brace:
+            // double-encode both literal braces and already-encoded ones
+            props[k] = safeUrl(val)
+              ? val.replace(/\{|%7b/gi, '%257B').replace(/\}|%7d/gi, '%257D')
+              : '#';
+          else if (typeof val === 'string') props[k] = fullwidth(val);
+          else if (Array.isArray(val))
+            props[k] = val.map((x) => (typeof x === 'string' ? fullwidth(x) : x));
+        }
+      }
+    );
     visit(tree as never, 'text', (n: N, _i: unknown, parent: { tagName?: string } | undefined) => {
-      if (parent?.tagName === 'code') return; // inline code: mdsvex already escaped it
       n.type = 'raw';
-      n.value = esc(n.value);
+      // inline code text is pre-escaped by mdsvex; braces are re-checked either way
+      n.value = parent?.tagName === 'code' ? braces(n.value) : esc(n.value);
     });
   };
 }
@@ -75,6 +158,7 @@ export async function highlight(code: string, lang: string | undefined): Promise
   // shiki escapes HTML; mdsvex pastes the result into a Svelte template, so braces need it too.
   return h
     .codeToHtml(code, { lang: known, theme: 'site' })
+    .replace('<pre ', `<pre data-hl="${NONCE}" `)
     .replace(/\{/g, '&#123;')
     .replace(/\}/g, '&#125;');
 }

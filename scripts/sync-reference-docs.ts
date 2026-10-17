@@ -7,6 +7,8 @@
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
+import { fromMarkdown } from 'mdast-util-from-markdown';
+import { visit } from 'unist-util-visit';
 
 export const REPO = 'dexterhere/omarchy-widgets';
 export const RAW_HOST = 'raw.githubusercontent.com';
@@ -82,37 +84,30 @@ export async function fetchText(
 }
 
 /**
- * Escapes `{`, `}` and `<` (and `>`, `&`) everywhere except fenced code blocks and inline code
- * spans, as HTML entities. Code is left alone: mdsvex escapes it itself.
+ * Escapes `{`, `}`, `<`, `>` and stray `&` as HTML entities in the TEXT and raw-HTML nodes of the
+ * document, found by a real CommonMark parse (micromark), never by regexes over the source.
+ * Code (fenced, indented, inline) is another node type and is left alone: mdsvex escapes it.
+ * Link and image attributes are not touched here: the compile-time pass (rehypeEscapeSynced)
+ * filters URLs and neutralises braces in every attribute.
  */
 export function escapeForMdsvex(md: string): string {
   const ent = (s: string) =>
     s
+      .replace(/\\([{}<>])/g, '$1')
       .replace(/&(?![a-zA-Z]+;|#\d+;|#x[0-9a-fA-F]+;)/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/\{/g, '&#123;')
       .replace(/\}/g, '&#125;');
-  let fence: string | null = null;
-  return md
-    .split('\n')
-    .map((line) => {
-      const m = /^ {0,3}(`{3,}|~{3,})/.exec(line);
-      if (fence) {
-        if (m && m[1]![0] === fence[0] && m[1]!.length >= fence.length) fence = null;
-        return line;
-      }
-      if (m) {
-        fence = m[1]!;
-        return line;
-      }
-      // keep inline code spans (`...` or ``...``) verbatim
-      return line
-        .split(/(`+[^`]*?`+)/)
-        .map((part, i) => (i % 2 ? part : ent(part)))
-        .join('');
-    })
-    .join('\n');
+  const spans: [number, number][] = [];
+  visit(fromMarkdown(md), (n) => {
+    if ((n.type === 'text' || n.type === 'html') && n.position)
+      spans.push([n.position.start.offset!, n.position.end.offset!]);
+  });
+  let out = md;
+  for (const [from, to] of spans.sort((x, y) => y[0] - x[0]))
+    out = out.slice(0, from) + ent(out.slice(from, to)) + out.slice(to);
+  return out;
 }
 
 export function render(t: Target, ref: string, source: string): string {
