@@ -22,8 +22,8 @@
           <dd>{statusLabels[w.status]}</dd>
           <dt>Trust tier</dt>
           <dd>{tierLabels[w.tier].label}</dd>
-          <dt>Category</dt>
-          <dd>{categoryLabels[w.category]}</dd>
+          <dt>Categories</dt>
+          <dd>{w.categories.map((c) => categoryLabels[c]).join(', ')}</dd>
           <dt>Compatibility{version ? ` (docs ${version})` : ''}</dt>
           <dd>Omarchy {w.compat.omarchy}, widgetsKit {w.compat.widgetsKit}</dd>
         </dl>

@@ -30,11 +30,23 @@ describe('listing schema', () => {
     'git@github.com:a/b'
   ])('rejects repo %s', (repo) => expect(ok(listing({ repo }))).toBe(false));
   it('rejects unknown category, bad tags, long summary, bad status', () => {
-    expect(ok(listing({ category: 'games' }))).toBe(false);
+    expect(ok(listing({ categories: ['games'] }))).toBe(false);
+    expect(ok(listing({ category: 'dev-git' }))).toBe(false); // old field is gone
     expect(ok(listing({ tags: ['Has Space'] }))).toBe(false);
     expect(ok(listing({ tags: Array.from({ length: 9 }, (_, i) => `t${i}`) }))).toBe(false);
     expect(ok(listing({ summary: 'x'.repeat(141) }))).toBe(false);
     expect(ok(listing({ status: 'verified' }))).toBe(false);
+  });
+  it('requires 1 to 3 distinct known categories', () => {
+    const cat = (categories: unknown) => ok(listing({ categories }));
+    expect(cat(['dev-git'])).toBe(true);
+    expect(cat(['dev-git', 'system', 'media'])).toBe(true);
+    expect(cat([])).toBe(false);
+    expect(cat(['dev-git', 'dev-git'])).toBe(false);
+    expect(cat(['dev-git', 'system', 'media', 'utilities'])).toBe(false);
+    expect(cat(['dev-git', 'nope'])).toBe(false);
+    expect(cat('dev-git')).toBe(false);
+    expect(cat(undefined)).toBe(false);
   });
   it('allows source fixture only with status planned', () => {
     expect(ok(listing({ status: 'planned', source: 'fixture' }))).toBe(true);

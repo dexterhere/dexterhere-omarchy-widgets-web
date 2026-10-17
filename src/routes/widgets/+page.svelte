@@ -4,18 +4,27 @@
   import { resolve } from '$app/paths';
   import Badges from '../../lib/components/Badges.svelte';
   import WidgetPreview from '../../lib/components/WidgetPreview.svelte';
+  import Highlight from '../../lib/components/gallery/Highlight.svelte';
+  import SearchBar from '../../lib/components/gallery/SearchBar.svelte';
   import { categoryLabels, declaredTierNote, statusLabels, tierLabels } from '../../lib/registry';
   import {
     DEFAULT_QUERY,
+    categoryCounts,
     clearFilters,
     facets,
     filterWidgets,
     hasFilters,
     parseQuery,
+    popularTags,
     serializeQuery,
-    type Query
+    toggleCategory,
+    tokenize,
+    type Query,
+    type Suggestion
   } from '../../lib/registry/filter';
   import { CARD_SIZE, previewType } from '../../lib/registry/preview';
+  import type { Category } from '../../lib/registry/types';
+  import { addRecent, clearRecent, loadRecent } from '../../lib/registry/recent';
 
   let { data } = $props();
 
@@ -23,9 +32,11 @@
   let query = $state<Query>({ ...DEFAULT_QUERY });
   let ready = $state(false);
   let search = $state<HTMLInputElement>();
+  let recent = $state<string[]>([]);
 
   onMount(() => {
     query = parseQuery(new URLSearchParams(location.search));
+    recent = loadRecent();
     ready = true;
   });
 
@@ -40,7 +51,55 @@
 
   const options = $derived(facets(data.widgets));
   const results = $derived(filterWidgets(data.widgets, query));
+  const counts = $derived(categoryCounts(data.widgets, query));
+  const tokens = $derived(tokenize(query.q));
   const active = $derived(hasFilters(query));
+  const tags = $derived(popularTags(data.widgets));
+  const moreOpen = $derived(
+    Boolean(query.status || query.tier || query.surface || query.provider || query.size)
+  );
+
+  /** Non-text filters as removable chips. Text search has its own clear button. */
+  const chips = $derived.by(() => {
+    const out: { key: string; label: string; remove: () => void }[] = [];
+    for (const c of query.cat)
+      out.push({
+        key: `cat-${c}`,
+        label: `Category: ${categoryLabels[c]}`,
+        remove: () => (query.cat = toggleCategory(query.cat, c))
+      });
+    if (query.status)
+      out.push({
+        key: 'status',
+        label: `Status: ${statusLabels[query.status]}`,
+        remove: () => (query.status = '')
+      });
+    if (query.tier)
+      out.push({
+        key: 'tier',
+        label: `Tier: ${tierLabels[query.tier].label}`,
+        remove: () => (query.tier = '')
+      });
+    if (query.surface)
+      out.push({
+        key: 'surface',
+        label: `Surface: ${query.surface}`,
+        remove: () => (query.surface = '')
+      });
+    if (query.provider)
+      out.push({
+        key: 'provider',
+        label: `Provider: ${query.provider}`,
+        remove: () => (query.provider = '')
+      });
+    if (query.size)
+      out.push({ key: 'size', label: `Size: ${query.size}`, remove: () => (query.size = '') });
+    return out;
+  });
+
+  const save = (q: string) => (recent = addRecent(q, recent));
+  const onpick = (s: Suggestion) => (query.cat = toggleCategory(query.cat, s.value as Category));
+  const reset = () => (query = clearFilters(query));
 
   function onWindowKey(e: KeyboardEvent) {
     const t = e.target as HTMLElement | null;
@@ -77,87 +136,127 @@
   <form
     class="tools"
     role="search"
-    aria-label="Filter widgets"
+    aria-label="Search widgets"
     onsubmit={(e) => e.preventDefault()}
   >
-    <div class="field grow">
-      <label for="q">Search</label>
-      <input
-        id="q"
-        name="q"
-        type="search"
-        autocomplete="off"
-        placeholder="Name, tag, id or data topic"
-        aria-keyshortcuts="/ Control+K"
-        bind:this={search}
-        bind:value={query.q}
-      />
-      <span class="tiny muted hint">Press <kbd>/</kbd> or <kbd>Ctrl</kbd> <kbd>K</kbd></span>
+    <SearchBar
+      widgets={data.widgets}
+      bind:value={query.q}
+      bind:input={search}
+      {onpick}
+      onsave={save}
+    />
+
+    {#if recent.length}
+      <div class="recent" data-testid="recent">
+        <span class="small text-2">Recent searches</span>
+        <ul class="chiprow">
+          {#each recent as r (r)}
+            <li><button class="chip" type="button" onclick={() => (query.q = r)}>{r}</button></li>
+          {/each}
+        </ul>
+        <button
+          class="linkbtn small"
+          type="button"
+          onclick={() => {
+            clearRecent();
+            recent = [];
+          }}>Clear history</button
+        >
+      </div>
+    {/if}
+
+    <div role="group" aria-label="Categories">
+      <ul class="chiprow">
+        {#each options.categories as c (c)}
+          <li>
+            <button
+              class="chip"
+              type="button"
+              aria-pressed={query.cat.includes(c)}
+              onclick={() => (query.cat = toggleCategory(query.cat, c))}
+            >
+              {categoryLabels[c]}
+              <span class="n" data-testid="cat-count-{c}">{counts[c]}</span>
+            </button>
+          </li>
+        {/each}
+      </ul>
     </div>
 
-    <div class="selects">
-      <div class="field">
-        <label for="cat">Category</label>
-        <select id="cat" bind:value={query.cat}>
-          <option value="">All</option>
-          {#each options.categories as c (c)}<option value={c}>{categoryLabels[c]}</option>{/each}
-        </select>
+    <details class="more" open={moreOpen}>
+      <summary>More filters</summary>
+      <div class="selects">
+        <div class="field">
+          <label for="status">Status</label>
+          <select id="status" bind:value={query.status}>
+            <option value="">All</option>
+            {#each options.statuses as s (s)}<option value={s}>{statusLabels[s]}</option>{/each}
+          </select>
+        </div>
+        <div class="field">
+          <label for="tier">Tier</label>
+          <select id="tier" bind:value={query.tier}>
+            <option value="">All</option>
+            {#each options.tiers as t (t)}<option value={t}>{tierLabels[t].label}</option>{/each}
+          </select>
+        </div>
+        <div class="field">
+          <label for="surface">Surface</label>
+          <select id="surface" bind:value={query.surface}>
+            <option value="">All</option>
+            {#each options.surfaces as s (s)}<option value={s}>{s}</option>{/each}
+          </select>
+        </div>
+        <div class="field">
+          <label for="provider">Data provider</label>
+          <select id="provider" bind:value={query.provider}>
+            <option value="">All</option>
+            {#each options.providers as p (p)}<option value={p}>{p}</option>{/each}
+          </select>
+        </div>
+        <div class="field">
+          <label for="size">Size class</label>
+          <select id="size" bind:value={query.size}>
+            <option value="">All</option>
+            {#each options.sizes as s (s)}<option value={s}>{s}</option>{/each}
+          </select>
+        </div>
       </div>
-      <div class="field">
-        <label for="status">Status</label>
-        <select id="status" bind:value={query.status}>
-          <option value="">All</option>
-          {#each options.statuses as s (s)}<option value={s}>{statusLabels[s]}</option>{/each}
-        </select>
-      </div>
-      <div class="field">
-        <label for="tier">Tier</label>
-        <select id="tier" bind:value={query.tier}>
-          <option value="">All</option>
-          {#each options.tiers as t (t)}<option value={t}>{tierLabels[t].label}</option>{/each}
-        </select>
-      </div>
-      <div class="field">
-        <label for="surface">Surface</label>
-        <select id="surface" bind:value={query.surface}>
-          <option value="">All</option>
-          {#each options.surfaces as s (s)}<option value={s}>{s}</option>{/each}
-        </select>
-      </div>
-      <div class="field">
-        <label for="provider">Data provider</label>
-        <select id="provider" bind:value={query.provider}>
-          <option value="">All</option>
-          {#each options.providers as p (p)}<option value={p}>{p}</option>{/each}
-        </select>
-      </div>
-      <div class="field">
-        <label for="size">Size class</label>
-        <select id="size" bind:value={query.size}>
-          <option value="">All</option>
-          {#each options.sizes as s (s)}<option value={s}>{s}</option>{/each}
-        </select>
-      </div>
-      <div class="field">
-        <label for="sort">Sort</label>
-        <select id="sort" bind:value={query.sort}>
-          <option value="name">Name, A to Z</option>
-          <option value="status">Status, then name</option>
-        </select>
-      </div>
-    </div>
+    </details>
   </form>
 
+  {#if chips.length}
+    <ul class="chiprow" aria-label="Active filters" data-testid="active">
+      {#each chips as c (c.key)}
+        <li class="achip">
+          <span>{c.label}</span>
+          <button type="button" aria-label="Remove filter {c.label}" onclick={c.remove}>
+            <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true" focusable="false">
+              <path d="M3 3l10 10M13 3L3 13" fill="none" stroke="currentColor" stroke-width="2" />
+            </svg>
+          </button>
+        </li>
+      {/each}
+    </ul>
+  {/if}
+
   <div class="bar">
-    <p class="small" role="status" aria-live="polite" data-testid="count">
+    <p class="small count" role="status" aria-live="polite" data-testid="count">
       {#if active}{results.length} of {data.widgets.length} widgets{:else}{data.widgets.length} widgets{/if}
     </p>
     <div class="row actions">
       {#if active}
-        <button class="btn small" type="button" onclick={() => (query = clearFilters(query))}>
-          Clear filters
-        </button>
+        <button class="btn small" type="button" onclick={reset}>Clear all</button>
       {/if}
+      <div class="sortf">
+        <label for="sort" class="small text-2">Sort</label>
+        <select id="sort" bind:value={query.sort}>
+          <option value="relevance">Best match</option>
+          <option value="name">Name, A to Z</option>
+          <option value="status">Status, then name</option>
+        </select>
+      </div>
       <div class="seg" role="group" aria-label="View">
         <button
           type="button"
@@ -177,24 +276,59 @@
     <div class="empty box" data-testid="empty">
       <h2>No widgets match</h2>
       <p class="text-2">
-        Nothing in the registry matches these filters. Try fewer words or clear them.
+        {#if query.q.trim()}Nothing matches <q class="typed">{query.q}</q> with these filters.{:else}Nothing
+          in the registry matches these filters.{/if} Try fewer words, or start from one of these.
       </p>
-      <button class="btn-primary small" type="button" onclick={() => (query = clearFilters(query))}>
-        Clear filters
-      </button>
+      <div class="sugg">
+        <p class="small text-2">Suggested searches</p>
+        <ul class="chiprow">
+          {#each tags as t (t)}
+            <li>
+              <button
+                class="chip"
+                type="button"
+                onclick={() => {
+                  query = { ...clearFilters(query), q: t };
+                  save(t);
+                }}>{t}</button
+              >
+            </li>
+          {/each}
+        </ul>
+      </div>
+      <div class="sugg">
+        <p class="small text-2">Browse by category</p>
+        <ul class="chiprow">
+          {#each options.categories as c (c)}
+            <li>
+              <button
+                class="chip"
+                type="button"
+                onclick={() => (query = { ...clearFilters(query), cat: [c] })}
+                >{categoryLabels[c]}</button
+              >
+            </li>
+          {/each}
+        </ul>
+      </div>
+      <button class="btn-primary small" type="button" onclick={reset}>Clear all</button>
     </div>
   {:else if query.view === 'list'}
     <ul class="list" data-testid="list">
       {#each results as w (w.id)}
         <li data-status={w.status}>
           <div class="main">
-            <h2><a href={resolve('/widgets/[id]', { id: w.id })}>{w.name}</a></h2>
-            <p class="small text-2">{w.summary}</p>
+            <h2>
+              <a href={resolve('/widgets/[id]', { id: w.id })} onclick={() => save(query.q)}
+                ><Highlight text={w.name} {tokens} /></a
+              >
+            </h2>
+            <p class="small text-2"><Highlight text={w.summary} {tokens} /></p>
           </div>
           <dl class="facts small">
             <div>
-              <dt>Category</dt>
-              <dd>{categoryLabels[w.category]}</dd>
+              <dt>Categories</dt>
+              <dd>{w.categories.map((c) => categoryLabels[c]).join(', ')}</dd>
             </div>
             <div>
               <dt>Status</dt>
@@ -222,14 +356,18 @@
             {/if}
           </div>
           <div class="body">
-            <h2><a href={resolve('/widgets/[id]', { id: w.id })}>{w.name}</a></h2>
-            <p class="small text-2">{w.summary}</p>
+            <h2>
+              <a href={resolve('/widgets/[id]', { id: w.id })} onclick={() => save(query.q)}
+                ><Highlight text={w.name} {tokens} /></a
+              >
+            </h2>
+            <p class="small text-2"><Highlight text={w.summary} {tokens} /></p>
             <Badges {w} />
             <p class="tiny muted">{tierLabels[w.tier].text}{note ? ` ${note}.` : ''}</p>
             <dl class="facts small">
               <div>
-                <dt>Category</dt>
-                <dd>{categoryLabels[w.category]}</dd>
+                <dt>Categories</dt>
+                <dd>{w.categories.map((c) => categoryLabels[c]).join(', ')}</dd>
               </div>
             </dl>
           </div>
@@ -258,10 +396,91 @@
     padding-block: 16px;
     border-block: 1px solid var(--border);
   }
+  .recent {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+  }
+  .chiprow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 32px;
+    padding: 0 12px;
+    font: 400 14px / 20px var(--font-mono);
+    color: var(--text);
+    background: transparent;
+    border: 1px solid var(--border-strong);
+    cursor: pointer;
+  }
+  .chip:hover {
+    background: var(--surface-2);
+  }
+  .chip[aria-pressed='true'] {
+    color: var(--brand-ink);
+    background: var(--brand);
+    border-color: var(--brand);
+  }
+  .chip .n {
+    min-width: 2ch;
+    text-align: center;
+    color: var(--text-2);
+  }
+  .chip[aria-pressed='true'] .n {
+    color: var(--brand-ink);
+  }
+  .linkbtn {
+    padding: 0;
+    font: inherit;
+    color: var(--text);
+    background: none;
+    border: 0;
+    text-decoration: underline;
+    text-decoration-color: var(--brand);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+    cursor: pointer;
+  }
+  .achip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-height: 32px;
+    padding-left: 12px;
+    font-size: 14px;
+    background: var(--surface-2);
+    border: 1px solid var(--border-strong);
+  }
+  .achip button {
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 30px;
+    padding: 0;
+    color: var(--text);
+    background: transparent;
+    border: 0;
+    cursor: pointer;
+  }
+  .achip button:hover {
+    background: var(--surface);
+  }
+  .more summary {
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--text-2);
+  }
   .selects {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr));
     gap: 12px;
+    padding-top: 12px;
   }
   .field {
     display: flex;
@@ -274,7 +493,6 @@
     line-height: 20px;
     color: var(--text-2);
   }
-  input,
   select {
     width: 100%;
     min-height: 40px;
@@ -285,12 +503,6 @@
     border: 1px solid var(--border-strong);
     border-radius: 0;
   }
-  input::placeholder {
-    color: var(--muted);
-  }
-  .hint {
-    line-height: 20px;
-  }
   .bar {
     display: flex;
     flex-wrap: wrap;
@@ -298,8 +510,21 @@
     justify-content: space-between;
     gap: 12px;
   }
+  .count {
+    min-height: 24px;
+    margin: 0;
+  }
   .actions {
     align-items: center;
+  }
+  .sortf {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .sortf select {
+    width: auto;
+    min-height: 32px;
   }
   .seg {
     display: inline-flex;
@@ -325,7 +550,18 @@
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    gap: 12px;
+    gap: 16px;
+  }
+  .empty p {
+    margin: 0;
+  }
+  .typed {
+    overflow-wrap: anywhere;
+  }
+  .sugg {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
   }
 
   ul {

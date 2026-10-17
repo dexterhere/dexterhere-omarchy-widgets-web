@@ -298,7 +298,7 @@ export interface Listing {
   id: string;
   repo: string;
   commit: string;
-  category: RegistryWidget['category'];
+  categories: RegistryWidget['categories'];
   tags: string[];
   summary: string;
   status: 'planned' | 'alpha' | 'stable' | 'removed';
@@ -357,8 +357,13 @@ async function buildOne(l: Listing, inp: BuildInput): Promise<RegistryWidget> {
     };
   if (manifest.id !== l.id || w.id !== l.id)
     throw new Error('id mismatch across listing, manifest.json and widget.json');
-  if (w.category !== l.category)
-    throw new Error('category differs between listing and widget.json');
+  // widget.json names the primary category; the listing may add up to two more. The primary
+  // comes first, the rest are sorted, so the output never depends on listing order.
+  const cats = [...new Set(l.categories)];
+  if (!cats.length || cats.length > 3) throw new Error('categories must hold 1 to 3 slugs');
+  if (!cats.includes(w.category))
+    throw new Error('widget.json category is not one of the listing categories');
+  const categories = [w.category, ...cats.filter((c) => c !== w.category).sort()];
 
   // The tier is NEVER taken from widget.json (author controlled) or the listing. Only a
   // maintainer review record for this exact commit can grant core, verified or spec.
@@ -396,7 +401,8 @@ async function buildOne(l: Listing, inp: BuildInput): Promise<RegistryWidget> {
     license: manifest.license as string,
     repo: l.repo,
     commit: l.commit,
-    category: l.category,
+    category: categories[0],
+    categories,
     tags: l.tags,
     status: l.status as RegistryWidget['status'],
     tier,
@@ -468,7 +474,7 @@ export async function buildRegistry(inp: BuildInput): Promise<BuildResult> {
       total: widgets.length,
       byStatus: tally(widgets.map((w) => w.status)),
       byTier: tally(widgets.map((w) => w.tier)),
-      byCategory: tally(widgets.map((w) => w.category))
+      byCategory: tally(widgets.flatMap((w) => w.categories))
     },
     widgets
   };

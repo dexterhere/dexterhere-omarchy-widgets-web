@@ -73,7 +73,10 @@ export interface RegistryWidget {
   license: string;
   repo: string;
   commit: string;
+  /** Primary category: the first entry of `categories`. */
   category: Category;
+  /** 1 to 3 categories, primary first. The gallery lists the widget under each. */
+  categories: Category[];
   tags: string[];
   status: Status;
   tier: Tier;
