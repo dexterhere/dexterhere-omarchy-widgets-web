@@ -23,6 +23,7 @@ crons = ["17 3 * * *"]
 
 # Secrets (not in this file):
 #   wrangler secret put STATS_SECRET
+#   wrangler secret put ID_SECRET               (set once, never change)
 #   wrangler secret put STATS_SECRET_PREVIOUS   (only while rotating)
 
 # No request logging for this Worker, so nothing about visitors is kept:

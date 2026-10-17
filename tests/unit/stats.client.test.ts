@@ -3,6 +3,7 @@ import { isWidgetId } from '../../src/lib/stats/id';
 import { LIKED_KEY, LocalStatsProvider, MAX_LIKED } from '../../src/lib/stats/local';
 import { connectSrc, statsOrigin } from '../../src/lib/stats/origin';
 import {
+  MAX_POW_BITS,
   TOKEN_KEY,
   MAX_RESPONSE_BYTES,
   RemoteStatsProvider,
@@ -242,12 +243,29 @@ describe('RemoteStatsProvider', () => {
       expect(paths(calls)).toEqual(['/challenge', '/token']);
       expect(p.isLiked(A)).toBe(true); // kept locally
     });
-    it('drops the token after a 401 so the next write gets a fresh one', async () => {
-      const { f } = server({ writeStatus: 401 });
+    it('after a 401 the next write renews, presenting the old token to keep the identity', async () => {
+      ls.m.set(TOKEN_KEY, TOKEN);
+      const { f, calls } = server({ writeStatus: 401 });
       const p = new RemoteStatsProvider(ORIGIN, f);
       await p.like(A);
       await p.settled();
-      expect(ls.m.get(TOKEN_KEY)).toBe('');
+      await p.unlike(A);
+      await p.settled();
+      expect(paths(calls)).toEqual([`/like/${A}`, '/challenge', '/token', `/like/${A}`]);
+      const tokenCall = calls[2].init.headers as Record<string, string>;
+      expect(tokenCall['x-previous-token']).toBe(TOKEN);
+    });
+    it('refuses a challenge above the client maximum and never burns CPU on it', async () => {
+      const f = vi.fn(async (url: string) =>
+        json(
+          url.endsWith('/challenge') ? { challenge: 'c'.repeat(40), bits: MAX_POW_BITS + 1 } : {}
+        )
+      );
+      const p = new RemoteStatsProvider(ORIGIN, f as unknown as typeof fetch);
+      await p.like(A);
+      await p.settled();
+      expect(f).toHaveBeenCalledTimes(1);
+      expect(MAX_POW_BITS).toBe(22);
     });
     it('keeps the like locally when the service fails', async () => {
       const p = new RemoteStatsProvider(ORIGIN, (async () => {

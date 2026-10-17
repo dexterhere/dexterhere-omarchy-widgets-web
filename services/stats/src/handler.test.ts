@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { leadingZeroBits, networkPrefix, powOk } from './auth';
+import { leadingZeroBits, networkPrefix, networkPrefixes, powOk } from './auth';
 import { createHandler, hmac } from './handler';
 import { memoryStore } from './store';
 
@@ -23,6 +23,8 @@ function setup(
     bits?: number;
     secret?: string;
     previousSecret?: string;
+    idSecret?: string;
+    adaptive?: { threshold: number; step: number };
   } = {}
 ) {
   let t = opts.t ?? Date.UTC(2026, 9, 17, 12);
@@ -35,7 +37,16 @@ function setup(
     allowedOrigins: [ORIGIN],
     now: () => t,
     powBits: bits,
-    limits: { tokenGlobal: 10_000, netToken: 10_000, ...opts.limits }
+    limits: {
+      tokenGlobal: 10_000,
+      netToken: 10_000,
+      netTokenCoarse: 10_000,
+      issuePerMinute: 10_000,
+      issuePerHour: 100_000,
+      ...opts.limits
+    },
+    adaptive: opts.adaptive,
+    idSecret: opts.idSecret
   });
   const call = (
     method: string,
@@ -385,7 +396,7 @@ describe('rate limits', () => {
     expect(await w(t3, '203.0.113.9')).toBe(429);
     expect(await w(t3, '203.0.114.9')).toBe(204); // other /24
     const keys = store.keys().filter((k) => k.startsWith('r:nw:'));
-    expect(keys.length).toBe(2);
+    expect(keys.length).toBe(3); // two /24 buckets and one shared /16
     for (const k of store.keys()) {
       expect(k).not.toMatch(/203[.:]0[.:]11[34]/);
       expect(k).not.toContain('203.0.113');
@@ -486,7 +497,7 @@ describe('CORS', () => {
     expect(r.headers.get('access-control-allow-origin')).toBe(ORIGIN);
     expect(r.headers.get('access-control-allow-methods')).toBe('GET, POST, DELETE, OPTIONS');
     expect(r.headers.get('access-control-allow-headers')).toBe(
-      'x-client-token, x-challenge, x-pow'
+      'x-client-token, x-challenge, x-pow, x-previous-token'
     );
     expect(r.headers.get('access-control-allow-credentials')).toBeNull();
   });
@@ -585,5 +596,255 @@ describe('errors and logging', () => {
       );
     expect((await req(A)).status).toBe(204);
     expect((await req(B)).status).toBe(400);
+  });
+});
+
+const DAYMS = 86400_000;
+
+describe('stable identity across renewal and rotation', () => {
+  const renew = async (
+    s: ReturnType<typeof setup>,
+    prev?: string,
+    ip?: string
+  ): Promise<string> => {
+    const ipH: Record<string, string> = ip ? { 'cf-connecting-ip': ip } : {};
+    const c = (await (await s.call('GET', '/challenge', ipH)).json()) as {
+      challenge: string;
+      bits: number;
+    };
+    const r = await s.call('POST', '/token', {
+      ...ipH,
+      'x-challenge': c.challenge,
+      'x-pow': await solve(c.challenge, c.bits),
+      ...(prev ? { 'x-previous-token': prev } : {})
+    });
+    expect(r.status).toBe(200);
+    return ((await r.json()) as { token: string }).token;
+  };
+  const ident = (t: string) => t.split('.')[1];
+
+  it('renewing after expiry keeps the identity: unlike works, no double count', async () => {
+    const s = setup();
+    const old = await s.mint();
+    await s.call('POST', `/like/${A}`, s.tk(old));
+    await s.call('POST', `/view/${A}`, s.tk(old));
+    expect((await s.stats(A))[A]).toEqual({ views: 1, likes: 1 });
+    s.advance(31 * DAYMS);
+    expect((await s.call('POST', `/like/${A}`, s.tk(old))).status).toBe(401);
+    const fresh = await renew(s, old);
+    expect(fresh).not.toBe(old);
+    expect(ident(fresh)).toBe(ident(old));
+    await s.call('POST', `/like/${A}`, s.tk(fresh)); // does not double count
+    expect((await s.stats(A))[A].likes).toBe(1);
+    await s.call('DELETE', `/like/${A}`, s.tk(fresh));
+    expect((await s.stats(A))[A].likes).toBe(0);
+  });
+  it('signing-secret rotation keeps identity (renewal under the new secret)', async () => {
+    const a = setup({ secret: 'o'.repeat(40), idSecret: 'i'.repeat(40) });
+    const old = await a.mint();
+    await a.call('POST', `/like/${A}`, a.tk(old));
+    // same store, new signing secret, same ID_SECRET, old secret as previous
+    const h = createHandler({
+      store: a.store,
+      secret: 'n'.repeat(40),
+      previousSecret: 'o'.repeat(40),
+      idSecret: 'i'.repeat(40),
+      allowedOrigins: [ORIGIN],
+      now: () => Date.UTC(2026, 9, 17, 12),
+      powBits: 6
+    });
+    const c = (await (
+      await h(new Request('https://s/challenge', { headers: { origin: ORIGIN } }))
+    ).json()) as { challenge: string; bits: number };
+    const tr = await h(
+      new Request('https://s/token', {
+        method: 'POST',
+        headers: {
+          origin: ORIGIN,
+          'x-challenge': c.challenge,
+          'x-pow': await solve(c.challenge, c.bits),
+          'x-previous-token': old
+        }
+      })
+    );
+    const fresh = ((await tr.json()) as { token: string }).token;
+    expect(ident(fresh)).toBe(ident(old));
+    const del = await h(
+      new Request(`https://s/like/${A}`, {
+        method: 'DELETE',
+        headers: { origin: ORIGIN, 'x-client-token': fresh }
+      })
+    );
+    expect(del.status).toBe(204);
+    expect((await a.stats(A))[A].likes).toBe(0);
+  });
+  it('tokens older than the one-year grace, forged or foreign start a new identity', async () => {
+    const s = setup();
+    const old = await s.mint();
+    s.advance((30 + 366) * DAYMS);
+    expect(ident(await renew(s, old))).not.toBe(ident(old));
+    const s2 = setup();
+    const tok = await s2.mint();
+    const [v, r, e] = tok.split('.');
+    expect(ident(await renew(s2, `${v}.${r}.${e}.${'0'.repeat(64)}`))).not.toBe(r);
+    expect(ident(await renew(s2, 'garbage'))).not.toBe(r);
+    const other = setup({ secret: 'q'.repeat(40) });
+    expect(ident(await renew(s2, await other.mint()))).not.toBe(ident(tok));
+  });
+  it('within the grace window an expired token renews', async () => {
+    const s = setup();
+    const old = await s.mint();
+    s.advance((30 + 300) * DAYMS);
+    expect(ident(await renew(s, old))).toBe(ident(old));
+  });
+});
+
+describe('extra rate tiers, issuance caps and adaptive difficulty', () => {
+  it('prefix tiers: IPv4 /24 + /16 and IPv6 /48 + /32', () => {
+    expect(networkPrefixes('203.0.113.7')).toEqual(['4:203.0.113', '4:203.0']);
+    expect(networkPrefixes('2001:db8:1234:5678::1')).toEqual(['6:2001:db8:1234', '6:2001:db8']);
+    expect(networkPrefixes('nope')).toEqual([]);
+    expect(networkPrefix('1.2.3.4')).toBe('4:1.2.3');
+  });
+  it('the coarse tier catches many /24s (IPv4) and many /48s (IPv6) in one parent', async () => {
+    const s = setup({ limits: { netWrite: 100, netWriteCoarse: 3 } });
+    const toks = [await s.mint(), await s.mint(), await s.mint(), await s.mint()];
+    const w = (t: string, ip: string) =>
+      s.call('POST', `/view/${A}`, { ...s.tk(t), 'cf-connecting-ip': ip }).then((r) => r.status);
+    expect([
+      await w(toks[0], '10.1.1.1'),
+      await w(toks[1], '10.1.2.1'),
+      await w(toks[2], '10.1.3.1')
+    ]).toEqual([204, 204, 204]);
+    expect(await w(toks[3], '10.1.4.1')).toBe(429); // new /24, same /16
+    const s6 = setup({ limits: { netWrite: 100, netWriteCoarse: 2 } });
+    const t6 = [await s6.mint(), await s6.mint(), await s6.mint()];
+    const w6 = (t: string, ip: string) =>
+      s6.call('POST', `/view/${A}`, { ...s6.tk(t), 'cf-connecting-ip': ip }).then((r) => r.status);
+    expect([await w6(t6[0], '2001:db8:1::1'), await w6(t6[1], '2001:db8:2::1')]).toEqual([
+      204, 204
+    ]);
+    expect(await w6(t6[2], '2001:db8:3::1')).toBe(429);
+    expect(await w6(t6[2], '2001:db9:3::1')).toBe(204); // different /32
+  });
+  it('global issuance caps apply even with an address header, with Retry-After', async () => {
+    const s = setup({ limits: { issuePerMinute: 2, issuePerHour: 100 } });
+    await s.mint('198.51.100.1');
+    await s.mint('192.0.2.1');
+    const c = (await (
+      await s.call('GET', '/challenge', { 'cf-connecting-ip': '203.0.113.1' })
+    ).json()) as { challenge: string; bits: number };
+    const r = await s.call('POST', '/token', {
+      'cf-connecting-ip': '203.0.113.1',
+      'x-challenge': c.challenge,
+      'x-pow': await solve(c.challenge, c.bits)
+    });
+    expect(r.status).toBe(429);
+    expect(r.headers.get('retry-after')).toBe('60');
+    expect(await r.text()).toBe('{"error":"rate_limited"}');
+    s.advance(61_000);
+    await s.mint();
+    const h = setup({ limits: { issuePerMinute: 100, issuePerHour: 2 } });
+    await h.mint();
+    await h.mint();
+    const c2 = (await (await h.call('GET', '/challenge')).json()) as {
+      challenge: string;
+      bits: number;
+    };
+    const r2 = await h.call('POST', '/token', {
+      'x-challenge': c2.challenge,
+      'x-pow': await solve(c2.challenge, c2.bits)
+    });
+    expect(r2.status).toBe(429);
+    expect(r2.headers.get('retry-after')).toBe('3600');
+  });
+  it('raises the difficulty when issuance is busy, and verifies the difficulty it signed', async () => {
+    const s = setup({ bits: 6, adaptive: { threshold: 2, step: 3 } });
+    const bitsNow = async () =>
+      ((await (await s.call('GET', '/challenge')).json()) as { bits: number }).bits;
+    expect(await bitsNow()).toBe(6);
+    await s.mint();
+    await s.mint();
+    expect(await bitsNow()).toBe(9);
+    // a solution good for 6 bits but not 9 is refused against a busy challenge
+    const c = (await (await s.call('GET', '/challenge')).json()) as {
+      challenge: string;
+      bits: number;
+    };
+    const weak = await solve(c.challenge, 6, async (x) => powOk(c.challenge, x, 9));
+    expect(
+      (await s.call('POST', '/token', { 'x-challenge': c.challenge, 'x-pow': weak })).status
+    ).toBe(400);
+    // the difficulty cannot be edited down
+    const [n, e, , m] = c.challenge.split('.');
+    expect(
+      (await s.call('POST', '/token', { 'x-challenge': `${n}.${e}.6.${m}`, 'x-pow': weak })).status
+    ).toBe(400);
+    s.advance(61_000);
+    expect(await bitsNow()).toBe(6);
+  });
+  it('never asks for more than the 22-bit maximum', async () => {
+    const s = setup({ bits: 30, adaptive: { threshold: 0, step: 10 } });
+    expect(((await (await s.call('GET', '/challenge')).json()) as { bits: number }).bits).toBe(22);
+  });
+});
+
+describe('request bodies', () => {
+  const fakeReq = (method: string, headers: Record<string, string>, body: ReadableStream | null) =>
+    ({
+      url: `https://s.example/stats?ids=${A}`,
+      method,
+      headers: new Headers({ origin: ORIGIN, ...headers }),
+      body
+    }) as unknown as Request;
+  const stream = () => {
+    const state = { pulls: 0, cancelled: false };
+    const body = new ReadableStream<Uint8Array>({
+      pull(c) {
+        state.pulls++;
+        c.enqueue(new Uint8Array(512)); // never ends
+      },
+      cancel() {
+        state.cancelled = true;
+      }
+    });
+    return { state, body };
+  };
+  it('rejects any body with 413 without reading it (chunked, lying length, huge length)', async () => {
+    const { mint, tk, call } = setup();
+    const t = tk(await mint());
+    const chunked = await call('POST', `/like/${A}`, { ...t, 'transfer-encoding': 'chunked' });
+    expect(chunked.status).toBe(413);
+    expect(
+      (await call('POST', `/like/${A}`, { ...t, 'content-length': '999999999999' })).status
+    ).toBe(413);
+    expect((await call('POST', `/like/${A}`, t, 'x')).status).toBe(413); // body, length lies low or absent
+    expect((await call('POST', `/token`, {}, 'x')).status).toBe(413);
+    expect((await call('POST', `/like/${A}`, { ...t, 'content-length': '1' })).status).toBe(413);
+    expect((await call('POST', `/like/${A}`, { ...t, 'content-length': 'abc' })).status).toBe(413);
+  });
+  it('refuses a body on GET, HEAD and OPTIONS', async () => {
+    const { h } = setup();
+    for (const m of ['GET', 'HEAD', 'OPTIONS']) {
+      const { body } = stream();
+      expect((await h(fakeReq(m, {}, body))).status).toBe(413);
+    }
+    for (const m of ['GET', 'HEAD', 'OPTIONS'])
+      expect((await h(fakeReq(m, { 'content-length': '5' }, null))).status).toBe(413);
+  });
+  it('cancels an endless stream and never reads it', async () => {
+    const { h } = setup();
+    const { state, body } = stream();
+    const r = await h(fakeReq('POST', {}, body));
+    expect(r.status).toBe(413);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(state.cancelled).toBe(true);
+    expect(state.pulls).toBeLessThanOrEqual(1); // only the stream's own initial fill, never our reads
+  });
+  it('rate limits by network before touching the token', async () => {
+    const s = setup({ limits: { netWrite: 1 } });
+    const bad = { 'x-client-token': 'junk', 'cf-connecting-ip': '192.0.2.5' };
+    expect((await s.call('POST', `/view/${A}`, bad)).status).toBe(401);
+    expect((await s.call('POST', `/view/${A}`, bad)).status).toBe(429);
   });
 });

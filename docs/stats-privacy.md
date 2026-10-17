@@ -20,7 +20,8 @@ Policy allows connections to that address and no other.
 - Getting a token (once per 30 days, only when you first like something or open a widget): a
   `GET /challenge`, a small calculation in your browser (a proof of work, a second or two, done in
   short slices so the page stays responsive), then a `POST /token`. The token is random and made by
-  the server.
+  the server. When it is renewed (every 30 days) the old token is sent along so the renewed one
+  keeps the same random identity; this is what lets you still unlike after a renewal.
 - Opening a widget page: one `POST /view/<id>` with the token in an `X-Client-Token` header. At
   most once per widget per day per browser.
 - Liking or unliking: `POST` or `DELETE /like/<id>` with the same token.
@@ -34,8 +35,8 @@ Policy allows connections to that address and no other.
   secret. Deleted after 48 hours. Tomorrow's hash is unrelated to today's.
 - Likes: an HMAC of the token's random part and the widget. Deleted when you unlike, or after 400
   days.
-- For abuse limits only: a counter keyed by a salted hash of your network prefix (IPv4 /24 or
-  IPv6 /48, never the full address). The salt changes every day and the counter expires within
+- For abuse limits only: counters keyed by salted hashes of your network prefix (IPv4 /24 and /16,
+  IPv6 /48 and /32, never the full address). The salt changes every day and the counter expires within
   minutes (never more than an hour). It is not stored with a widget, a token or a like, and the
   prefix itself is never written anywhere.
 
@@ -49,6 +50,10 @@ identifies a person.
 - Block the stats origin in your browser or content blocker: the site keeps working, likes stay
   on your device and totals are hidden.
 - Remove your token by clearing site data (`ow-token`); unlike a widget to delete its like row.
+
+**Limits of the service:** the number of new tokens issued per minute and hour is capped for
+everyone, and the work asked for rises when many are requested, so a busy period can delay a
+token (counts hide, nothing else changes).
 
 **Limits of the numbers:** counts are a popularity signal. Someone willing to do the proof of work
 for each token can inflate them, so they never decide anything security-relevant (trust tiers,

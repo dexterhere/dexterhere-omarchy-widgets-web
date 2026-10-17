@@ -1,7 +1,9 @@
 import {
   DEFAULT_POW_BITS,
+  MAX_POW_BITS,
+  RENEW_GRACE_SEC,
   hmac,
-  networkPrefix,
+  networkPrefixes,
   powOk,
   signChallenge,
   signToken,
@@ -17,6 +19,11 @@ export interface Config {
   store: Store;
   /** Server secret for HMAC-SHA-256. Never logged, never returned. */
   secret: string;
+  /**
+   * Key-derivation secret for dedupe keys (views, likes). Keep it stable: changing it orphans
+   * existing likes. Defaults to `secret`, which then must not be rotated casually.
+   */
+  idSecret?: string;
   /** Previous secret, accepted for verifying tokens and challenges during rotation. */
   previousSecret?: string;
   /** Exact origins, e.g. ["https://example.org"]. No wildcard. */
@@ -26,6 +33,8 @@ export interface Config {
   now?: () => number;
   /** Leading zero bits required to get a token. 18 is about a second or two of work. */
   powBits?: number;
+  /** Raise the difficulty by `step` bits when this many tokens were issued in the current minute. */
+  adaptive?: { threshold: number; step: number };
   /** Platform header carrying the client address. Only a salted hash of its coarse prefix is used. */
   ipHeader?: string;
   limits?: Partial<typeof DEFAULT_LIMITS>;
@@ -33,13 +42,22 @@ export interface Config {
 
 // Per minute. `net*` buckets are keyed by a daily-salted hash of the network prefix (or one shared
 // bucket when no address header exists); `perToken` by a hash of the token; `global` is shared.
-const DEFAULT_LIMITS = { perToken: 30, global: 1200, netWrite: 120, netToken: 6, tokenGlobal: 60 };
+const DEFAULT_LIMITS = {
+  perToken: 30,
+  global: 1200,
+  netWrite: 120,
+  netWriteCoarse: 480, // IPv4 /16, IPv6 /32
+  netToken: 6,
+  netTokenCoarse: 24,
+  tokenGlobal: 60, // shared bucket when no address header exists
+  issuePerMinute: 30, // tokens issued in total, always applied
+  issuePerHour: 300
+};
 
 const DAY = 86400;
 const VIEW_TTL = 2 * DAY; // dedupe rows vanish two days after the UTC day they belong to
 const LIKE_TTL = 400 * DAY;
 const RATE_TTL = 120; // every rate-limit key lives at most two minutes
-const MAX_BODY = 1024;
 const METHODS = 'GET, POST, DELETE, OPTIONS';
 
 const SECURITY: Record<string, string> = {
@@ -52,7 +70,9 @@ const SECURITY: Record<string, string> = {
 export function createHandler(cfg: Config): (req: Request) => Promise<Response> {
   const now = cfg.now ?? Date.now;
   const limits = { ...DEFAULT_LIMITS, ...cfg.limits };
-  const bits = cfg.powBits ?? DEFAULT_POW_BITS;
+  const baseBits = Math.min(cfg.powBits ?? DEFAULT_POW_BITS, MAX_POW_BITS);
+  const adaptive = cfg.adaptive ?? { threshold: 20, step: 2 };
+  const idSecret = cfg.idSecret ?? cfg.secret;
   const ipHeader = (cfg.ipHeader ?? 'cf-connecting-ip').toLowerCase();
   const secrets = [cfg.secret, ...(cfg.previousSecret ? [cfg.previousSecret] : [])];
   const origins = new Set(cfg.allowedOrigins.filter((o) => o && o !== '*'));
@@ -84,18 +104,39 @@ export function createHandler(cfg: Config): (req: Request) => Promise<Response> 
   }
 
   /**
-   * Ephemeral bucket key: HMAC(daily salt, coarse network prefix). The address and prefix are
-   * never stored, logged or joined to a token or widget; the key rotates every UTC day and
-   * expires with its window. Without the header (local dev) all traffic shares one bucket.
+   * Ephemeral bucket keys, finest tier first: HMAC(daily salt, coarse network prefix) for IPv4
+   * /24 and /16 or IPv6 /48 and /32. Addresses and prefixes are never stored, logged or joined to
+   * a token or widget; the keys rotate every UTC day and expire with their window. Without the
+   * header (local dev) all traffic shares one bucket.
    */
-  async function netKey(req: Request, day: string): Promise<string> {
-    const prefix = networkPrefix(req.headers.get(ipHeader));
-    if (!prefix) return 'global';
+  async function netKeys(req: Request, day: string): Promise<string[]> {
+    const prefixes = networkPrefixes(req.headers.get(ipHeader));
+    if (!prefixes.length) return ['global'];
     const salt = await hmac(cfg.secret, `salt|${day}`);
-    return (await hmac(salt, `net|${prefix}`)).slice(0, 32);
+    return Promise.all(prefixes.map(async (p) => (await hmac(salt, `net|${p}`)).slice(0, 32)));
+  }
+  /** Checks every tier; all must pass. [fine, coarse] limits, or `shared` without an address. */
+  async function netHit(
+    keys: string[],
+    cls: string,
+    lim: number[],
+    shared: number,
+    minute: number
+  ) {
+    let ok = true;
+    for (let i = 0; i < keys.length; i++)
+      ok = (await hit(`${cls}:${keys[i]}`, keys[0] === 'global' ? shared : lim[i], minute)) && ok;
+    return ok;
   }
 
   async function handle(req: Request): Promise<Response> {
+    // No endpoint takes a body, so any request that has one is refused without reading a byte:
+    // a body stream, a non-zero or unparseable Content-Length, or any Transfer-Encoding.
+    const cl = req.headers.get('content-length');
+    if (req.body !== null || req.headers.has('transfer-encoding') || (cl !== null && cl !== '0')) {
+      void req.body?.cancel().catch(() => {});
+      return fail(413, 'too_large', null);
+    }
     const url = new URL(req.url);
     const origin = req.headers.get('origin');
     const allowed = origin !== null && origins.has(origin);
@@ -107,7 +148,7 @@ export function createHandler(cfg: Config): (req: Request) => Promise<Response> 
     if (req.method === 'OPTIONS') {
       if (!allowed) return fail(403, 'forbidden', null);
       return respond(204, null, origin, {
-        'access-control-allow-headers': 'x-client-token, x-challenge, x-pow',
+        'access-control-allow-headers': 'x-client-token, x-challenge, x-pow, x-previous-token',
         'access-control-max-age': '600',
         'cache-control': 'no-store'
       });
@@ -137,22 +178,36 @@ export function createHandler(cfg: Config): (req: Request) => Promise<Response> 
       const want = route === 'challenge' ? 'GET' : 'POST';
       if (req.method !== want) return fail(405, 'method_not_allowed', origin, { allow: METHODS });
       if (!allowed) return fail(403, 'forbidden', null);
-      const net = await netKey(req, day);
-      if (
-        !(await hit(`nt:${net}`, net === 'global' ? limits.tokenGlobal : limits.netToken, minute))
-      )
+      const keys = await netKeys(req, day);
+      const lim = [limits.netToken, limits.netTokenCoarse];
+      if (!(await netHit(keys, 'nt', lim, limits.tokenGlobal, minute)))
         return fail(429, 'rate_limited', origin, { 'retry-after': '60' });
       if (route === 'challenge') {
-        const challenge = await signChallenge(cfg.secret, nowSec);
+        // Adaptive difficulty: busier minutes cost more work.
+        const busy = (await store.getNumber(`r:ti:m:${minute}`)) >= adaptive.threshold;
+        const bits = Math.min(MAX_POW_BITS, baseBits + (busy ? adaptive.step : 0));
+        const challenge = await signChallenge(cfg.secret, nowSec, bits);
         return respond(200, { challenge, bits }, origin, { 'cache-control': 'no-store' });
       }
       const challenge = req.headers.get('x-challenge');
-      const nonce = await verifyChallenge(secrets, challenge, nowSec);
-      if (!challenge || !nonce || !(await powOk(challenge, req.headers.get('x-pow'), bits)))
+      const ch = await verifyChallenge(secrets, challenge, nowSec);
+      if (!challenge || !ch || !(await powOk(challenge, req.headers.get('x-pow'), ch.bits)))
         return fail(400, 'bad_request', origin);
       // Single use: a solved challenge cannot be replayed for more tokens.
-      if (!(await store.setIfAbsent(`ch:${nonce}`, 150))) return fail(400, 'bad_request', origin);
-      const { token, exp } = await signToken(cfg.secret, nowSec);
+      if (!(await store.setIfAbsent(`ch:${ch.nonce}`, 150)))
+        return fail(400, 'bad_request', origin);
+      // Global issuance caps apply even when an address header is present.
+      if ((await store.incr(`r:ti:m:${minute}`, 1, { ttl: RATE_TTL })) > limits.issuePerMinute)
+        return fail(429, 'rate_limited', origin, { 'retry-after': '60' });
+      if (
+        (await store.incr(`r:ti:h:${Math.floor(minute / 60)}`, 1, { ttl: 7200 })) >
+        limits.issuePerHour
+      )
+        return fail(429, 'rate_limited', origin, { 'retry-after': '3600' });
+      // Renewal keeps the identity (so likes stay revocable); an unknown or too old token starts a new one.
+      const prevHeader = req.headers.get('x-previous-token');
+      const prev = await verifyToken(secrets, prevHeader, nowSec, RENEW_GRACE_SEC);
+      const { token, exp } = await signToken(cfg.secret, nowSec, prev ?? undefined);
       return respond(200, { token, expires: exp }, origin, { 'cache-control': 'no-store' });
     }
 
@@ -169,21 +224,17 @@ export function createHandler(cfg: Config): (req: Request) => Promise<Response> 
       }
       if (!idOk(id)) return fail(400, 'bad_request', origin);
 
-      const declared = Number(req.headers.get('content-length') ?? 0);
-      if (declared > MAX_BODY) return fail(413, 'too_large', origin);
-      if (req.body) {
-        const text = await req.text();
-        if (text.length > MAX_BODY) return fail(413, 'too_large', origin);
-      }
+      // Cheap checks done; limit by network before any token work.
+      const keys = await netKeys(req, day);
+      const wlim = [limits.netWrite, limits.netWriteCoarse];
+      if (!(await netHit(keys, 'nw', wlim, limits.global, minute)))
+        return fail(429, 'rate_limited', origin, { 'retry-after': '60' });
 
       // The identity is the random part of a server-signed token, never a client-chosen value.
       const who = await verifyToken(secrets, req.headers.get('x-client-token'), nowSec);
       if (!who) return fail(401, 'unauthorized', origin);
-
-      const net = await netKey(req, day);
       const tokenHash = await hmac(cfg.secret, `rl|${who}`);
       if (
-        !(await hit(`nw:${net}`, net === 'global' ? limits.global : limits.netWrite, minute)) ||
         !(await hit(`t:${tokenHash}`, limits.perToken, minute)) ||
         !(await hit('g', limits.global, minute))
       )
@@ -194,11 +245,11 @@ export function createHandler(cfg: Config): (req: Request) => Promise<Response> 
         if (req.headers.get('dnt') === '1' || req.headers.get('sec-gpc') === '1')
           return respond(204, null, origin, { 'cache-control': 'no-store' });
         // The day is inside the HMAC input, so the same browser has an unrelated key each day.
-        const key = `v:${id}:${day}:${await hmac(cfg.secret, `view|${day}|${id}|${who}`)}`;
+        const key = `v:${id}:${day}:${await hmac(idSecret, `view|${day}|${id}|${who}`)}`;
         if (await store.setIfAbsent(key, VIEW_TTL)) await store.incr(`cv:${id}`, 1);
       } else {
         // Per widget and no date: a like must stay revocable, but keys of different widgets do not link.
-        const key = `l:${id}:${await hmac(cfg.secret, `like|${id}|${who}`)}`;
+        const key = `l:${id}:${await hmac(idSecret, `like|${id}|${who}`)}`;
         if (req.method === 'POST') {
           if (await store.setIfAbsent(key, LIKE_TTL)) await store.incr(`cl:${id}`, 1);
         } else if (await store.delete(key)) await store.incr(`cl:${id}`, -1);

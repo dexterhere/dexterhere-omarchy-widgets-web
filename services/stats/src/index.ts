@@ -6,6 +6,8 @@ export interface Env {
   DB: D1Like;
   /** Secret: `wrangler secret put STATS_SECRET` (32+ random bytes, hex or base64). */
   STATS_SECRET: string;
+  /** Stable key-derivation secret for dedupe keys. Set once and do not rotate (it would orphan likes). */
+  ID_SECRET?: string;
   /** Optional secret: the previous STATS_SECRET during rotation (tokens signed with it stay valid). */
   STATS_SECRET_PREVIOUS?: string;
   /** Comma-separated exact origins, e.g. `https://example.org,https://www.example.org`. */
@@ -27,6 +29,7 @@ export default {
     return createHandler({
       store: d1Store(env.DB),
       secret: env.STATS_SECRET,
+      idSecret: env.ID_SECRET || undefined,
       previousSecret: env.STATS_SECRET_PREVIOUS || undefined,
       allowedOrigins: list(env.ALLOWED_ORIGINS),
       widgetIds: env.WIDGET_IDS ? list(env.WIDGET_IDS) : undefined

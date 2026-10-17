@@ -8,7 +8,8 @@ export const TIMEOUT_MS = 3000;
 export const MAX_RESPONSE_BYTES = 16 * 1024;
 export const MAX_IDS = 50;
 export const TOKEN_KEY = 'ow-token';
-const MAX_POW_BITS = 24;
+/** Highest difficulty this client will solve (2^22 hashes). A server asking for more is ignored. */
+export const MAX_POW_BITS = 22;
 const TOKEN_RE = /^v1\.[0-9a-f]{32}\.[0-9]{1,12}\.[0-9a-f]{64}$/;
 export const VIEWED_KEY = 'ow-viewed';
 const MAX_VIEWED = 500;
@@ -40,9 +41,10 @@ export class RemoteStatsProvider implements StatsProvider {
    * A server-issued token (proves a small proof-of-work was done), kept in localStorage, never a
    * cookie, and sent only to the stats origin on writes. Fetched lazily, shared by concurrent calls.
    */
+  private stale = false;
   private tokenPromise: Promise<string | null> | undefined;
   private getToken(): Promise<string | null> {
-    const cur = readToken(this.now());
+    const cur = this.stale ? null : readToken(this.now());
     if (cur) return Promise.resolve(cur);
     this.tokenPromise ??= this.acquireToken().finally(() => (this.tokenPromise = undefined));
     return this.tokenPromise;
@@ -57,13 +59,17 @@ export class RemoteStatsProvider implements StatsProvider {
       return null;
     const solution = await solvePow(j.challenge, bits as number);
     if (solution === null) return null;
+    // Renewal: present the old token (even expired) so the server keeps the same identity.
+    const old = readItem(TOKEN_KEY);
     const t = await this.call('POST', '/token', {
       'x-challenge': j.challenge,
-      'x-pow': solution
+      'x-pow': solution,
+      ...(old && TOKEN_RE.test(old) ? { 'x-previous-token': old } : {})
     });
     const r = t.ok && isObj(t.json) ? t.json : null;
     if (!r || typeof r.token !== 'string' || !TOKEN_RE.test(r.token)) return null;
     writeItem(TOKEN_KEY, r.token);
+    this.stale = false;
     return r.token;
   }
 
@@ -72,7 +78,7 @@ export class RemoteStatsProvider implements StatsProvider {
     const token = await this.getToken();
     if (!token) return;
     const r = await this.call(method, path, { 'x-client-token': token });
-    if (r.status === 401) writeItem(TOKEN_KEY, ''); // expired or rotated: get a new one next time
+    if (r.status === 401) this.stale = true; // expired or rotated: renew (same identity) next time
   }
 
   private pending: Promise<unknown> = Promise.resolve();
