@@ -24,6 +24,15 @@ function watch(page: Page) {
   return problems;
 }
 
+/** "/" opens the search; retry until the page has hydrated and the handler is attached. */
+const openSearch = (page: Page) =>
+  expect(async () => {
+    await page.keyboard.press('/');
+    await expect(page.getByRole('dialog', { name: 'Search the docs' })).toBeVisible({
+      timeout: 1000
+    });
+  }).toPass();
+
 const docsLink = (page: Page) =>
   page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Docs' });
 
@@ -192,9 +201,8 @@ test('assets and search (pagefind index and wasm) work on the docs host', async 
   expect(seen.some((s) => s.url.endsWith('.woff2') && s.type === 'font/woff2')).toBe(true);
   await expect(page.locator('html')).toHaveAttribute('data-theme', /.+/);
 
-  await page.keyboard.press('/');
   const dialog = page.getByRole('dialog', { name: 'Search the docs' });
-  await expect(dialog).toBeVisible();
+  await openSearch(page);
   await page.keyboard.type('vault');
   const hits = dialog.getByRole('option');
   await expect(hits.first()).toBeVisible();
@@ -265,7 +273,7 @@ test('no request leaves the two local hosts', async ({ page }) => {
   await page.goto(`${SITE}/widgets/`);
   await page.goto(`${DOCS}${START}`);
   await page.waitForLoadState('networkidle');
-  await page.keyboard.press('/');
+  await openSearch(page);
   await page.keyboard.type('vault');
   await page.getByRole('dialog', { name: 'Search the docs' }).getByRole('option').first().waitFor();
   await page.getByRole('button', { name: /Version:/ }).click({ force: true });
