@@ -160,7 +160,11 @@
         </div>
         {#if manualCmd}
           <div class="cmd">
-            <p class="small">Manual alternative, pinned to the commit below:</p>
+            <p class="small">
+              Manual alternative. This installs the latest commit of the repository, not the pinned
+              one; pinned installs are planned with <code>ow install</code>. Compare the commit you
+              get with the one listed below before you trust it:
+            </p>
             <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
             <pre tabindex="0"><code>{manualCmd}</code></pre>
             <CopyButton text={manualCmd} label="Copy manual command" />
@@ -238,7 +242,7 @@
     <section class="block" aria-labelledby="h-settings">
       <h2 id="h-settings">Settings</h2>
       {#if w.settings.length}
-        <div class="scroll" role="region" aria-label="Settings table" tabindex="-1">
+        <div class="scroll" role="region" aria-label="Settings table" tabindex="0">
           <table class="small">
             <thead>
               <tr
