@@ -1,6 +1,7 @@
 // Registry build. Validates listings, fetches DATA (two JSON files) at a pinned commit, derives
 // everything from them and writes registry/dist. It never executes anything from a widget repo.
-// Usage: bun scripts/build-registry.ts [--offline] [--out registry/dist]
+// Usage: bun scripts/build-registry.ts [--offline] [--skip-reachability] [--out registry/dist]
+// --skip-reachability is for local development only; CI must never use it.
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -17,6 +18,7 @@ import type {
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const REG = join(ROOT, 'registry');
 const RAW_HOST = 'raw.githubusercontent.com';
+const API_HOST = 'api.github.com';
 
 export const LIMITS = { timeoutMs: 10_000, maxBytes: 256 * 1024, maxListingBytes: 8 * 1024 };
 
@@ -54,7 +56,7 @@ const errText = (v: { errors?: { instancePath: string; message?: string }[] | nu
 // ---------- safe fetching ----------
 export type FetchFn = (url: string, init: RequestInit) => Promise<Response>;
 
-/** Only https://raw.githubusercontent.com/..., nothing else: no userinfo, port, other host or scheme. */
+/** Only https://raw.githubusercontent.com/... and https://api.github.com/...: no userinfo, port, other host or scheme. */
 export function assertAllowedUrl(raw: string): URL {
   let u: URL;
   try {
@@ -65,14 +67,15 @@ export function assertAllowedUrl(raw: string): URL {
   if (u.protocol !== 'https:') throw new Error(`rejected URL: scheme ${u.protocol} not allowed`);
   if (u.username || u.password) throw new Error('rejected URL: credentials in URL');
   if (u.port) throw new Error('rejected URL: explicit port');
-  if (u.hostname !== RAW_HOST) throw new Error(`rejected URL: host ${u.hostname} not allow-listed`);
+  if (u.hostname !== RAW_HOST && u.hostname !== API_HOST)
+    throw new Error(`rejected URL: host ${u.hostname} not allow-listed`);
   if (u.search || u.hash) throw new Error('rejected URL: query or fragment');
   return u;
 }
 
 export async function fetchJson(
   rawUrl: string,
-  opts: { fetch?: FetchFn; timeoutMs?: number; maxBytes?: number } = {}
+  opts: { fetch?: FetchFn; timeoutMs?: number; maxBytes?: number; token?: string } = {}
 ): Promise<Record<string, unknown>> {
   const url = assertAllowedUrl(rawUrl);
   const { timeoutMs = LIMITS.timeoutMs, maxBytes = LIMITS.maxBytes } = opts;
@@ -86,12 +89,18 @@ export async function fetchJson(
     }, timeoutMs);
   });
   const work = (async () => {
-    // No Authorization or cookie headers are ever sent; redirects are errors, not followed.
+    // The token (if any) goes ONLY to api.github.com, never to the raw host. No cookies are sent;
+    // redirects are errors, not followed.
     const res = await doFetch(url.href, {
       redirect: 'error',
       signal: ctl.signal,
       credentials: 'omit',
-      headers: { accept: 'application/json' }
+      headers: {
+        accept: 'application/json',
+        ...(opts.token && url.hostname === API_HOST
+          ? { authorization: `Bearer ${opts.token}` }
+          : {})
+      }
     });
     if (res.redirected || (res.status >= 300 && res.status < 400))
       throw new Error('rejected: redirect');
@@ -137,6 +146,44 @@ export async function fetchJson(
   } finally {
     clearTimeout(timer);
   }
+}
+
+// ---------- commit reachability ----------
+const OWNER_RE = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/;
+const REPO_RE = /^(?!\.{1,2}$)[A-Za-z0-9._-]{1,100}$/;
+const BRANCH_RE = /^[A-Za-z0-9._+@#~-]+(?:\/[A-Za-z0-9._+@#~-]+)*$/;
+const COMMIT_RE = /^[0-9a-f]{40}$/;
+
+const own = (o: Record<string, unknown>, k: string): unknown =>
+  Object.hasOwn(o, k) ? o[k] : undefined;
+
+/** raw.githubusercontent.com serves a commit from ANY repo in a fork network, so a listing could
+ *  name the victim's repo but pin a fork's commit. Require the commit to be an ancestor of (or
+ *  equal to) the repo's default branch: compare status "behind" or "identical". */
+export async function assertCommitReachable(
+  owner: string,
+  repo: string,
+  commit: string,
+  opts: { fetch?: FetchFn; token?: string } = {}
+): Promise<void> {
+  if (!OWNER_RE.test(owner) || !REPO_RE.test(repo) || !COMMIT_RE.test(commit))
+    throw new Error('reachability: invalid owner, repo or commit');
+  const api = `https://${API_HOST}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
+  const info = await fetchJson(api, opts);
+  const branch = own(info, 'default_branch');
+  if (typeof branch !== 'string' || !BRANCH_RE.test(branch) || branch.includes('..'))
+    throw new Error('reachability: unusable default branch name');
+  const seg = branch.split('/').map(encodeURIComponent).join('/');
+  const cmp = await fetchJson(`${api}/compare/${seg}...${commit}`, opts).catch((e) => {
+    if (e instanceof Error && /HTTP 404/.test(e.message))
+      throw new Error('commit not found in this repository (is it from a fork?)');
+    throw e;
+  });
+  const status = own(cmp, 'status');
+  if (status !== 'behind' && status !== 'identical')
+    throw new Error(
+      `commit is not reachable from the default branch ${branch} (compare status: ${typeof status === 'string' ? status.slice(0, 20) : 'unknown'})`
+    );
 }
 
 // ---------- plain text ----------
@@ -263,6 +310,10 @@ export interface BuildInput {
   listings: { file: string; data: unknown }[];
   fetch?: FetchFn;
   offline?: boolean;
+  /** Local development only. CI must not set this (a test checks ci.yml). */
+  skipReachability?: boolean;
+  /** GitHub token, sent only to api.github.com. */
+  token?: string;
   readFixture: (id: string, name: 'manifest' | 'widget') => unknown;
   readReview: (id: string) => unknown;
   /** registry/namespaces.json: namespace prefix -> allowed GitHub repo owners. */
@@ -286,6 +337,8 @@ async function buildOne(l: Listing, inp: BuildInput): Promise<RegistryWidget> {
   } else {
     if (inp.offline) throw new Error('needs the network, but --offline was given');
     const [, owner, repo] = /^https:\/\/github\.com\/([^/]+)\/([^/]+)$/.exec(l.repo) ?? [];
+    if (!inp.skipReachability)
+      await assertCommitReachable(owner, repo, l.commit, { fetch: inp.fetch, token: inp.token });
     const base = `https://${RAW_HOST}/${owner}/${repo}/${l.commit}`;
     manifest = await fetchJson(`${base}/manifest.json`, { fetch: inp.fetch });
     widget = await fetchJson(`${base}/widget.json`, { fetch: inp.fetch });
@@ -426,6 +479,7 @@ export async function buildRegistry(inp: BuildInput): Promise<BuildResult> {
 async function main() {
   const args = process.argv.slice(2);
   const offline = args.includes('--offline');
+  const skipReachability = args.includes('--skip-reachability');
   const oi = args.indexOf('--out');
   const out = resolve(ROOT, oi >= 0 && args[oi + 1] ? args[oi + 1] : 'registry/dist');
   const dir = join(REG, 'widgets');
@@ -445,6 +499,8 @@ async function main() {
   const { index, widgets, errors } = await buildRegistry({
     listings,
     offline,
+    skipReachability,
+    token: process.env.GITHUB_TOKEN || undefined,
     readFixture: (id, name) => optional(join(REG, 'fixtures', id, `${name}.json`)),
     namespaces: optional(join(REG, 'namespaces.json')),
     readReview: (id) =>

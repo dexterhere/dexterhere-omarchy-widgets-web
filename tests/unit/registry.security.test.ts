@@ -22,7 +22,7 @@ import {
 } from './registry.helpers';
 
 const run = (over: Partial<BuildInput> & { listings: BuildInput['listings'] }) =>
-  buildRegistry({ readFixture: noFixture, readReview: noReview, ...over });
+  buildRegistry({ readFixture: noFixture, readReview: noReview, skipReachability: true, ...over });
 const L = (data: Record<string, unknown> = listing(), file?: string) => ({
   file: file ?? `${data.id}.json`,
   data
@@ -182,6 +182,65 @@ describe('check-review-changes', () => {
   });
   it('passes maintainers, case-insensitively', () => {
     expect(checkReviewChanges({ ...base, changed: review, author: 'DexterHere' }).ok).toBe(true);
+  });
+});
+
+describe('listing author binding', () => {
+  const base = { eventName: 'pull_request', maintainers: ['dexterhere'] };
+  const mine = 'io.github.alice.demo';
+  const ch = (id: string, over: Record<string, unknown> = {}, content?: string | null) => {
+    const l = {
+      path: `registry/widgets/${id}.json`,
+      deleted: false,
+      content: content === undefined ? JSON.stringify({ id }) : content,
+      ...over
+    };
+    return { changed: [l.path], listings: [l] };
+  };
+  const ok = (author: string | undefined, c: ReturnType<typeof ch>) =>
+    checkReviewChanges({ ...base, author, ...c }).ok;
+  it('allows the namespace owner (case-insensitive) and maintainers', () => {
+    expect(ok('alice', ch(mine))).toBe(true);
+    expect(ok('ALICE', ch(mine))).toBe(true);
+    expect(ok('DexterHere', ch(mine))).toBe(true);
+  });
+  it('rejects a stranger, and a namespace of another owner', () => {
+    expect(ok('mallory', ch(mine))).toBe(false);
+    expect(ok('mallory', ch('io.github.mallory.x', {}, JSON.stringify({ id: mine })))).toBe(false);
+    expect(
+      ok('alice', ch('io.github.alice.x', {}, JSON.stringify({ id: 'io.github.bob.x' })))
+    ).toBe(false);
+  });
+  it('rejects a stranger who only changes the commit of an existing listing', () => {
+    const content = JSON.stringify({ id: mine, commit: 'b'.repeat(40) });
+    expect(ok('mallory', ch(mine, {}, content))).toBe(false);
+    expect(ok('alice', ch(mine, {}, content))).toBe(true);
+  });
+  it('lets the owner or a maintainer delete, but not a stranger', () => {
+    const del = ch(mine, { deleted: true, content: null });
+    expect(ok('alice', del)).toBe(true);
+    expect(ok('dexterhere', del)).toBe(true);
+    expect(ok('mallory', del)).toBe(false);
+  });
+  it('needs a maintainer for other namespaces', () => {
+    const c = ch('com.example.demo');
+    expect(ok('alice', c)).toBe(false);
+    expect(ok('dexterhere', c)).toBe(true);
+  });
+  it('fails closed on unreadable, malformed or id-less content and a missing author', () => {
+    for (const content of [null, 'not json', 'null', '{}', '{"id":5}'])
+      expect(ok('alice', ch(mine, {}, content))).toBe(false);
+    expect(ok(undefined, ch(mine))).toBe(false);
+  });
+  it('keeps the guarded-path rule for an owner who also touches review records', () => {
+    const c = ch(mine);
+    const r = checkReviewChanges({
+      ...base,
+      author: 'alice',
+      changed: [...c.changed, 'registry/review/x.json'],
+      listings: c.listings
+    });
+    expect(r.ok).toBe(false);
   });
 });
 

@@ -19,6 +19,8 @@ jobs:
       - run: bun run lint
       - run: bun run themes:check
       - run: bun run registry
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: only maintainers change review records
         run: bun scripts/check-review-changes.ts
       - run: bunx vitest run --passWithNoTests
