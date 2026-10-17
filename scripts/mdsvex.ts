@@ -17,6 +17,20 @@ export interface TocItem {
   depth: 2 | 3;
 }
 
+const ENT: Record<string, string> = {
+  '&lt;': '<',
+  '&gt;': '>',
+  '&amp;': '&',
+  '&quot;': '"',
+  '&#39;': "'",
+  '&#x27;': "'",
+  '&#123;': '{',
+  '&#125;': '}'
+};
+/** Toc text is rendered as text, never HTML: decode a small fixed entity set. */
+export const decodeText = (t: string) =>
+  t.replace(/&(?:lt|gt|amp|quot|#39|#x27|#123|#125);/g, (m) => ENT[m]!);
+
 /** Runs after rehype-slug: lists h2/h3 and exports them as `metadata.toc`. */
 export function rehypeToc() {
   return (tree: object, file: { data: { fm?: Record<string, unknown> } }) => {
@@ -25,7 +39,7 @@ export function rehypeToc() {
       if ((n.tagName === 'h2' || n.tagName === 'h3') && n.properties?.id)
         toc.push({
           id: String(n.properties.id),
-          text: toString(n as never),
+          text: decodeText(toString(n as never)),
           depth: n.tagName === 'h2' ? 2 : 3
         });
     });
@@ -92,8 +106,39 @@ export function safeUrl(v: string): boolean {
       );
     })
     .join('');
+  if (u.startsWith('//') || u.startsWith('\\')) return false; // protocol-relative: external
   const m = /^([a-z][a-z0-9+.-]*):/i.exec(u);
   return !m || ['http', 'https', 'mailto'].includes(m[1]!.toLowerCase());
+}
+
+const attr = (s: string) =>
+  s
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\{/g, '&#123;') // Svelte decodes entities in attributes: a literal brace, not an expression
+    .replace(/\}/g, '&#125;');
+
+/**
+ * ALL pages: mdsvex writes attribute values into the Svelte source unescaped, so a value such as
+ * `x" onerror="y` would break out of its attribute. Entity-encode every string attribute value
+ * and array item of every element (markdown-derived; authored raw HTML is not an element here).
+ */
+export function rehypeEncodeAttrs() {
+  return (tree: object) => {
+    visit(tree as never, 'element', (n: { properties?: Record<string, unknown> }) => {
+      for (const [k, v] of Object.entries(n.properties ?? {})) {
+        // mdsvex percent-decodes hrefs after this pass, so %7B would turn back into a brace:
+        // double-encode literal and already-encoded braces in URLs
+        if (typeof v === 'string' && URL_PROPS.has(k))
+          n.properties![k] = attr(v.replace(/\{|%7b/gi, '%257B').replace(/\}|%7d/gi, '%257D'));
+        else if (typeof v === 'string') n.properties![k] = attr(v);
+        else if (Array.isArray(v))
+          n.properties![k] = v.map((x) => (typeof x === 'string' ? attr(x) : x));
+      }
+    });
+  };
 }
 
 export function rehypeEscapeSynced() {
@@ -168,9 +213,18 @@ export const mdsvexOptions = {
   highlight: { highlighter: highlight },
   rehypePlugins: [
     rehypeSlug,
-    [rehypeAutolink, { behavior: 'wrap' }],
+    rehypeToc, // right after the ids, before anchors and escaping: toc text is plain
+    [
+      rehypeAutolink,
+      {
+        // append, never wrap: a link inside a heading must not end up inside another <a>
+        behavior: 'append',
+        properties: { className: ['anchor'], ariaLabel: 'Link to this section' },
+        content: { type: 'text', value: '#' }
+      }
+    ],
     [rehypeExternalLinks, { rel: ['noopener', 'noreferrer'] }],
-    rehypeToc, // before escaping, so toc text is plain
-    rehypeEscapeSynced
+    rehypeEscapeSynced,
+    rehypeEncodeAttrs
   ]
 } as Parameters<typeof mdsvex>[0];

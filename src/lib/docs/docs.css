@@ -34,14 +34,16 @@ article.docs :is(h2, h3, h4) {
 article.docs :is(h2, h3, h4) + * {
   margin-top: 0.5em;
 }
-article.docs :is(h2, h3, h4) a {
-  color: inherit;
+/* heading anchor: appended after the text, never wrapping it, so links in headings stay valid */
+article.docs a.anchor {
+  margin-left: 0.5em;
+  color: var(--muted);
   text-decoration: none;
+  font-weight: 400;
 }
-article.docs :is(h2, h3, h4) a:hover {
-  text-decoration: underline;
-  text-decoration-color: var(--brand);
-  text-decoration-thickness: 2px;
+article.docs a.anchor:hover,
+article.docs a.anchor:focus-visible {
+  color: var(--text);
 }
 article.docs p {
   max-width: none;

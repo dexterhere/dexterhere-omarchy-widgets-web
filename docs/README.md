@@ -18,7 +18,7 @@ Pages are Markdown processed by mdsvex (Svelte in Markdown). Content lives in `d
 
 ## Synced reference pages
 
-`reference/protocol.md`, `reference/vault-format.md` and `reference/threat-model.md` are generated from the code repository by `bun run docs:sync [version]`. They are committed, marked `synced: true`, and must not be edited here. The source is `$CODE_REPO_PATH`, else the sibling `../omarchy-widgets` checkout, else raw.githubusercontent.com at `codeRepoRef` (https only, host allow-list, no redirects, 512 KB cap). Their text is escaped and, because of `synced: true`, every text node is escaped again at compile time, so synced content cannot become Svelte or HTML.
+`reference/protocol.md`, `reference/vault-format.md` and `reference/threat-model.md` are generated from the code repository by `bun run docs:sync [version]`. They are committed, marked `synced: true`, and must not be edited here. The source is raw.githubusercontent.com at `codeRepoRef` (or a local checkout only when `$CODE_REPO_PATH` is set explicitly, which the generated header then says) (https only, host allow-list, no redirects, 512 KB cap). Their text is escaped and, because of `synced: true`, every text node is escaped again at compile time, so synced content cannot become Svelte or HTML.
 
 ## Versions
 

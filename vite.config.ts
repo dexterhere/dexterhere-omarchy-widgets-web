@@ -16,7 +16,12 @@ const pagefindPreview: Plugin = {
   configurePreviewServer(server) {
     const root = join(process.cwd(), 'build', 'pagefind');
     server.middlewares.use('/pagefind', (req, res, next) => {
-      const file = normalize(join(root, decodeURIComponent((req.url ?? '/').split('?')[0])));
+      let file: string;
+      try {
+        file = normalize(join(root, decodeURIComponent((req.url ?? '/').split('?')[0])));
+      } catch {
+        return next(); // malformed percent-encoding
+      }
       if (!file.startsWith(root + '/') || !existsSync(file) || !statSync(file).isFile())
         return next();
       const type = file.endsWith('.js')

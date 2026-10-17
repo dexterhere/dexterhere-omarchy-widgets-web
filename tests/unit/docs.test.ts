@@ -142,7 +142,7 @@ describe('mdsvex pipeline', () => {
       { id: 'two-words', text: 'Two words', depth: 2 },
       { id: 'three', text: 'Three', depth: 3 }
     ]);
-    expect(code).toContain('<h2 id="two-words"><a href="#two-words">');
+    expect(code).toContain('<h2 id="two-words">Two words<a class="anchor"');
   });
   it('external links get rel noopener noreferrer', async () => {
     const code = await md('title: T', '[x](https://example.com)');
@@ -330,7 +330,7 @@ describe('synced content hardening', () => {
     expect(kids[1]!.properties.href).toBe('#');
     expect(kids[2]!.properties).toEqual({ href: '#', title: '｛evil｝' });
     expect(safeUrl('https://a.b/{x}')).toBe(true);
-    expect(safeUrl('//host/x')).toBe(true);
+    expect(safeUrl('//host/x')).toBe(false);
     expect(safeUrl('vbscript:x')).toBe(false);
   });
 

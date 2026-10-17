@@ -4,9 +4,10 @@
 // https://raw.githubusercontent.com/dexterhere/omarchy-widgets/<ref>/docs/<file>.
 // The output is GENERATED and committed. Its text is escaped here (and again at compile time by
 // rehypeEscapeSynced) so nothing in it can become Svelte or HTML.
-import { existsSync } from 'node:fs';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { execFileSync } from 'node:child_process';
+import { lstat, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
+import { isVersionId } from '../src/lib/docs/content';
 import { fromMarkdown } from 'mdast-util-from-markdown';
 import { visit } from 'unist-util-visit';
 
@@ -110,7 +111,8 @@ export function escapeForMdsvex(md: string): string {
   return out;
 }
 
-export function render(t: Target, ref: string, source: string): string {
+/** `localSha` is set only when the text came from a local checkout instead of the pinned ref. */
+export function render(t: Target, ref: string, source: string, localSha?: string): string {
   const body = escapeForMdsvex(source.replace(/^﻿/, '').replace(/^# .*\n+/, ''));
   const url = `https://github.com/${REPO}/blob/${ref}/docs/${t.file}`;
   return `---
@@ -121,30 +123,45 @@ synced: true
 source: ${JSON.stringify(url)}
 ---
 
-> Synced from ${REPO}@${ref} (docs/${t.file}); do not edit here. Change the file in the code repository.
+> Synced from ${localSha ? `a local checkout of ${REPO} at ${localSha} (not verified against ${ref})` : `${REPO}@${ref}`} (docs/${t.file}); do not edit here. Change the file in the code repository.
 
 ${body.trimEnd()}
 `;
 }
 
+/** Reads docs/<file> from a local checkout; symbolic links are refused, not followed. */
+export async function readLocal(local: string, file: string): Promise<string> {
+  for (const p of [join(local, 'docs'), join(local, 'docs', file)])
+    if ((await lstat(p)).isSymbolicLink()) throw new Error(`refusing symbolic link: ${p}`);
+  return readFile(join(local, 'docs', file), 'utf8');
+}
+
 export async function sync(version = 'next', root = resolve(import.meta.dirname, '..')) {
+  if (!isVersionId(version)) throw new Error(`bad version: ${JSON.stringify(version)}`);
   const v = JSON.parse(
     await readFile(join(root, 'docs/content', version, '_version.json'), 'utf8')
   );
   const ref: string = v.codeRepoRef;
   if (!validRef(ref)) throw new Error(`bad codeRepoRef in _version.json: ${ref}`);
-  const sibling = join(root, '..', 'omarchy-widgets');
-  const local = process.env.CODE_REPO_PATH ?? (existsSync(sibling) ? sibling : undefined);
+  // A local checkout is used only when CODE_REPO_PATH is set explicitly; the default is the
+  // network fetch at the pinned ref, so the generated header always tells the truth.
+  const local = process.env.CODE_REPO_PATH ? resolve(process.env.CODE_REPO_PATH) : undefined;
+  let localSha: string | undefined;
+  if (local) {
+    localSha = execFileSync('git', ['-C', local, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+    console.warn(
+      `WARNING: using local checkout ${local} at ${localSha}, NOT ${REPO}@${ref}. ` +
+        'The generated pages say so. Do not commit this unless you mean to.'
+    );
+  }
   const dir = join(root, 'docs/content', version, 'reference');
   await mkdir(dir, { recursive: true });
   for (const t of TARGETS) {
-    const source = local
-      ? await readFile(join(local, 'docs', t.file), 'utf8')
-      : await fetchText(rawUrl(ref, t.file));
+    const source = local ? await readLocal(local, t.file) : await fetchText(rawUrl(ref, t.file));
     if (Buffer.byteLength(source) > LIMITS.maxBytes) throw new Error(`${t.file} is too large`);
-    await writeFile(join(dir, `${t.out}.md`), render(t, ref, source));
+    await writeFile(join(dir, `${t.out}.md`), render(t, ref, source, localSha));
     console.log(
-      `synced ${t.file} -> reference/${t.out}.md (${local ? 'local' : 'remote'}, ${ref})`
+      `synced ${t.file} -> reference/${t.out}.md (${local ? `local:${localSha}` : `@${ref}`})`
     );
   }
 }

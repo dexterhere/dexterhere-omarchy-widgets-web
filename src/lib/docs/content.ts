@@ -33,6 +33,7 @@ export interface SidebarSection {
 
 const STATUSES = ['unreleased', 'draft', 'stable'];
 const VERSION_ID = /^(next|v\d+(\.\d+)*(-[a-z0-9.]+)?)$/;
+export const isVersionId = (v: string) => VERSION_ID.test(v);
 
 /** Throws with a readable message when a _version.json is malformed. */
 export function parseVersion(dir: string, json: unknown): DocsVersion {
