@@ -10,6 +10,8 @@ import { toString } from 'hast-util-to-string';
 import { randomUUID } from 'node:crypto';
 import { SKIP, visit } from 'unist-util-visit';
 import type { mdsvex } from 'mdsvex';
+import { makeLinks } from '../src/lib/links.ts';
+import type { Origins } from '../src/lib/origins.ts';
 
 export interface TocItem {
   id: string;
@@ -208,23 +210,44 @@ export async function highlight(code: string, lang: string | undefined): Promise
     .replace(/\}/g, '&#125;');
 }
 
-export const mdsvexOptions = {
-  extensions: ['.md'],
-  highlight: { highlighter: highlight },
-  rehypePlugins: [
-    rehypeSlug,
-    rehypeToc, // right after the ids, before anchors and escaping: toc text is plain
-    [
-      rehypeAutolink,
-      {
-        // append, never wrap: a link inside a heading must not end up inside another <a>
-        behavior: 'append',
-        properties: { className: ['anchor'], ariaLabel: 'Link to this section' },
-        content: { type: 'text', value: '#' }
-      }
-    ],
-    [rehypeExternalLinks, { rel: ['noopener', 'noreferrer'] }],
-    rehypeEscapeSynced,
-    rehypeEncodeAttrs
-  ]
-} as Parameters<typeof mdsvex>[0];
+/**
+ * Host mode only: authored links like [x](/docs/next/a/) become /next/a/ (the docs host), and
+ * links to site pages become absolute site URLs. Only these exact internal prefixes are touched.
+ */
+export function rehypeHostLinks(o: Origins) {
+  const l = makeLinks(o, (p) => p);
+  return (tree: object) => {
+    visit(tree as never, 'element', (n: { tagName: string; properties?: { href?: unknown } }) => {
+      const h = n.properties?.href;
+      if (n.tagName !== 'a' || typeof h !== 'string') return;
+      if (/^\/docs(?=$|[/?#])/.test(h)) n.properties!.href = l.docsPath(h);
+      else if (/^\/(widgets|contribute|security)(?=$|[/?#])/.test(h))
+        n.properties!.href = l.sitePath(h);
+    });
+  };
+}
+
+export const mdsvexOptionsFor = (o: Origins) =>
+  ({
+    extensions: ['.md'],
+    highlight: { highlighter: highlight },
+    rehypePlugins: [
+      rehypeSlug,
+      rehypeToc, // right after the ids, before anchors and escaping: toc text is plain
+      [
+        rehypeAutolink,
+        {
+          // append, never wrap: a link inside a heading must not end up inside another <a>
+          behavior: 'append',
+          properties: { className: ['anchor'], ariaLabel: 'Link to this section' },
+          content: { type: 'text', value: '#' }
+        }
+      ],
+      [rehypeExternalLinks, { rel: ['noopener', 'noreferrer'] }],
+      ...(o.site ? [[rehypeHostLinks, o]] : []),
+      rehypeEscapeSynced,
+      rehypeEncodeAttrs
+    ]
+  }) as Parameters<typeof mdsvex>[0];
+
+export const mdsvexOptions = mdsvexOptionsFor({ site: '', docs: '' });

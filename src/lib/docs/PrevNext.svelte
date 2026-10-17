@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { resolve } from '$app/paths';
+  import { docsPath } from '../site';
   type L = { title: string; href: string } | null;
   let { prev, next }: { prev: L; next: L } = $props();
 </script>
@@ -7,12 +7,12 @@
 {#if prev || next}
   <nav class="pn" aria-label="Previous and next page">
     {#if prev}
-      <a class="prev" href={resolve(prev.href as '/docs')} rel="prev"
+      <a class="prev" href={docsPath(prev.href)} rel="prev"
         ><span class="muted tiny">Previous</span>{prev.title}</a
       >
     {/if}
     {#if next}
-      <a class="next" href={resolve(next.href as '/docs')} rel="next"
+      <a class="next" href={docsPath(next.href)} rel="next"
         ><span class="muted tiny">Next</span>{next.title}</a
       >
     {/if}

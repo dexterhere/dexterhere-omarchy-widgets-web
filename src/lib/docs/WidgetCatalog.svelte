@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { resolve } from '$app/paths';
+  import { sitePath } from '../site';
   import { getContext } from 'svelte';
   import { categoryLabels, getAll, statusLabels, tierLabels } from '../registry';
 
@@ -15,7 +15,7 @@
   <ul class="catalog" aria-label="Widgets in the registry">
     {#each widgets as w (w.id)}
       <li>
-        <h3><a href={resolve(`/widgets/${w.id}/` as '/widgets')}>{w.name}</a></h3>
+        <h3><a href={sitePath(`/widgets/${w.id}/`)}>{w.name}</a></h3>
         <p class="summary">{w.summary}</p>
         <dl>
           <dt>Status</dt>

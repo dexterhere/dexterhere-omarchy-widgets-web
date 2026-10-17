@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { resolve } from '$app/paths';
+  import { docsUrl } from '../../lib/site';
   import CopyButton from '../../lib/components/CopyButton.svelte';
 
   // Kept in script so the angle brackets and braces are shown as text, not parsed as markup.
@@ -237,7 +237,7 @@
   <section class="section" aria-labelledby="next-heading">
     <h2 id="next-heading">Where to go next</h2>
     <ul class="list">
-      <li><a href={resolve('/docs')}>Docs</a></li>
+      <li><a href={docsUrl('/docs')}>Docs</a></li>
       <li>
         <a
           href="https://github.com/dexterhere/dexterhere-omarchy-widgets-web/blob/main/CONTRIBUTING.md"

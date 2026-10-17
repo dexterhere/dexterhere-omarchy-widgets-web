@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { resolve } from '$app/paths';
+  import { docsPath } from '../site';
   import { switchTarget, type DocsVersion } from './content';
 
   let {
@@ -52,7 +52,7 @@
       {#each versions as v (v.version)}
         <li>
           <a
-            href={resolve(switchTarget(v.version, slug, pagesByVersion) as '/docs')}
+            href={docsPath(switchTarget(v.version, slug, pagesByVersion))}
             aria-current={v.version === current.version ? 'true' : undefined}
             data-version={v.version}
           >

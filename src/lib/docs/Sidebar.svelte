@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { resolve } from '$app/paths';
+  import { docsPath } from '../site';
   import type { SidebarSection } from './content';
 
   let { sections, current }: { sections: SidebarSection[]; current: string } = $props();
@@ -12,9 +12,8 @@
       <ul>
         {#each s.pages as p (p.slug)}
           <li>
-            <a
-              href={resolve(p.href as '/docs')}
-              aria-current={p.slug === current ? 'page' : undefined}>{p.title}</a
+            <a href={docsPath(p.href)} aria-current={p.slug === current ? 'page' : undefined}
+              >{p.title}</a
             >
           </li>
         {/each}

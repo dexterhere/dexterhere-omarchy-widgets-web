@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { resolve } from '$app/paths';
+  import { docsPath } from '../site';
   import { afterNavigate } from '$app/navigation';
   import { splitExcerpt, type Part } from './search';
 
@@ -135,7 +135,7 @@
           role="option"
           aria-selected={i === active}
           class:active={i === active}
-          href={resolve(h.url as '/docs')}
+          href={docsPath(h.url)}
         >
           <span class="title">{h.title}</span>
           <span class="excerpt"
