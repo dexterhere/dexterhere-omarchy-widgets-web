@@ -123,7 +123,7 @@ test('makes no request to any origin other than localhost', async ({ page }) => 
   await page.keyboard.press('t');
   await page.keyboard.press('ArrowRight');
   await page.keyboard.press('Escape');
-  expect([...hosts]).toEqual(['localhost:4173']);
+  expect([...hosts]).toEqual([`localhost:${process.env.PW_PORT ?? 4173}`]);
 });
 
 test('no horizontal overflow at 360px', async ({ page }) => {

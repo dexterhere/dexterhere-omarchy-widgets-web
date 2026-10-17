@@ -184,3 +184,29 @@ describe('check-review-changes', () => {
     expect(checkReviewChanges({ ...base, changed: review, author: 'DexterHere' }).ok).toBe(true);
   });
 });
+
+describe('maintainer list resolution (fail closed)', () => {
+  it('uses the base branch list when it exists', async () => {
+    const { maintainersFromBase } = await import('../../scripts/check-review-changes');
+    expect(maintainersFromBase(() => '["alice"]')).toEqual(['alice']);
+  });
+
+  it('falls back to the hardcoded bootstrap ONLY when the file is absent on the base', async () => {
+    const { maintainersFromBase, BOOTSTRAP_MAINTAINERS } =
+      await import('../../scripts/check-review-changes');
+    const absent = () => {
+      throw new Error("fatal: path 'registry/MAINTAINERS.json' does not exist in 'origin/main'");
+    };
+    expect(maintainersFromBase(absent)).toEqual(BOOTSTRAP_MAINTAINERS);
+  });
+
+  it('returns nobody for any other failure or malformed content', async () => {
+    const { maintainersFromBase } = await import('../../scripts/check-review-changes');
+    expect(
+      maintainersFromBase(() => {
+        throw new Error('network down');
+      })
+    ).toEqual([]);
+    expect(maintainersFromBase(() => 'not json')).toEqual([]);
+  });
+});

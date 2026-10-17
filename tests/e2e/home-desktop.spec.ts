@@ -204,5 +204,5 @@ test('makes no request to any origin other than localhost', async ({ page }) => 
   await edit(page);
   await slot(page, 'clock').focus();
   await page.keyboard.press('ArrowRight');
-  expect([...hosts]).toEqual(['localhost:4173']);
+  expect([...hosts]).toEqual([`localhost:${process.env.PW_PORT ?? 4173}`]);
 });
