@@ -242,6 +242,7 @@
     <section class="block" aria-labelledby="h-settings">
       <h2 id="h-settings">Settings</h2>
       {#if w.settings.length}
+        <!-- svelte-ignore a11y_no_noninteractive_tabindex: scrollable region must be keyboard reachable -->
         <div class="scroll" role="region" aria-label="Settings table" tabindex="0">
           <table class="small">
             <thead>
