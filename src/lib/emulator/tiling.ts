@@ -23,8 +23,13 @@ export interface Gaps {
   in: number;
   out: number;
 }
-/** Omarchy defaults (hyprland.conf): gaps_in 5, gaps_out 10. */
-export const GAPS: Gaps = { in: 5, out: 10 };
+/** Omarchy uses gaps_in 5 / gaps_out 10 on a full screen; slightly larger here because the desktop is scaled down. */
+export const GAPS: Gaps = { in: 6, out: 16 };
+/** Gaps grow with the desktop so the wallpaper clearly shows around windows (about 10/5 at 1920 px wide scale up from there). */
+export const scaledGaps = (w: number): Gaps => ({
+  in: Math.max(6, Math.min(16, Math.round(w / 100))),
+  out: Math.max(16, Math.min(44, Math.round(w / 36)))
+});
 export const FLOAT_DEFAULT: Rect = { x: 0.2, y: 0.14, w: 0.6, h: 0.7 };
 
 export const emptyLayout = (): WsLayout => ({

@@ -52,10 +52,17 @@ test('workspaces: click and Super+2 on the virtual strip', async ({ page }) => {
   await expect(page.locator('[data-emulator] [aria-live]')).toContainText('Workspace 2');
 });
 
+test('the file manager opens on demand with Super+Shift+F', async ({ page }) => {
+  await ready(page);
+  await expect(page.locator('[data-kind="files"]')).toHaveCount(0);
+  await chord(page, ['super', 'shift'], 'KeyF');
+  await expect(page.locator('[data-kind="files"]')).toHaveCount(1);
+});
+
 test('Super+Return adds a tile and Super+W removes it', async ({ page }) => {
   await ready(page);
   const before = await tiles(page).count();
-  expect(before).toBe(3);
+  expect(before).toBe(2);
   await chord(page, ['super'], 'Enter');
   await expect(tiles(page)).toHaveCount(before + 1);
   await chord(page, ['super'], 'KeyW');
@@ -70,7 +77,7 @@ test('tiles are separated by gaps and the focused one has the accent border', as
       const b = (await page.locator('[data-win="w2"]').boundingBox())!;
       return Math.round(b.x - (a.x + a.width));
     })
-    .toBe(10);
+    .toBeGreaterThanOrEqual(12);
   const border = await page
     .locator('.win.focused')
     .first()

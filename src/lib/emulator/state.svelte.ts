@@ -8,6 +8,7 @@ import {
   idsOf,
   insertTiled,
   neighbour,
+  scaledGaps,
   raiseFloating,
   removeWindow,
   swapWindows,
@@ -118,7 +119,9 @@ export class EmulatorState {
   private seq = 0;
   private lastMsg = '';
 
-  rects = $derived(this.layouts.map((l) => computeRects(l, this.bounds)));
+  rects = $derived(
+    this.layouts.map((l) => computeRects(l, this.bounds, scaledGaps(this.bounds.w)))
+  );
   current = $derived(this.layouts[this.ws]);
   focusedId = $derived(this.focused[this.ws]);
   fullscreenId = $derived(this.layouts[this.ws].fullscreen);
@@ -144,7 +147,6 @@ export class EmulatorState {
     this.barTransparent = false;
     this.add('terminal', 0, true);
     this.add('monitor', 0, true);
-    this.add('files', 0, true);
     this.add('terminal', 1, true);
     this.focused[0] = Object.keys(this.windows)[0];
   }
@@ -360,6 +362,7 @@ export class EmulatorState {
       },
       bar: () => this.toggleBar(),
       terminal: () => this.open('terminal'),
+      files: () => this.open('files'),
       'close-w': () => this.close(),
       'close-q': () => this.close(),
       float: () => this.toggleFloat(),

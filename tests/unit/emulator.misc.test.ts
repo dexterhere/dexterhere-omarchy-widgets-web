@@ -49,9 +49,9 @@ describe('no colour literals in emulator source', () => {
 });
 
 describe('workspace state', () => {
-  it('starts with 3 tiles on workspace 1 and 1 on workspace 2', () => {
+  it('starts with 2 tiles on workspace 1 and 1 on workspace 2', () => {
     const e = new EmulatorState();
-    expect([0, 1, 2, 3].map((i) => e.windowCount(i))).toEqual([3, 1, 0, 0]);
+    expect([0, 1, 2, 3].map((i) => e.windowCount(i))).toEqual([2, 1, 0, 0]);
     expect(e.ws).toBe(0);
   });
   it('switches, cycles with wrap, and moves windows', () => {
@@ -68,15 +68,15 @@ describe('workspace state', () => {
     const id = e.focusedId!;
     e.moveTo(2);
     expect(e.ws).toBe(2);
-    expect(e.windowCount(0)).toBe(2);
+    expect(e.windowCount(0)).toBe(1);
     expect(e.wsOf(id)).toBe(2);
   });
   it('opens and closes terminals, and leaves ghosts for the exit animation', () => {
     const e = new EmulatorState();
     e.open('terminal');
-    expect(e.windowCount(0)).toBe(4);
-    e.close();
     expect(e.windowCount(0)).toBe(3);
+    e.close();
+    expect(e.windowCount(0)).toBe(2);
     expect(e.ghosts.length).toBe(1);
   });
   it('runs chords from the virtual keys with sticky Super', () => {

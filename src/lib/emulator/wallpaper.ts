@@ -49,7 +49,7 @@ export function wallpaper(themeId: string): WpPath[] {
   const variant = variantOf(themeId);
 
   // Sky: horizontal bands that fade from the deepest background, dithered at the seams.
-  const bands = ['--bg-deep', '--bg', '--surface'];
+  const bands = ['--bg-deep', '--surface', '--surface-2'];
   for (let y = 0; y < WP_H; y++) {
     const f = (y / WP_H) * (bands.length - 0.4);
     const i = Math.min(bands.length - 1, Math.floor(f));
@@ -57,8 +57,8 @@ export function wallpaper(themeId: string): WpPath[] {
     for (let x = 0; x < WP_W; x++) put(x, y, f - i > dither(x, y) ? bands[next] : bands[i]);
   }
   // Stars.
-  for (let n = 0; n < 34; n++) {
-    put(Math.floor(rnd() * WP_W), Math.floor(rnd() * WP_H * 0.5), '--text', 0.18 + rnd() * 0.3);
+  for (let n = 0; n < 60; n++) {
+    put(Math.floor(rnd() * WP_W), Math.floor(rnd() * WP_H * 0.5), '--text', 0.3 + rnd() * 0.4);
   }
   // A sun or moon disc in the accent.
   const sx = 8 + Math.floor(rnd() * (WP_W - 16));
@@ -73,9 +73,9 @@ export function wallpaper(themeId: string): WpPath[] {
     for (let x = 0; x < WP_W; x++) {
       const far = 22 + Math.sin(x / 6 + p1) * 2.2 + Math.sin(x / 2.3 + p2) * 0.8;
       const near = 28 + Math.sin(x / 8 + p2) * 2.6 + Math.sin(x / 3.1 + p1) * 0.9;
-      for (let y = Math.round(far); y < WP_H; y++) put(x, y, '--surface-2');
+      for (let y = Math.round(far); y < WP_H; y++) put(x, y, '--border');
       for (let y = Math.round(near); y < WP_H; y++)
-        put(x, y, y === Math.round(near) ? '--border-strong' : '--border');
+        put(x, y, y === Math.round(near) ? '--text-2' : '--border-strong');
     }
   } else if (variant === 'city') {
     let x = 0;
@@ -83,8 +83,7 @@ export function wallpaper(themeId: string): WpPath[] {
       const w = 2 + Math.floor(rnd() * 4);
       const h = 6 + Math.floor(rnd() * 16);
       for (let bx = x; bx < Math.min(WP_W, x + w); bx++)
-        for (let y = WP_H - h; y < WP_H; y++)
-          put(bx, y, y === WP_H - h ? '--border-strong' : '--surface-2');
+        for (let y = WP_H - h; y < WP_H; y++) put(bx, y, y === WP_H - h ? '--text-2' : '--border');
       for (let wy = WP_H - h + 2; wy < WP_H - 1; wy += 2)
         for (let bx = x + 1; bx < Math.min(WP_W, x + w) - 0; bx += 2)
           if (rnd() > 0.55) put(bx, wy, '--brand', 0.5 + rnd() * 0.4);
@@ -97,8 +96,8 @@ export function wallpaper(themeId: string): WpPath[] {
       a = Math.min(26, Math.max(12, a + Math.round((rnd() - 0.5) * 3)));
       b = Math.min(31, Math.max(22, b + Math.round((rnd() - 0.5) * 3)));
       for (let y = a; y < WP_H; y++)
-        put(x, y, y - a < 2 ? '--text-2' : '--surface-2', y - a < 2 ? 0.4 : 1);
-      for (let y = b; y < WP_H; y++) put(x, y, y === b ? '--border-strong' : '--border');
+        put(x, y, y - a < 2 ? '--text-2' : '--border', y - a < 2 ? 0.7 : 1);
+      for (let y = b; y < WP_H; y++) put(x, y, y === b ? '--text-2' : '--border-strong');
     }
   } else {
     const cx = 10 + Math.floor(rnd() * (WP_W - 20));

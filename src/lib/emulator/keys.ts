@@ -143,6 +143,7 @@ export const BINDING_DEFS: BindingDef[] = [
   d('theme', 'Super+Ctrl+Shift+Space', 'Pick a theme', 'Omarchy'),
   d('bar', 'Super+Shift+Space', 'Toggle the top bar', 'Omarchy'),
   d('terminal', 'Super+Return', 'New terminal', 'Windows'),
+  d('files', 'Super+Shift+F', 'File manager', 'Windows'),
   d('close-w', 'Super+W', 'Close window', 'Windows'),
   d('close-q', 'Super+Q', 'Close window', 'Windows'),
   d('float', 'Super+T', 'Toggle tiling or floating', 'Windows'),
