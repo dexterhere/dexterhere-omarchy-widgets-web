@@ -21,7 +21,7 @@ const files = (o: { m?: Record<string, unknown>; w?: Record<string, unknown> } =
   'widget.json': widgetJson(o.w)
 });
 const run = (over: Partial<BuildInput> & { listings: BuildInput['listings'] }) =>
-  buildRegistry({ readFixture: noFixture, readReview: noReview, ...over });
+  buildRegistry({ readFixture: noFixture, readReview: noReview, skipReachability: true, ...over });
 const L = (data: object = listing(), file = `${(data as { id: string }).id}.json`) => ({
   file,
   data
