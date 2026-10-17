@@ -318,10 +318,7 @@
         </div>
         <div>
           <dt>Categories</dt>
-          <dd class="cats">
-            {#each w.categories as c, i (c)}{#if i},
-              {/if}<a href={`${resolve('/widgets')}?cat=${c}`}>{categoryLabels[c]}</a>{/each}
-          </dd>
+          <dd>{w.categories.map((c) => categoryLabels[c]).join(', ')}</dd>
         </div>
         <div>
           <dt>Id</dt>
