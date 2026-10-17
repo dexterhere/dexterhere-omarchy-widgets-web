@@ -1,6 +1,6 @@
 ---
 title: CLI
-description: Reference for the ow commands that exist today: status and the vault commands. Exact syntax, input rules and exit behaviour.
+description: 'Reference for the ow commands that exist today: status and the vault commands. Exact syntax, input rules and exit behaviour.'
 ---
 
 <script>import Callout from '$lib/docs/Callout.svelte';</script>

@@ -1,6 +1,6 @@
 ---
 title: Glossary
-description: Short definitions of the terms used in these docs: grant, topic, provider, spec widget, code widget, tier and more.
+description: 'Short definitions of the terms used in these docs: grant, topic, provider, spec widget, code widget, tier and more.'
 ---
 
 **Audit log.** A local file where the daemon records each access decision. It never holds data values.
