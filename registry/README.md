@@ -9,6 +9,7 @@ registry/
   schema/review.schema.json    maintainer review records
   widgets/<id>.json            one listing per widget (file name must equal the id)
   review/<id>.json             maintainer review records (CODEOWNERS only)
+  namespaces.json, MAINTAINERS.json   maintainer managed
   fixtures/<id>/               manifest.json + widget.json for CONCEPT entries
   dist/                        generated: index.json and widgets/<id>.json
 ```
@@ -55,7 +56,10 @@ The site loads `dist/index.json` at build time through `src/lib/registry/index.t
 ## Trust model
 
 - The build never runs code from a widget repo. It fetches two JSON files and validates them.
-- The tier is never taken from a listing or from the widget's own files. `core` and `verified` come only from `review/<id>.json` whose `reviewedCommit` equals the listing's `commit`. A review of an older commit is ignored and the output says so (`reviewNote`). Otherwise the tier is `spec` (widget.json says no custom code) or `community` (unreviewed code). Fixture entries are `concept`.
+- The tier is never taken from a listing or from the widget's own files. `core`, `verified` and `spec` come only from `review/<id>.json` whose `reviewedCommit` equals the listing's `commit` (schema: `review.schema.json`). A review of another id or an older commit is ignored and the output says so (`reviewNote`). Everything else is `community`. If `widget.json` declares `tier: "spec"` without a review, the output carries `declaredTier: "spec"` as information only and the site says "Declares itself spec, not reviewed". Fixture entries are `concept`.
+- Namespace ownership: `io.github.<owner>.<name>` must be listed from a repo owned by `<owner>` (case-insensitive). Any other reverse-domain namespace is rejected unless `namespaces.json` (maintainer managed, prefix to allowed GitHub owners) allows the repo owner.
+- Display spoofing: every string and key in listings, `manifest.json`, `widget.json` and review records is rejected (not stripped) if it contains control, format (bidi override, zero-width) or line/paragraph separator characters, or looks like HTML. Setting defaults are capped at 200 characters. No field may ever be rendered with `{@html}`.
+- Provenance: CODEOWNERS covers `registry/review/`, `namespaces.json` and `MAINTAINERS.json`. CI runs `scripts/check-review-changes.ts` on pull requests: if the diff touches those paths, the PR author must be listed in `registry/MAINTAINERS.json` as it exists on the base branch (a PR cannot add itself).
 - Tiers describe how much a person reviewed, never isolation. Code widgets are not sandboxed.
 - Review records and `.github/` are covered by CODEOWNERS.
 

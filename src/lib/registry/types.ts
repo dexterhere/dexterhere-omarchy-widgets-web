@@ -58,7 +58,7 @@ export interface Access {
 }
 
 export interface ReviewInfo {
-  tier: 'core' | 'verified';
+  tier: 'core' | 'verified' | 'spec';
   reviewer: string;
   date: string;
   reviewedCommit: string;
@@ -77,6 +77,8 @@ export interface RegistryWidget {
   tags: string[];
   status: Status;
   tier: Tier;
+  /** What widget.json says about itself. Informational only, never trusted. */
+  declaredTier: 'spec' | 'code';
   /** True only for alpha/stable entries. Concept entries are not installable. */
   installable: boolean;
   /** Present only when a matching maintainer review record covers this exact commit. */

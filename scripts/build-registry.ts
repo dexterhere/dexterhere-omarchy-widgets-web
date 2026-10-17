@@ -140,17 +140,37 @@ export async function fetchJson(
 }
 
 // ---------- plain text ----------
-/** Strips control and invisible format characters, collapses whitespace, caps length.
- *  Throws when the text looks like HTML. Output is plain text: never render it as markup. */
+// SECURITY: no field in the output may ever be rendered with {@html} or innerHTML. Everything
+// here is data from strangers; it is only ever shown as text.
+const SPOOF = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u; // control, bidi/zero-width format, line/paragraph separators
+const HTMLISH = /<\s*\/?\s*[a-z!?]/i;
+const BAD_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+
+/** Rejects (never strips) any string or object key that could spoof what a person sees:
+ *  control, format (bidi override, zero-width) and separator characters, or HTML-looking text.
+ *  Walks the whole value, so every field that can reach the output is covered. */
+export function assertPlain(value: unknown, path = '$', depth = 0): void {
+  if (depth > 12) throw new Error(`${path}: nested too deeply`);
+  if (typeof value === 'string') {
+    if (SPOOF.test(value)) throw new Error(`${path}: control or invisible characters not allowed`);
+    if (HTMLISH.test(value)) throw new Error(`${path}: looks like HTML, plain text only`);
+  } else if (Array.isArray(value)) {
+    value.forEach((v, i) => assertPlain(v, `${path}[${i}]`, depth + 1));
+  } else if (value && typeof value === 'object') {
+    for (const [k, v] of Object.entries(value)) {
+      if (BAD_KEYS.has(k) || SPOOF.test(k)) throw new Error(`${path}: forbidden key`);
+      assertPlain(v, `${path}.${k}`, depth + 1);
+    }
+  }
+}
+
+/** Plain text only: rejects spoofing characters and HTML-looking text, collapses spaces, caps length. */
 export function cleanText(input: unknown, max: number, field: string): string {
   if (typeof input !== 'string') throw new Error(`${field}: must be a string`);
-  const s = input
-    .replace(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]+/gu, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-  if (/<\s*\/?\s*[a-z!?]/i.test(s)) throw new Error(`${field}: looks like HTML, plain text only`);
-  if (!s) throw new Error(`${field}: empty after cleaning`);
-  return s.length > max ? s.slice(0, max - 1) + '…' : s;
+  assertPlain(input, field);
+  const s = input.replace(/\s+/g, ' ').trim();
+  if (!s) throw new Error(`${field}: empty`);
+  return s.length > max ? s.slice(0, max - 1) + '\u2026' : s;
 }
 
 // ---------- access summary ----------
@@ -180,6 +200,52 @@ export function describeAccess(w: WidgetJson): Access {
   };
 }
 
+// ---------- namespace ownership ----------
+export const validateNamespaces = ajv.compile(
+  readJson(join(schemaDir, 'namespaces.schema.json')) as object
+);
+export type Namespaces = Record<string, string[]>;
+
+function parseNamespaces(raw: unknown, errors: string[]): Namespaces {
+  if (raw === undefined) return {};
+  if (!validateNamespaces(raw)) {
+    errors.push(`namespaces.json: ${errText(validateNamespaces)}`);
+    return {};
+  }
+  return raw as Namespaces;
+}
+
+/** io.github.<owner>.<name> must be listed from a repo owned by <owner>. Any other namespace
+ *  needs a maintainer entry in registry/namespaces.json naming the allowed repo owner. */
+export function checkNamespace(l: Pick<Listing, 'id' | 'repo'>, ns: Namespaces): void {
+  const repoOwner = l.repo.split('/')[3].toLowerCase();
+  if (l.id.startsWith('io.github.')) {
+    if (l.id.split('.')[2] !== repoOwner)
+      throw new Error('id namespace io.github.<owner> must match the repo owner');
+    return;
+  }
+  const hit = Object.entries(ns).find(([prefix]) => l.id.startsWith(`${prefix}.`));
+  if (!hit || !hit[1].some((o) => o.toLowerCase() === repoOwner))
+    throw new Error(
+      'id namespace is not allowed for this repo owner (see registry/namespaces.json)'
+    );
+}
+
+// ---------- output ----------
+const SAFE_ID = /^[a-z][a-z0-9-]*(\.[a-z0-9][a-z0-9-]*)+$/;
+
+/** Writes dist. Every id is re-checked first, so nothing can escape out/widgets or collide. */
+export function writeDist(out: string, index: RegistryIndex, widgets: RegistryWidget[]): void {
+  for (const w of widgets) {
+    if (!SAFE_ID.test(w.id) || w.id.length > 100) throw new Error('refusing to write: unsafe id');
+  }
+  rmSync(join(out, 'widgets'), { recursive: true, force: true });
+  mkdirSync(join(out, 'widgets'), { recursive: true });
+  const json = (v: unknown) => JSON.stringify(v, null, 2) + '\n';
+  writeFileSync(join(out, 'index.json'), json(index));
+  for (const w of widgets) writeFileSync(join(out, 'widgets', `${w.id}.json`), json(w));
+}
+
 // ---------- build ----------
 export interface Listing {
   id: string;
@@ -199,6 +265,8 @@ export interface BuildInput {
   offline?: boolean;
   readFixture: (id: string, name: 'manifest' | 'widget') => unknown;
   readReview: (id: string) => unknown;
+  /** registry/namespaces.json: namespace prefix -> allowed GitHub repo owners. */
+  namespaces?: unknown;
 }
 
 export interface BuildResult {
@@ -225,6 +293,8 @@ async function buildOne(l: Listing, inp: BuildInput): Promise<RegistryWidget> {
   if (!validateManifest(manifest))
     throw new Error(`manifest.json invalid: ${errText(validateManifest)}`);
   if (!validateWidget(widget)) throw new Error(`widget.json invalid: ${errText(validateWidget)}`);
+  assertPlain(manifest, 'manifest.json');
+  assertPlain(widget, 'widget.json');
   const w = widget as unknown as WidgetJson &
     Pick<
       RegistryWidget,
@@ -237,30 +307,29 @@ async function buildOne(l: Listing, inp: BuildInput): Promise<RegistryWidget> {
   if (w.category !== l.category)
     throw new Error('category differs between listing and widget.json');
 
-  let tier: Tier;
+  // The tier is NEVER taken from widget.json (author controlled) or the listing. Only a
+  // maintainer review record for this exact commit can grant core, verified or spec.
+  let tier: Tier = fixture ? 'concept' : 'community';
   let review: ReviewInfo | null = null;
   let reviewNote: string | null = null;
-  if (fixture) tier = 'concept';
-  else {
-    tier = w.tier === 'spec' ? 'spec' : 'community';
-    const rec = inp.readReview(l.id);
-    if (rec !== undefined) {
-      if (!validateReview(rec))
-        reviewNote = `review record ignored: invalid (${errText(validateReview)})`;
+  const rec = fixture ? undefined : inp.readReview(l.id);
+  if (rec !== undefined) {
+    if (!validateReview(rec))
+      reviewNote = `review record ignored: invalid (${errText(validateReview)})`;
+    else {
+      assertPlain(rec, 'review record');
+      const r = rec as unknown as ReviewInfo & { id: string };
+      if (r.id !== l.id) reviewNote = 'review record ignored: id does not match';
+      else if (r.reviewedCommit !== l.commit)
+        reviewNote = `review record ignored: it covers ${r.reviewedCommit.slice(0, 12)}, this listing pins ${l.commit.slice(0, 12)}`;
       else {
-        const r = rec as unknown as ReviewInfo & { id: string; notes: string };
-        if (r.id !== l.id) reviewNote = 'review record ignored: id does not match';
-        else if (r.reviewedCommit !== l.commit)
-          reviewNote = `review record ignored: it covers ${r.reviewedCommit.slice(0, 12)}, this listing pins ${l.commit.slice(0, 12)}`;
-        else {
-          tier = r.tier;
-          review = {
-            tier: r.tier,
-            reviewer: cleanText(r.reviewer, 80, 'reviewer'),
-            date: r.date,
-            reviewedCommit: r.reviewedCommit
-          };
-        }
+        tier = r.tier;
+        review = {
+          tier: r.tier,
+          reviewer: cleanText(r.reviewer, 80, 'reviewer'),
+          date: r.date,
+          reviewedCommit: r.reviewedCommit
+        };
       }
     }
   }
@@ -278,6 +347,7 @@ async function buildOne(l: Listing, inp: BuildInput): Promise<RegistryWidget> {
     tags: l.tags,
     status: l.status as RegistryWidget['status'],
     tier,
+    declaredTier: w.tier === 'spec' ? 'spec' : 'code',
     installable: l.status === 'alpha' || l.status === 'stable',
     review,
     reviewNote,
@@ -305,6 +375,7 @@ const tally = (xs: string[]) =>
 
 export async function buildRegistry(inp: BuildInput): Promise<BuildResult> {
   const errors: string[] = [];
+  const nsMap = parseNamespaces(inp.namespaces, errors);
   const valid: Listing[] = [];
   const seen = new Set<string>();
   for (const { file, data } of inp.listings) {
@@ -313,6 +384,13 @@ export async function buildRegistry(inp: BuildInput): Promise<BuildResult> {
       continue;
     }
     const l = data as unknown as Listing;
+    try {
+      assertPlain(l, file);
+      checkNamespace(l, nsMap);
+    } catch (e) {
+      errors.push(`${file}: ${e instanceof Error ? e.message : 'invalid'}`);
+      continue;
+    }
     if (file !== `${l.id}.json`) errors.push(`${file}: file name must be <id>.json`);
     if (seen.has(l.id)) {
       errors.push(`${file}: duplicate id ${l.id}`);
@@ -368,6 +446,7 @@ async function main() {
     listings,
     offline,
     readFixture: (id, name) => optional(join(REG, 'fixtures', id, `${name}.json`)),
+    namespaces: optional(join(REG, 'namespaces.json')),
     readReview: (id) =>
       /^[a-z0-9.-]+$/.test(id) ? optional(join(REG, 'review', `${id}.json`)) : undefined
   });
@@ -381,11 +460,7 @@ async function main() {
     for (const e of errors) console.error(`  - ${e}`);
     process.exit(1);
   }
-  rmSync(join(out, 'widgets'), { recursive: true, force: true });
-  mkdirSync(join(out, 'widgets'), { recursive: true });
-  const json = (v: unknown) => JSON.stringify(v, null, 2) + '\n';
-  writeFileSync(join(out, 'index.json'), json(index));
-  for (const w of widgets) writeFileSync(join(out, 'widgets', `${w.id}.json`), json(w));
+  writeDist(out, index, widgets);
   console.log(`\nregistry: ${widgets.length} widget(s) written to ${out}`);
 }
 

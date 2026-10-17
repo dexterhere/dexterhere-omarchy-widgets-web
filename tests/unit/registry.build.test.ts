@@ -47,7 +47,7 @@ describe('buildRegistry', () => {
       name: 'Demo',
       version: '1.0.0',
       license: 'MIT',
-      tier: 'spec',
+      tier: 'community',
       installable: true
     });
     expect(a.index.counts.total).toBe(1);
@@ -132,9 +132,30 @@ describe('buildRegistry', () => {
   });
 
   describe('tier', () => {
-    it('code widget is community, spec widget is spec', async () => {
-      const r = await run({ listings: [L()], fetch: mockFetch(files({ w: { tier: 'code' } })).fn });
-      expect(r.widgets[0].tier).toBe('community');
+    it('tier:"spec" in widget.json without a review stays community, with declaredTier', async () => {
+      const r = await run({ listings: [L()], fetch: mockFetch(files()).fn });
+      expect(r.widgets[0]).toMatchObject({ tier: 'community', declaredTier: 'spec', review: null });
+      const c = await run({ listings: [L()], fetch: mockFetch(files({ w: { tier: 'code' } })).fn });
+      expect(c.widgets[0]).toMatchObject({ tier: 'community', declaredTier: 'code' });
+    });
+    it('spec tier comes only from a matching review record', async () => {
+      const r = await run({
+        listings: [L()],
+        fetch: mockFetch(files()).fn,
+        readReview: () => review({ tier: 'spec' })
+      });
+      expect(r.widgets[0].tier).toBe('spec');
+    });
+    it('review records for another id or commit are ignored with a note', async () => {
+      for (const o of [{ id: 'io.github.x.y' }, { reviewedCommit: 'c'.repeat(40) }]) {
+        const r = await run({
+          listings: [L()],
+          fetch: mockFetch(files()).fn,
+          readReview: () => review(o)
+        });
+        expect(r.widgets[0]).toMatchObject({ tier: 'community', review: null });
+        expect(r.widgets[0].reviewNote).toMatch(/ignored/);
+      }
     });
     it('uses a matching review record', async () => {
       const r = await run({
@@ -159,13 +180,13 @@ describe('buildRegistry', () => {
         fetch: mockFetch(files()).fn,
         readReview: () => ({ tier: 'core' })
       });
-      expect(bad.widgets[0].tier).toBe('spec');
+      expect(bad.widgets[0].tier).toBe('community');
       const other = await run({
         listings: [L()],
         fetch: mockFetch(files()).fn,
         readReview: () => review({ id: 'io.github.x.y' })
       });
-      expect(other.widgets[0].tier).toBe('spec');
+      expect(other.widgets[0].tier).toBe('community');
     });
     it('a listing cannot reach a high tier through widget.json either', async () => {
       const r = await run({ listings: [L()], fetch: mockFetch(files({ w: { tier: 'core' } })).fn });
@@ -184,20 +205,19 @@ describe('buildRegistry', () => {
         expect(r.errors[0]).toMatch(/looks like HTML/);
       }
     });
-    it('strips control characters and caps lengths', async () => {
+    it('caps lengths', async () => {
       const r = await run({
         listings: [L()],
-        fetch: mockFetch(files({ m: { name: 'De\u0000m\u001bo‮!', description: 'x'.repeat(900) } }))
-          .fn
+        fetch: mockFetch(files({ m: { description: 'x'.repeat(900) } })).fn
       });
-      expect(r.widgets[0].name).toBe('De m o !');
       expect(r.widgets[0].description.length).toBe(500);
     });
     it('cleanText basics', () => {
-      expect(cleanText('a\n\tb', 10, 'f')).toBe('a b');
+      expect(cleanText('a   b', 10, 'f')).toBe('a b');
+      expect(() => cleanText('a\nb', 10, 'f')).toThrow(/invisible/);
       expect(() => cleanText('1 < 2 and 3 > 2', 50, 'f')).not.toThrow();
       expect(() => cleanText('<!-- x -->', 50, 'f')).toThrow();
-      expect(() => cleanText('\u0000', 50, 'f')).toThrow(/empty/);
+      expect(() => cleanText('\u0000', 50, 'f')).toThrow(/invisible/);
     });
   });
 });

@@ -56,12 +56,12 @@ export const tierLabels: Record<Tier, { label: string; text: string }> = {
     text: 'A design idea, not installable. Nothing has been built or reviewed.'
   },
   spec: {
-    label: 'Spec',
-    text: 'Valid widget.json that runs no custom code. Shape checked by schema, not read by a person.'
+    label: 'Spec (reviewed)',
+    text: 'A maintainer reviewed the pinned commit and confirmed it is a spec widget that runs no custom code. This is a review, not a sandbox.'
   },
   community: {
     label: 'Community',
-    text: 'Unreviewed code. It passed automated checks only. Read it before you install it.'
+    text: 'Not reviewed by a maintainer. It passed automated checks only. Read it before you install it.'
   },
   verified: {
     label: 'Verified',
@@ -72,3 +72,10 @@ export const tierLabels: Record<Tier, { label: string; text: string }> = {
     text: 'Maintained by this project and reviewed at the pinned commit. This is a review, not a sandbox.'
   }
 };
+
+/** widget.json is written by the widget's author, so what it says about itself is not a tier. */
+export function declaredTierNote(w: RegistryWidget): string | null {
+  return w.tier === 'community' && w.declaredTier === 'spec'
+    ? 'Declares itself spec, not reviewed'
+    : null;
+}

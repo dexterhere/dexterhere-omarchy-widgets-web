@@ -146,7 +146,7 @@
           "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_-]{0,31}$" },
           "type": { "enum": ["int", "number", "bool", "string", "enum"] },
           "label": { "type": "string", "maxLength": 80 },
-          "default": { "type": ["integer", "number", "boolean", "string"] },
+          "default": { "type": ["integer", "number", "boolean", "string"], "maxLength": 200 },
           "min": { "type": "number" },
           "max": { "type": "number" },
           "options": {

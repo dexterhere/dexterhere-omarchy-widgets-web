@@ -66,7 +66,7 @@ describe('widget and review schemas', () => {
       notes: ''
     };
     expect(validateReview(r)).toBe(true);
-    expect(validateReview({ ...r, tier: 'spec' })).toBe(false);
+    expect(validateReview({ ...r, tier: 'community' })).toBe(false);
     expect(validateReview({ ...r, reviewedCommit: 'abc' })).toBe(false);
   });
 });

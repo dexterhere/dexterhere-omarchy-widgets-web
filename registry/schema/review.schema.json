@@ -12,7 +12,7 @@
       "maxLength": 100,
       "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9][a-z0-9-]*)+$"
     },
-    "tier": { "enum": ["core", "verified"] },
+    "tier": { "enum": ["core", "verified", "spec"] },
     "reviewedCommit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
     "reviewer": { "type": "string", "minLength": 1, "maxLength": 80 },
     "date": { "type": "string", "format": "date" },
