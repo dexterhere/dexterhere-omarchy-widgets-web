@@ -33,11 +33,11 @@ Policy allows connections to that address and no other.
 - Two counters per widget.
 - Views: an HMAC-SHA-256 of the token's random part, the widget and the date, with a server
   secret. Deleted after 48 hours. Tomorrow's hash is unrelated to today's.
-- Likes: an HMAC of the token's random part and the widget. Deleted when you unlike, or after 400
-  days.
+- Likes: an HMAC of the token's random part and the widget. Kept until you unlike (no expiry, so
+  unliking always works and a like cannot be counted twice).
 - For abuse limits only: counters keyed by salted hashes of your network prefix (IPv4 /24 and /16,
-  IPv6 /48 and /32, never the full address). The salt changes every day and the counter expires within
-  minutes (never more than an hour). It is not stored with a widget, a token or a like, and the
+  IPv6 /48 and /32, never the full address). The salt changes every day. Counters expire 2 minutes after
+  their last use, and the per-prefix hourly token counter 1 hour after (never longer). It is not stored with a widget, a token or a like, and the
   prefix itself is never written anywhere.
 
 **Not stored:** IP addresses, user agents, referrers, raw tokens, cookies, or anything that

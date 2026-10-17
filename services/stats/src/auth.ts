@@ -106,21 +106,35 @@ export async function powOk(challenge: string, solution: string | null, bits: nu
   return leadingZeroBits(new Uint8Array(d)) >= bits;
 }
 
+function parseV4(s: string): number[] | null {
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(s);
+  if (!m) return null;
+  const o = m.slice(1).map(Number); // Number() drops leading zeros, so 010 and 10 are the same
+  return o.every((x) => x <= 255) ? o : null;
+}
+const v4Prefixes = (o: number[]) => [`4:${o[0]}.${o[1]}.${o[2]}`, `4:${o[0]}.${o[1]}`];
+
 /**
- * Coarse network prefixes from a platform-supplied address, finest first: IPv4 /24 then /16,
- * IPv6 /48 then /32. Empty for anything unparseable. The address itself is never kept; only
- * salted hashes of these prefixes are used, see handler.
+ * Coarse network prefixes from ONE platform-supplied address, finest first: IPv4 /24 then /16,
+ * IPv6 /48 then /32. IPv4-mapped IPv6 (::ffff:a.b.c.d or ::ffff:hhhh:hhhh) counts as IPv4.
+ * Empty for anything else, including comma or space separated lists (X-Forwarded-For style:
+ * only a header set by a trusted proxy is valid). The address itself is never kept; only salted
+ * hashes of these prefixes are used, see handler.
  */
 export function networkPrefixes(ip: string | null): string[] {
   if (!ip || ip.length > 45) return [];
-  const v4 = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(ip);
-  if (v4) {
-    return v4.slice(1).every((o) => Number(o) <= 255)
-      ? [`4:${v4[1]}.${v4[2]}.${v4[3]}`, `4:${v4[1]}.${v4[2]}`]
-      : [];
+  const v4 = parseV4(ip);
+  if (v4) return v4Prefixes(v4);
+  if (!ip.includes(':')) return [];
+  let work = ip;
+  if (ip.includes('.')) {
+    const i = ip.lastIndexOf(':');
+    const t = parseV4(ip.slice(i + 1));
+    if (!t) return [];
+    work = `${ip.slice(0, i + 1)}${((t[0] << 8) | t[1]).toString(16)}:${((t[2] << 8) | t[3]).toString(16)}`;
   }
-  if (!/^[0-9a-fA-F:]+$/.test(ip) || !ip.includes(':')) return [];
-  const halves = ip.split('::');
+  if (!/^[0-9a-fA-F:]+$/.test(work)) return [];
+  const halves = work.split('::');
   if (halves.length > 2) return [];
   const head = halves[0] ? halves[0].split(':') : [];
   const tail = halves.length === 2 && halves[1] ? halves[1].split(':') : [];
@@ -128,7 +142,10 @@ export function networkPrefixes(ip: string | null): string[] {
   const fill = halves.length === 2 ? 8 - head.length - tail.length : 0;
   const groups = [...head, ...Array(fill).fill('0'), ...tail];
   if (groups.length !== 8 || !groups.every((g) => /^[0-9a-fA-F]{1,4}$/.test(g))) return [];
-  const g = groups.slice(0, 3).map((x) => parseInt(x, 16).toString(16));
+  const n = groups.map((g) => parseInt(g, 16));
+  if (n.slice(0, 5).every((x) => x === 0) && n[5] === 0xffff)
+    return v4Prefixes([n[6] >> 8, n[6] & 255, n[7] >> 8, n[7] & 255]);
+  const g = n.slice(0, 3).map((x) => x.toString(16));
   return [`6:${g.join(':')}`, `6:${g[0]}:${g[1]}`];
 }
 

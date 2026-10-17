@@ -28,8 +28,16 @@ export interface Config {
   previousSecret?: string;
   /** Exact origins, e.g. ["https://example.org"]. No wildcard. */
   allowedOrigins: string[];
-  /** Optional allow-list of widget ids. Unset: any id matching the registry id shape. */
+  /**
+   * REQUIRED allow-list of widget ids (generate it with scripts/emit-widget-ids.ts). Without it
+   * the service answers 503 and creates no rows, so strangers cannot create counters.
+   */
   widgetIds?: string[];
+  /** Optional shared cache for /stats bodies (Workers: the Cache API). Keys are URLs without CORS data. */
+  cache?: {
+    match(key: string): Promise<string | null>;
+    put(key: string, body: string): Promise<void>;
+  };
   now?: () => number;
   /** Leading zero bits required to get a token. 18 is about a second or two of work. */
   powBits?: number;
@@ -50,13 +58,19 @@ const DEFAULT_LIMITS = {
   netToken: 6,
   netTokenCoarse: 24,
   tokenGlobal: 60, // shared bucket when no address header exists
-  issuePerMinute: 30, // tokens issued in total, always applied
-  issuePerHour: 300
+  // Token issuance is an availability trade-off: the totals below cap what a flood of prefixes can
+  // cause, and `issuePerHourPrefix` reserves budget so one coarse prefix cannot use it all.
+  issuePerMinute: 120, // tokens issued in total, always applied
+  issuePerHour: 3000,
+  issuePerHourPrefix: 30, // per coarse prefix (/16, /32); difficulty also rises with each one
+  netRead: 60, // GET /stats per fine prefix, per minute
+  netReadCoarse: 240,
+  readShared: 600 // without an address header
 };
+const PREFIX_BITS_MAX = 4; // extra proof-of-work bits for a prefix that keeps asking for tokens
 
 const DAY = 86400;
 const VIEW_TTL = 2 * DAY; // dedupe rows vanish two days after the UTC day they belong to
-const LIKE_TTL = 400 * DAY;
 const RATE_TTL = 120; // every rate-limit key lives at most two minutes
 const METHODS = 'GET, POST, DELETE, OPTIONS';
 
@@ -76,8 +90,9 @@ export function createHandler(cfg: Config): (req: Request) => Promise<Response> 
   const ipHeader = (cfg.ipHeader ?? 'cf-connecting-ip').toLowerCase();
   const secrets = [cfg.secret, ...(cfg.previousSecret ? [cfg.previousSecret] : [])];
   const origins = new Set(cfg.allowedOrigins.filter((o) => o && o !== '*'));
-  const ids = cfg.widgetIds ? new Set(cfg.widgetIds) : null;
-  const idOk = (id: string) => isWidgetId(id) && (!ids || ids.has(id));
+  const ids = new Set(cfg.widgetIds ?? []);
+  const idOk = (id: string) => isWidgetId(id) && ids.has(id);
+  const unavailable = (origin: string | null) => fail(503, 'unavailable', origin);
   const store = cfg.store;
 
   const respond = (
@@ -160,15 +175,32 @@ export function createHandler(cfg: Config): (req: Request) => Promise<Response> 
     if (route === 'stats' && parts.length === 2) {
       if (req.method !== 'GET') return fail(405, 'method_not_allowed', origin, { allow: METHODS });
       if (origin !== null && !allowed) return fail(403, 'forbidden', null);
+      if (ids.size === 0) return unavailable(origin);
       const list = parseIds(url.searchParams.get('ids'));
       if (!list || !list.every(idOk)) return fail(400, 'bad_request', origin);
-      const stats: Record<string, { views: number; likes: number }> = Object.create(null);
-      for (const id of list)
-        stats[id] = {
-          views: await store.getNumber(`cv:${id}`),
-          likes: await store.getNumber(`cl:${id}`)
-        };
-      return respond(200, { stats }, origin, { 'cache-control': 'public, max-age=30' });
+      // Rate limit first (two cheap writes), then cache, then ONE batched read.
+      const rkeys = await netKeys(req, day);
+      const rlim = [limits.netRead, limits.netReadCoarse];
+      if (!(await netHit(rkeys, 'ns', rlim, limits.readShared, minute)))
+        return fail(429, 'rate_limited', origin, { 'retry-after': '60' });
+      const sorted = [...list].sort();
+      const cacheKey = `https://stats.invalid/stats?ids=${sorted.join(',')}`;
+      let body = (await cfg.cache?.match(cacheKey)) ?? null;
+      if (body === null) {
+        const nums = await store.getMany(sorted.flatMap((id) => [`cv:${id}`, `cl:${id}`]));
+        const stats: Record<string, { views: number; likes: number }> = Object.create(null);
+        sorted.forEach((id, i) => (stats[id] = { views: nums[2 * i], likes: nums[2 * i + 1] }));
+        body = JSON.stringify({ stats });
+        await cfg.cache?.put(cacheKey, body);
+      }
+      const h = new Headers({ ...SECURITY, vary: 'Origin' });
+      h.set('content-type', 'application/json; charset=utf-8');
+      h.set('cache-control', 'public, max-age=30');
+      if (origin && origins.has(origin)) {
+        h.set('access-control-allow-origin', origin);
+        h.set('access-control-allow-methods', METHODS);
+      }
+      return new Response(body, { status: 200, headers: h });
     }
 
     if (
@@ -180,12 +212,19 @@ export function createHandler(cfg: Config): (req: Request) => Promise<Response> 
       if (!allowed) return fail(403, 'forbidden', null);
       const keys = await netKeys(req, day);
       const lim = [limits.netToken, limits.netTokenCoarse];
+      // Hourly issuance counter of the coarse prefix: its hashed key expires an hour after last use.
+      const hour = Math.floor(minute / 60);
+      const prefixKey = `r:ti:p:${keys[keys.length - 1]}:${hour}`;
+      const prefixMax = keys[0] === 'global' ? limits.issuePerHour : limits.issuePerHourPrefix;
       if (!(await netHit(keys, 'nt', lim, limits.tokenGlobal, minute)))
         return fail(429, 'rate_limited', origin, { 'retry-after': '60' });
       if (route === 'challenge') {
         // Adaptive difficulty: busier minutes cost more work.
         const busy = (await store.getNumber(`r:ti:m:${minute}`)) >= adaptive.threshold;
-        const bits = Math.min(MAX_POW_BITS, baseBits + (busy ? adaptive.step : 0));
+        // ...and a prefix that keeps getting tokens pays one more bit per recent issuance.
+        const mine = await store.getNumber(prefixKey);
+        const extra = Math.min(PREFIX_BITS_MAX, mine);
+        const bits = Math.min(MAX_POW_BITS, baseBits + (busy ? adaptive.step : 0) + extra);
         const challenge = await signChallenge(cfg.secret, nowSec, bits);
         return respond(200, { challenge, bits }, origin, { 'cache-control': 'no-store' });
       }
@@ -196,13 +235,13 @@ export function createHandler(cfg: Config): (req: Request) => Promise<Response> 
       // Single use: a solved challenge cannot be replayed for more tokens.
       if (!(await store.setIfAbsent(`ch:${ch.nonce}`, 150)))
         return fail(400, 'bad_request', origin);
+      // One prefix cannot use up the shared budget: its own share is checked first.
+      if ((await store.incr(prefixKey, 1, { ttl: 3600 })) > prefixMax)
+        return fail(429, 'rate_limited', origin, { 'retry-after': '3600' });
       // Global issuance caps apply even when an address header is present.
       if ((await store.incr(`r:ti:m:${minute}`, 1, { ttl: RATE_TTL })) > limits.issuePerMinute)
         return fail(429, 'rate_limited', origin, { 'retry-after': '60' });
-      if (
-        (await store.incr(`r:ti:h:${Math.floor(minute / 60)}`, 1, { ttl: 7200 })) >
-        limits.issuePerHour
-      )
+      if ((await store.incr(`r:ti:h:${hour}`, 1, { ttl: 7200 })) > limits.issuePerHour)
         return fail(429, 'rate_limited', origin, { 'retry-after': '3600' });
       // Renewal keeps the identity (so likes stay revocable); an unknown or too old token starts a new one.
       const prevHeader = req.headers.get('x-previous-token');
@@ -222,6 +261,7 @@ export function createHandler(cfg: Config): (req: Request) => Promise<Response> 
       } catch {
         return fail(400, 'bad_request', origin);
       }
+      if (ids.size === 0) return unavailable(origin);
       if (!idOk(id)) return fail(400, 'bad_request', origin);
 
       // Cheap checks done; limit by network before any token work.
@@ -248,10 +288,10 @@ export function createHandler(cfg: Config): (req: Request) => Promise<Response> 
         const key = `v:${id}:${day}:${await hmac(idSecret, `view|${day}|${id}|${who}`)}`;
         if (await store.setIfAbsent(key, VIEW_TTL)) await store.incr(`cv:${id}`, 1);
       } else {
-        // Per widget and no date: a like must stay revocable, but keys of different widgets do not link.
+        // Per widget, no date and no expiry: a like must stay revocable, but keys of different widgets do not link.
         const key = `l:${id}:${await hmac(idSecret, `like|${id}|${who}`)}`;
         if (req.method === 'POST') {
-          if (await store.setIfAbsent(key, LIKE_TTL)) await store.incr(`cl:${id}`, 1);
+          if (await store.setIfAbsent(key)) await store.incr(`cl:${id}`, 1);
         } else if (await store.delete(key)) await store.incr(`cl:${id}`, -1);
       }
       return respond(204, null, origin, { 'cache-control': 'no-store' });

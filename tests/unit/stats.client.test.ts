@@ -163,7 +163,7 @@ describe('RemoteStatsProvider', () => {
     await vi.advanceTimersByTimeAsync(TIMEOUT_MS + 1);
     expect(await r).toEqual({ [A]: null });
   });
-  it('chunks ids at 50 per request', async () => {
+  it('chunks ids at 20 per request', async () => {
     const ids = Array.from(
       { length: 120 },
       (_, i) =>
@@ -171,7 +171,7 @@ describe('RemoteStatsProvider', () => {
     );
     const f = vi.fn(async () => json({ stats: {} }));
     await new RemoteStatsProvider(ORIGIN, f as unknown as typeof fetch).getStats(ids);
-    expect(f).toHaveBeenCalledTimes(3);
+    expect(f).toHaveBeenCalledTimes(6);
   });
 
   describe('writes', () => {
@@ -267,6 +267,39 @@ describe('RemoteStatsProvider', () => {
       expect(f).toHaveBeenCalledTimes(1);
       expect(MAX_POW_BITS).toBe(22);
     });
+    it('backs off (doubling) after the work is refused or times out, instead of re-solving', async () => {
+      let t = Date.UTC(2026, 9, 17, 10);
+      const { f, calls } = server();
+      const tooHard = vi.fn(async (url: string, init: RequestInit) => {
+        if (url.endsWith('/challenge'))
+          return json({ challenge: 'c'.repeat(40), bits: MAX_POW_BITS + 1 });
+        return f(url, init);
+      });
+      const p = new RemoteStatsProvider(ORIGIN, tooHard as unknown as typeof fetch, () => t);
+      const attempts = () =>
+        tooHard.mock.calls.filter((c) => String(c[0]).endsWith('/challenge')).length;
+      await p.like(A);
+      await p.settled();
+      expect(attempts()).toBe(1);
+      await p.unlike(A);
+      await p.like(A);
+      await p.settled();
+      expect(attempts()).toBe(1); // within 10 minutes: no second attempt
+      t += 11 * 60_000;
+      await p.unlike(A);
+      await p.settled();
+      expect(attempts()).toBe(2);
+      t += 11 * 60_000; // second wait is 20 minutes
+      await p.like(A);
+      await p.settled();
+      expect(attempts()).toBe(2);
+      t += 10 * 60_000;
+      await p.unlike(A);
+      await p.settled();
+      expect(attempts()).toBe(3);
+      expect(calls).toHaveLength(0);
+      expect(p.isLiked(A)).toBe(false); // the actions themselves still worked locally
+    });
     it('keeps the like locally when the service fails', async () => {
       const p = new RemoteStatsProvider(ORIGIN, (async () => {
         throw new Error('down');
@@ -353,6 +386,11 @@ describe('statsOrigin / connectSrc', () => {
     expect(statsOrigin('https://stats.example.org')).toBe('https://stats.example.org');
     expect(statsOrigin('https://stats.example.org/')).toBe('https://stats.example.org');
     expect(statsOrigin('http://localhost:8787')).toBe('http://localhost:8787');
+    expect(statsOrigin('http://[::1]:8787')).toBe('http://[::1]:8787');
+    expect(statsOrigin('http://127.0.0.1:8787')).toBe('http://127.0.0.1:8787');
+    expect(statsOrigin('https://stats-1.eu.example.org:8443')).toBe(
+      'https://stats-1.eu.example.org:8443'
+    );
     for (const bad of [
       '',
       undefined,
@@ -364,6 +402,17 @@ describe('statsOrigin / connectSrc', () => {
       'https://x.org#h',
       'https://x.org?',
       'javascript:alert(1)',
+      'https://*.example.org',
+      'https://a.example.org;',
+      'https://a.example.org,https://b.org',
+      "https://a.example.org'",
+      'https://exa mple.org',
+      'https://-bad.org',
+      'https://bad-.org',
+      'https://a..org',
+      'https://[2001:db8::1]',
+      'https://a.org:99999',
+      'https://%2A.example.org',
       'not a url'
     ])
       expect(statsOrigin(bad)).toBeNull();

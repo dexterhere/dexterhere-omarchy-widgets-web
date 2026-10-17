@@ -6,7 +6,7 @@ import type { Stats, StatsProvider } from './types';
 
 export const TIMEOUT_MS = 3000;
 export const MAX_RESPONSE_BYTES = 16 * 1024;
-export const MAX_IDS = 50;
+export const MAX_IDS = 20;
 export const TOKEN_KEY = 'ow-token';
 /** Highest difficulty this client will solve (2^22 hashes). A server asking for more is ignored. */
 export const MAX_POW_BITS = 22;
@@ -14,6 +14,8 @@ const TOKEN_RE = /^v1\.[0-9a-f]{32}\.[0-9]{1,12}\.[0-9a-f]{64}$/;
 export const VIEWED_KEY = 'ow-viewed';
 const MAX_VIEWED = 500;
 const BACKOFF_MS = 60_000;
+const POW_BACKOFF_MS = 10 * 60_000; // doubles per failure, up to 6 hours
+const POW_BACKOFF_MAX_MS = 6 * 3600_000;
 
 const isCount = (n: unknown): n is number => Number.isSafeInteger(n) && (n as number) >= 0;
 const has = (o: object, k: string) => Object.prototype.hasOwnProperty.call(o, k);
@@ -42,10 +44,19 @@ export class RemoteStatsProvider implements StatsProvider {
    * cookie, and sent only to the stats origin on writes. Fetched lazily, shared by concurrent calls.
    */
   private stale = false;
+  private powBackoffUntil = 0;
+  private powFailures = 0;
+  /** The work was refused or too costly: do not try again for a while (doubling). */
+  private powFailed(): null {
+    const wait = Math.min(POW_BACKOFF_MAX_MS, POW_BACKOFF_MS * 2 ** this.powFailures++);
+    this.powBackoffUntil = this.now() + wait;
+    return null;
+  }
   private tokenPromise: Promise<string | null> | undefined;
   private getToken(): Promise<string | null> {
     const cur = this.stale ? null : readToken(this.now());
     if (cur) return Promise.resolve(cur);
+    if (this.now() < this.powBackoffUntil) return Promise.resolve(null);
     this.tokenPromise ??= this.acquireToken().finally(() => (this.tokenPromise = undefined));
     return this.tokenPromise;
   }
@@ -56,9 +67,9 @@ export class RemoteStatsProvider implements StatsProvider {
     if (!j || typeof j.challenge !== 'string' || j.challenge.length > 160) return null;
     const bits = j.bits;
     if (!Number.isInteger(bits) || (bits as number) < 0 || (bits as number) > MAX_POW_BITS)
-      return null;
+      return this.powFailed();
     const solution = await solvePow(j.challenge, bits as number);
-    if (solution === null) return null;
+    if (solution === null) return this.powFailed();
     // Renewal: present the old token (even expired) so the server keeps the same identity.
     const old = readItem(TOKEN_KEY);
     const t = await this.call('POST', '/token', {
@@ -70,6 +81,7 @@ export class RemoteStatsProvider implements StatsProvider {
     if (!r || typeof r.token !== 'string' || !TOKEN_RE.test(r.token)) return null;
     writeItem(TOKEN_KEY, r.token);
     this.stale = false;
+    this.powFailures = 0;
     return r.token;
   }
 

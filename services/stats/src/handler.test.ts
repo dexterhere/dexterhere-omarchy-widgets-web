@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { leadingZeroBits, networkPrefix, networkPrefixes, powOk } from './auth';
 import { createHandler, hmac } from './handler';
-import { memoryStore } from './store';
+import { memoryStore, type Store } from './store';
 
 const ORIGIN = 'https://site.example';
 const SECRET = 's'.repeat(40);
@@ -24,6 +24,7 @@ function setup(
     secret?: string;
     previousSecret?: string;
     idSecret?: string;
+    cache?: { match(k: string): Promise<string | null>; put(k: string, b: string): Promise<void> };
     adaptive?: { threshold: number; step: number };
   } = {}
 ) {
@@ -35,6 +36,8 @@ function setup(
     secret: opts.secret ?? SECRET,
     previousSecret: opts.previousSecret,
     allowedOrigins: [ORIGIN],
+    widgetIds: [A, B],
+    cache: opts.cache,
     now: () => t,
     powBits: bits,
     limits: {
@@ -522,10 +525,10 @@ describe('errors and logging', () => {
   });
   it('storage failures give a generic 500', async () => {
     const store = memoryStore();
-    store.getNumber = async () => {
+    store.getMany = async () => {
       throw new Error('db down with secret-details');
     };
-    const h = createHandler({ store, secret: SECRET, allowedOrigins: [ORIGIN] });
+    const h = createHandler({ store, secret: SECRET, allowedOrigins: [ORIGIN], widgetIds: [A] });
     const r = await h(
       new Request(`https://s.example/stats?ids=${A}`, { headers: { origin: ORIGIN } })
     );
@@ -650,6 +653,7 @@ describe('stable identity across renewal and rotation', () => {
       previousSecret: 'o'.repeat(40),
       idSecret: 'i'.repeat(40),
       allowedOrigins: [ORIGIN],
+      widgetIds: [A, B],
       now: () => Date.UTC(2026, 9, 17, 12),
       powBits: 6
     });
@@ -765,13 +769,13 @@ describe('extra rate tiers, issuance caps and adaptive difficulty', () => {
     expect(await bitsNow()).toBe(6);
     await s.mint();
     await s.mint();
-    expect(await bitsNow()).toBe(9);
+    expect(await bitsNow()).toBe(11); // 6 + 3 busy + 2 for this (shared) prefix
     // a solution good for 6 bits but not 9 is refused against a busy challenge
     const c = (await (await s.call('GET', '/challenge')).json()) as {
       challenge: string;
       bits: number;
     };
-    const weak = await solve(c.challenge, 6, async (x) => powOk(c.challenge, x, 9));
+    const weak = await solve(c.challenge, 6, async (x) => powOk(c.challenge, x, 11));
     expect(
       (await s.call('POST', '/token', { 'x-challenge': c.challenge, 'x-pow': weak })).status
     ).toBe(400);
@@ -781,7 +785,7 @@ describe('extra rate tiers, issuance caps and adaptive difficulty', () => {
       (await s.call('POST', '/token', { 'x-challenge': `${n}.${e}.6.${m}`, 'x-pow': weak })).status
     ).toBe(400);
     s.advance(61_000);
-    expect(await bitsNow()).toBe(6);
+    expect(await bitsNow()).toBe(8); // not busy any more; the prefix still pays for its 2 tokens
   });
   it('never asks for more than the 22-bit maximum', async () => {
     const s = setup({ bits: 30, adaptive: { threshold: 0, step: 10 } });
@@ -846,5 +850,257 @@ describe('request bodies', () => {
     const bad = { 'x-client-token': 'junk', 'cf-connecting-ip': '192.0.2.5' };
     expect((await s.call('POST', `/view/${A}`, bad)).status).toBe(401);
     expect((await s.call('POST', `/view/${A}`, bad)).status).toBe(429);
+  });
+});
+
+describe('issuance budget per prefix', () => {
+  const issue = async (s: ReturnType<typeof setup>, ip: string) => {
+    const h = { 'cf-connecting-ip': ip };
+    const c = (await (await s.call('GET', '/challenge', h)).json()) as {
+      challenge: string;
+      bits: number;
+    };
+    const r = await s.call('POST', '/token', {
+      ...h,
+      'x-challenge': c.challenge,
+      'x-pow': await solve(c.challenge, c.bits)
+    });
+    return { status: r.status, retry: r.headers.get('retry-after'), bits: c.bits };
+  };
+  it('one actor exhausts its share, another prefix still gets a token', async () => {
+    const s = setup({ limits: { issuePerHourPrefix: 2, issuePerHour: 100 } });
+    expect((await issue(s, '10.1.1.1')).status).toBe(200);
+    expect((await issue(s, '10.1.2.2')).status).toBe(200); // same /16
+    const third = await issue(s, '10.1.3.3');
+    expect(third.status).toBe(429);
+    expect(third.retry).toBe('3600');
+    expect((await issue(s, '10.2.0.1')).status).toBe(200); // other /16 is unaffected
+    expect((await issue(s, '2001:db8:1::1')).status).toBe(200);
+  });
+  it('the exhausted actor does not consume the global budget', async () => {
+    const s = setup({ limits: { issuePerHourPrefix: 1, issuePerHour: 2, issuePerMinute: 100 } });
+    expect((await issue(s, '10.1.1.1')).status).toBe(200);
+    for (let i = 0; i < 5; i++) expect((await issue(s, '10.1.1.1')).status).toBe(429);
+    expect((await issue(s, '10.9.0.1')).status).toBe(200); // global 2nd slot still free
+    expect((await issue(s, '10.8.0.1')).status).toBe(429); // now the global cap is reached
+  });
+  it('difficulty rises with each recent issuance to a prefix, up to +4 bits, and resets next hour', async () => {
+    const s = setup({ bits: 6 });
+    const bits: number[] = [];
+    for (let i = 0; i < 7; i++) bits.push((await issue(s, '10.1.1.1')).bits);
+    expect(bits).toEqual([6, 7, 8, 9, 10, 10, 10]);
+    expect((await issue(s, '10.7.7.7')).bits).toBe(6); // other prefix unaffected
+    s.advance(3600_000);
+    expect((await issue(s, '10.1.1.1')).bits).toBe(6);
+  });
+  it('prefix keys are hashed and expire within an hour of last use', async () => {
+    const s = setup();
+    await issue(s, '10.1.1.1');
+    const keys = s.store.keys().filter((k) => k.startsWith('r:ti:p:'));
+    expect(keys).toHaveLength(1);
+    expect(keys[0]).not.toContain('10.1');
+    expect(s.store.ttlMs(keys[0])!).toBeLessThanOrEqual(3600_000);
+    const hourly = s.store.keys().find((k) => k.startsWith('r:ti:h:'))!;
+    expect(hourly).toMatch(/^r:ti:h:\d+$/); // global hourly counter holds no address data
+  });
+});
+
+describe('GET /stats cost', () => {
+  const counting = () => {
+    const inner = memoryStore();
+    const calls = { getMany: 0, getNumber: 0 };
+    const store: Store & ReturnType<typeof memoryStore> = {
+      ...inner,
+      getMany: async (k) => (calls.getMany++, inner.getMany(k)),
+      getNumber: async (k) => (calls.getNumber++, inner.getNumber(k))
+    };
+    return { store, calls };
+  };
+  const build = (extra: Partial<Parameters<typeof createHandler>[0]> = {}) => {
+    const { store, calls } = counting();
+    const h = createHandler({
+      store,
+      secret: SECRET,
+      allowedOrigins: [ORIGIN],
+      widgetIds: [A, B],
+      now: () => Date.UTC(2026, 9, 17, 12),
+      ...extra
+    });
+    const get = (ip?: string, ids = `${A},${B}`) =>
+      h(
+        new Request(`https://s/stats?ids=${ids}`, {
+          headers: { origin: ORIGIN, ...(ip ? { 'cf-connecting-ip': ip } : {}) }
+        })
+      );
+    return { get, calls, store };
+  };
+  it('reads all counters in ONE batched call', async () => {
+    const { get, calls } = build();
+    const r = await get('10.0.0.1');
+    expect(r.status).toBe(200);
+    expect(calls.getMany).toBe(1);
+    expect(calls.getNumber).toBe(0);
+  });
+  it('2000 requests from one network cost at most the rate-limit budget', async () => {
+    const { get, calls } = build();
+    const codes = new Map<number, number>();
+    for (let i = 0; i < 2000; i++) {
+      const st = (await get('10.0.0.1')).status;
+      codes.set(st, (codes.get(st) ?? 0) + 1);
+    }
+    expect(codes.get(200)).toBe(60); // netRead per minute
+    expect(codes.get(429)).toBe(1940);
+    expect(calls.getMany).toBe(60);
+  });
+  it('the coarse tier bounds many fine prefixes in one /16', async () => {
+    const { get, calls } = build();
+    let ok = 0;
+    for (let i = 0; i < 600; i++) if ((await get(`10.0.${i % 250}.1`)).status === 200) ok++;
+    expect(ok).toBe(240); // netReadCoarse
+    expect(calls.getMany).toBe(240);
+  });
+  it('without an address header all readers share one bucket', async () => {
+    const { get, calls } = build();
+    for (let i = 0; i < 1000; i++) await get();
+    expect(calls.getMany).toBe(600);
+  });
+  it('a cache serves repeats (any id order) with no store reads and keeps Cache-Control', async () => {
+    const m = new Map<string, string>();
+    const cache = {
+      match: async (k: string) => m.get(k) ?? null,
+      put: async (k: string, b: string) => void m.set(k, b)
+    };
+    const { get, calls } = build({ cache });
+    const first = await get('10.0.0.1', `${A},${B}`);
+    const second = await get('10.0.0.2', `${B},${A}`);
+    expect(await second.text()).toBe(await first.text());
+    expect(calls.getMany).toBe(1);
+    expect(second.headers.get('cache-control')).toBe('public, max-age=30');
+    expect(second.headers.get('access-control-allow-origin')).toBe(ORIGIN);
+    for (let i = 0; i < 2000; i++) await get('10.0.0.1');
+    expect(calls.getMany).toBe(1);
+  });
+  it('accepts at most 20 ids', async () => {
+    const { get } = build();
+    const many = Array.from(
+      { length: 21 },
+      (_, i) => `io.github.x.w${'abcdefghijklmnopqrstu'[i]}`
+    ).join(',');
+    expect((await get('10.0.0.1', many)).status).toBe(400);
+  });
+});
+
+describe('WIDGET_IDS is required', () => {
+  it('without it nothing is served or created', async () => {
+    const store = memoryStore();
+    const h = createHandler({
+      store,
+      secret: SECRET,
+      allowedOrigins: [ORIGIN],
+      now: () => 1_800_000_000_000,
+      powBits: 4
+    });
+    const g = (path: string, method = 'GET', headers: Record<string, string> = {}) =>
+      h(new Request(`https://s${path}`, { method, headers: { origin: ORIGIN, ...headers } }));
+    expect((await g(`/stats?ids=${A}`)).status).toBe(503);
+    expect((await g(`/like/${A}`, 'POST', { 'x-client-token': 'x' })).status).toBe(503);
+    expect((await g(`/view/${A}`, 'POST')).status).toBe(503);
+    expect(store.keys()).toEqual([]);
+    expect(
+      (
+        await h(new Request('https://s/stats?ids=' + A, { headers: { origin: ORIGIN } }))
+      ).headers.get('content-type')
+    ).toContain('json');
+  });
+  it('unknown ids are rejected and create no rows', async () => {
+    const s = setup();
+    const t = s.tk(await s.mint());
+    const before = s.store.keys().length;
+    const other = 'io.github.stranger.thing';
+    for (const route of ['view', 'like'])
+      expect((await s.call('POST', `/${route}/${other}`, t)).status).toBe(400);
+    expect((await s.call('DELETE', `/like/${other}`, t)).status).toBe(400);
+    expect((await s.call('GET', `/stats?ids=${other}`)).status).toBe(400);
+    const rows = s.store.keys().filter((k) => /^(cv|cl|v|l):/.test(k));
+    expect(rows).toEqual([]);
+    expect(s.store.keys().length).toBeLessThanOrEqual(before + 2); // at most rate-limit counters
+  });
+});
+
+describe('likes do not expire', () => {
+  it('like rows have no TTL; view rows do', async () => {
+    const s = setup();
+    const t = s.tk(await s.mint());
+    await s.call('POST', `/like/${A}`, t);
+    await s.call('POST', `/view/${A}`, t);
+    const like = s.store.keys().find((k) => k.startsWith('l:'))!;
+    const view = s.store.keys().find((k) => k.startsWith('v:'))!;
+    expect(s.store.ttlMs(like)).toBe(Infinity);
+    expect(s.store.ttlMs(view)!).toBeLessThanOrEqual(2 * 86400_000);
+    s.advance(800 * DAYMS);
+    expect((await s.call('DELETE', `/like/${A}`, s.tk(await s.mint()))).status).toBe(204); // other identity: no-op
+    expect(s.store.keys().some((k) => k.startsWith('l:'))).toBe(true);
+    expect((await s.stats(A))[A].likes).toBe(1);
+  });
+});
+
+describe('address header forms', () => {
+  it('IPv4-mapped IPv6 is IPv4; leading zeros are normalised', () => {
+    const v = ['4:1.2.3', '4:1.2'];
+    expect(networkPrefixes('::ffff:1.2.3.4')).toEqual(v);
+    expect(networkPrefixes('::ffff:0102:0304')).toEqual(v);
+    expect(networkPrefixes('::FFFF:102:304')).toEqual(v);
+    expect(networkPrefixes('0:0:0:0:0:ffff:102:304')).toEqual(v);
+    expect(networkPrefixes('001.002.003.004')).toEqual(v);
+    expect(networkPrefixes('01.2.3.4')).toEqual(v);
+  });
+  it('lists, ports, zones and malformed forms are rejected', () => {
+    for (const bad of [
+      '1.2.3.4, 5.6.7.8',
+      '1.2.3.4,5.6.7.8',
+      '1.2.3.4 5.6.7.8',
+      '1.2.3.4:80',
+      '[::1]',
+      'fe80::1%eth0',
+      '256.1.1.1',
+      '1.2.3',
+      '::ffff:1.2.3',
+      '::ffff:1.2.3.999',
+      ':::',
+      '1:2:3:4:5:6:7',
+      '2001:db8::1, 2001:db8::2'
+    ])
+      expect(networkPrefixes(bad)).toEqual([]);
+  });
+  it('a list header falls into the shared bucket instead of picking an address', async () => {
+    const s = setup({ limits: { netWrite: 1, global: 3 } });
+    const t = [
+      s.tk(await s.mint()),
+      s.tk(await s.mint()),
+      s.tk(await s.mint()),
+      s.tk(await s.mint())
+    ];
+    const w = (x: Record<string, string>) =>
+      s
+        .call('POST', `/view/${A}`, { ...x, 'cf-connecting-ip': '1.2.3.4, 9.9.9.9' })
+        .then((r) => r.status);
+    expect([await w(t[0]), await w(t[1]), await w(t[2]), await w(t[3])]).toEqual([
+      204, 204, 204, 429
+    ]);
+  });
+  it('a custom header name is honoured', async () => {
+    const store = memoryStore();
+    const h = createHandler({
+      store,
+      secret: SECRET,
+      allowedOrigins: [ORIGIN],
+      widgetIds: [A],
+      ipHeader: 'X-Real-IP',
+      powBits: 4
+    });
+    await h(
+      new Request('https://s/challenge', { headers: { origin: ORIGIN, 'x-real-ip': '10.1.1.1' } })
+    );
+    expect(store.keys().some((k) => k.startsWith('r:nt:') && !k.includes('global'))).toBe(true);
   });
 });

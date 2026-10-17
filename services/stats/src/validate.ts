@@ -1,7 +1,7 @@
 // Copy of src/lib/stats/id.ts (the service is a separate package with no imports from the site).
 const ID_RE = /^[a-z][a-z0-9-]*(\.[a-z0-9][a-z0-9-]*)+$/;
 export const MAX_ID_LENGTH = 128;
-export const MAX_IDS = 50;
+export const MAX_IDS = 20;
 
 export const isWidgetId = (v: unknown): v is string =>
   typeof v === 'string' && v.length <= MAX_ID_LENGTH && ID_RE.test(v);

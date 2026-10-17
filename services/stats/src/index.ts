@@ -12,8 +12,10 @@ export interface Env {
   STATS_SECRET_PREVIOUS?: string;
   /** Comma-separated exact origins, e.g. `https://example.org,https://www.example.org`. */
   ALLOWED_ORIGINS: string;
-  /** Optional comma-separated allow-list of widget ids. */
+  /** REQUIRED comma-separated widget ids (generate with scripts/emit-widget-ids.ts). */
   WIDGET_IDS?: string;
+  /** Header with the client address, set by a TRUSTED proxy. Default cf-connecting-ip. */
+  IP_HEADER?: string;
 }
 
 const list = (s?: string) =>
@@ -21,6 +23,20 @@ const list = (s?: string) =>
     .split(',')
     .map((x) => x.trim())
     .filter(Boolean);
+
+/** The Workers Cache API as a tiny string cache, when it exists. */
+function workerCache() {
+  const c = (globalThis as unknown as { caches?: { default?: Cache } }).caches?.default;
+  if (!c) return undefined;
+  return {
+    match: async (key: string) => (await c.match(new Request(key)))?.text() ?? null,
+    put: (key: string, body: string) =>
+      c.put(
+        new Request(key),
+        new Response(body, { headers: { 'cache-control': 'public, max-age=30' } })
+      )
+  };
+}
 
 export default {
   fetch(request: Request, env: Env): Promise<Response> {
@@ -32,7 +48,9 @@ export default {
       idSecret: env.ID_SECRET || undefined,
       previousSecret: env.STATS_SECRET_PREVIOUS || undefined,
       allowedOrigins: list(env.ALLOWED_ORIGINS),
-      widgetIds: env.WIDGET_IDS ? list(env.WIDGET_IDS) : undefined
+      widgetIds: list(env.WIDGET_IDS),
+      ipHeader: env.IP_HEADER || undefined,
+      cache: workerCache()
     })(request);
   },
   /** Daily cron: delete expired dedupe and rate-limit rows. */
