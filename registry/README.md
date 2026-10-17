@@ -1,0 +1,72 @@
+# Registry
+
+Static widget catalog. Listings are data in Git, CI builds `registry/dist/` (not committed), the site reads only that.
+
+```
+registry/
+  schema/listing.schema.json   what a submitter writes
+  schema/widget.schema.json    DRAFT v0 copy (see PINNED.json), to be replaced by the code repo's pinned release
+  schema/review.schema.json    maintainer review records
+  widgets/<id>.json            one listing per widget (file name must equal the id)
+  review/<id>.json             maintainer review records (CODEOWNERS only)
+  fixtures/<id>/               manifest.json + widget.json for CONCEPT entries
+  dist/                        generated: index.json and widgets/<id>.json
+```
+
+## Listing format
+
+A listing is a pointer, not the widget:
+
+```json
+{
+  "id": "io.github.you.github-activity",
+  "repo": "https://github.com/you/omarchy-github-activity",
+  "commit": "0123456789abcdef0123456789abcdef01234567",
+  "category": "dev-git",
+  "tags": ["github", "pull-requests"],
+  "summary": "Open PRs and review requests at a glance.",
+  "status": "alpha"
+}
+```
+
+- `id`: reverse-domain, lowercase, never under `omarchy.`.
+- `repo`: `https://github.com/<owner>/<repo>` only.
+- `commit`: full 40-character lowercase SHA. The build reads your files at exactly this commit.
+- `status`: `planned`, `alpha`, `stable` or `removed`. `removed` is a takedown: the entry is not fetched and not published.
+- `source: "fixture"` exists only for maintainers' concept entries and is allowed only with `status: "planned"`.
+- A listing has no trust field. Any extra property fails validation.
+
+## Build
+
+`bun run registry` (flags `--offline`, `--out <dir>`):
+
+1. Validate every listing; reject duplicate ids and file names that are not `<id>.json`.
+2. Skip `removed` listings entirely.
+3. Fetch `manifest.json` and `widget.json` from `https://raw.githubusercontent.com/<owner>/<repo>/<commit>/`. Only that host, https, no credentials or ports, redirects are errors, 10 s timeout, 256 KB cap enforced while streaming, JSON only, no auth headers. Fixture entries read `registry/fixtures/<id>/` instead and never touch the network. `--offline` fails any listing that would need the network.
+4. Validate `widget.json` against the widget schema; the id must match in the listing, `manifest.json` and `widget.json`.
+5. Derive name, version, description, surfaces, size classes, variants, providers, capabilities, settings, compat and license from those files. Text is reduced to plain text (control and invisible characters removed, length capped, HTML-looking text rejected). Nothing is rendered as markdown.
+6. Generate the plain-language access summary (data topics and fields, network hosts, files, programs, secrets). Empty rows say "none".
+7. Write `dist/index.json` (sorted by id, no timestamp, so output is reproducible) and `dist/widgets/<id>.json`.
+
+Any problem prints a secret-free message and exits non-zero.
+
+The site loads `dist/index.json` at build time through `src/lib/registry/index.ts` (`import.meta.glob`, so SvelteKit prerendering sees it). `bun run build` runs the registry build first.
+
+## Trust model
+
+- The build never runs code from a widget repo. It fetches two JSON files and validates them.
+- The tier is never taken from a listing or from the widget's own files. `core` and `verified` come only from `review/<id>.json` whose `reviewedCommit` equals the listing's `commit`. A review of an older commit is ignored and the output says so (`reviewNote`). Otherwise the tier is `spec` (widget.json says no custom code) or `community` (unreviewed code). Fixture entries are `concept`.
+- Tiers describe how much a person reviewed, never isolation. Code widgets are not sandboxed.
+- Review records and `.github/` are covered by CODEOWNERS.
+
+## What CI checks
+
+`bun run registry` (schema validation and the build above, offline for fixtures), plus the unit tests in `tests/unit/registry.*.test.ts` (schema, SSRF cases, size and timeout limits, id mismatch, duplicates, removed, stale reviews, sanitization, access summary).
+
+## Add a listing
+
+1. Publish your widget in its own public repo (one `manifest.json` at the root, license, README with install and removal steps) and note the commit SHA.
+2. Open a PR adding `registry/widgets/<id>.json` with the fields above.
+3. CI validates the listing and your `widget.json`. A maintainer reads the pinned commit and may add a review record. To update, open a PR changing `commit`; reviewers see the capability diff.
+
+Planned tooling (not available yet): `ow new`, `ow check` and `ow publish --listing` will scaffold, check and generate the listing file. Until they exist, do these steps by hand.

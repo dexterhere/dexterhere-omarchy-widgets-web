@@ -1,0 +1,74 @@
+// Registry loader. Reads registry/dist/index.json, which `bun run registry` generates
+// (it is not committed). `vite build` and `vite dev` bundle it through import.meta.glob, so
+// SvelteKit prerendering sees it at build time and no registry request happens in the browser.
+// The glob (instead of a static import) keeps `svelte-check` working before the file exists;
+// a missing file fails loudly when a page actually needs the data.
+import type { Category, RegistryIndex, RegistryWidget, Status, Tier } from './types';
+
+export type * from './types';
+
+const files = import.meta.glob<RegistryIndex>('../../../registry/dist/index.json', {
+  eager: true,
+  import: 'default'
+});
+
+function load(): RegistryIndex {
+  const index = Object.values(files)[0];
+  if (!index) throw new Error('registry/dist/index.json is missing: run `bun run registry` first');
+  return index;
+}
+
+export function getIndex(): RegistryIndex {
+  return load();
+}
+
+export function getAll(): RegistryWidget[] {
+  return load().widgets;
+}
+
+export function getById(id: string): RegistryWidget | undefined {
+  return load().widgets.find((w) => w.id === id);
+}
+
+export const categoryLabels: Record<Category, string> = {
+  system: 'System',
+  'time-calendar': 'Time and Calendar',
+  productivity: 'Productivity',
+  'dev-git': 'Dev and Git',
+  'ai-agents': 'AI and Agents',
+  media: 'Media',
+  communication: 'Communication',
+  'network-containers': 'Network and Containers',
+  'ambient-fun': 'Ambient and Fun',
+  utilities: 'Utilities'
+};
+
+export const statusLabels: Record<Status, string> = {
+  planned: 'Concept, not installable',
+  alpha: 'Alpha',
+  stable: 'Stable'
+};
+
+// Tiers describe how much a human reviewed, never how isolated the code is.
+export const tierLabels: Record<Tier, { label: string; text: string }> = {
+  concept: {
+    label: 'Concept',
+    text: 'A design idea, not installable. Nothing has been built or reviewed.'
+  },
+  spec: {
+    label: 'Spec',
+    text: 'Valid widget.json that runs no custom code. Shape checked by schema, not read by a person.'
+  },
+  community: {
+    label: 'Community',
+    text: 'Unreviewed code. It passed automated checks only. Read it before you install it.'
+  },
+  verified: {
+    label: 'Verified',
+    text: 'A maintainer read the pinned commit. This is a review, not a sandbox.'
+  },
+  core: {
+    label: 'Core',
+    text: 'Maintained by this project and reviewed at the pinned commit. This is a review, not a sandbox.'
+  }
+};
