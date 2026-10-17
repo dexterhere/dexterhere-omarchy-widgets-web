@@ -2,7 +2,7 @@
   "id": "io.github.dexterhere.concept-docker",
   "repo": "https://github.com/dexterhere/omarchy-widgets",
   "commit": "0000000000000000000000000000000000000000",
-  "category": "network-containers",
+  "categories": ["network-containers", "dev-git"],
   "tags": ["docker", "containers"],
   "summary": "Shows how many containers are running, stopped or unhealthy, read-only.",
   "status": "planned",

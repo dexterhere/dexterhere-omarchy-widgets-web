@@ -54,6 +54,27 @@ describe('buildRegistry', () => {
     expect(a.index.widgetSchema).toBe('draft-0');
     expect(JSON.stringify(a.index)).not.toMatch(/generatedAt/);
   });
+  it('puts the widget.json category first, sorts the rest and is independent of listing order', async () => {
+    const run1 = (categories: string[]) =>
+      run({ listings: [L(listing({ categories }))], fetch: mockFetch(files()).fn });
+    const a = await run1(['utilities', 'system', 'dev-git']);
+    const b = await run1(['dev-git', 'system', 'utilities']);
+    expect(a.errors).toEqual([]);
+    expect(a.widgets[0].categories).toEqual(['dev-git', 'system', 'utilities']);
+    expect(a.widgets[0].category).toBe('dev-git');
+    expect(JSON.stringify(a.index)).toBe(JSON.stringify(b.index));
+    expect(a.index.counts.byCategory).toEqual({ 'dev-git': 1, system: 1, utilities: 1 });
+  });
+  it('rejects empty and unknown categories, and a widget.json category the listing omits', async () => {
+    for (const categories of [[], ['nope'], ['system']]) {
+      const r = await run({
+        listings: [L(listing({ categories }))],
+        fetch: mockFetch(files()).fn
+      });
+      expect(r.widgets).toEqual([]);
+      expect(r.errors).toHaveLength(1);
+    }
+  });
   it('fetches only the two pinned files from raw.githubusercontent.com', async () => {
     const m = mockFetch(files());
     await run({ listings: [L()], fetch: m.fn });

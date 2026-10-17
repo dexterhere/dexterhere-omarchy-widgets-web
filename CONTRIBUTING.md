@@ -90,7 +90,7 @@ Status of the tooling: `ow new`, `ow check` and `ow publish --listing` are **pla
   "id": "io.github.you.github-activity",
   "repo": "https://github.com/you/omarchy-github-activity",
   "commit": "0123456789abcdef0123456789abcdef01234567",
-  "category": "dev-git",
+  "categories": ["dev-git", "productivity"],
   "tags": ["github", "pull-requests"],
   "summary": "Open PRs and review requests at a glance.",
   "status": "alpha"

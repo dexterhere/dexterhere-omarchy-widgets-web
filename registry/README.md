@@ -23,7 +23,7 @@ A listing is a pointer, not the widget:
   "id": "io.github.you.github-activity",
   "repo": "https://github.com/you/omarchy-github-activity",
   "commit": "0123456789abcdef0123456789abcdef01234567",
-  "category": "dev-git",
+  "categories": ["dev-git", "productivity"],
   "tags": ["github", "pull-requests"],
   "summary": "Open PRs and review requests at a glance.",
   "status": "alpha"
@@ -33,6 +33,7 @@ A listing is a pointer, not the widget:
 - `id`: reverse-domain, lowercase, never under `omarchy.`.
 - `repo`: `https://github.com/<owner>/<repo>` only.
 - `commit`: full 40-character lowercase SHA. The build reads your files at exactly this commit.
+- `categories`: 1 to 3 distinct slugs from `system`, `time-calendar`, `productivity`, `dev-git`, `ai-agents`, `media`, `communication`, `network-containers`, `ambient-fun`, `utilities`. The `category` in the widget's own `widget.json` must be one of them and becomes the primary; the gallery lists the widget under every category named here.
 - `status`: `planned`, `alpha`, `stable` or `removed`. `removed` is a takedown: the entry is not fetched and not published.
 - `source: "fixture"` exists only for maintainers' concept entries and is allowed only with `status: "planned"`.
 - A listing has no trust field. Any extra property fails validation.
