@@ -5,9 +5,16 @@ import { mdsvex } from 'mdsvex';
 import { createReadStream, existsSync, statSync } from 'node:fs';
 import { join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Plugin } from 'vite';
+import { loadEnv, type Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 import { mdsvexOptions } from './scripts/mdsvex.ts';
+import { connectSrc, statsOrigin } from './src/lib/stats/origin.ts';
+
+// Optional stats service. Unset (the default): no remote provider, CSP unchanged.
+const rawStatsUrl =
+  process.env.PUBLIC_STATS_URL ?? loadEnv('', process.cwd(), 'PUBLIC_').PUBLIC_STATS_URL;
+if (rawStatsUrl && !statsOrigin(rawStatsUrl))
+  throw new Error('PUBLIC_STATS_URL must be an https origin (http only for localhost), no path.');
 
 // `vite preview` serves SvelteKit's own output, not build/, where `pagefind --site build` writes
 // the search index. This serves build/pagefind/ under /pagefind/ so e2e tests the real index.
@@ -56,7 +63,8 @@ export default defineConfig({
           'style-src': ['self', 'unsafe-inline'], // Svelte scoped styles, no external sheets
           'img-src': ['self', 'data:'],
           'font-src': ['self'],
-          'connect-src': ['self'],
+          // exactly the stats origin when PUBLIC_STATS_URL is set, nothing else
+          'connect-src': connectSrc(rawStatsUrl) as ['self'],
           'object-src': ['none'],
           'base-uri': ['self'],
           'form-action': ['self']
@@ -67,7 +75,11 @@ export default defineConfig({
   ],
   // Never inline assets as data: URIs (small font files were, and font-src 'self' blocks data:).
   build: { assetsInlineLimit: 0 },
+  define: { __STATS_URL__: JSON.stringify(statsOrigin(rawStatsUrl) ?? '') },
   // Content pages import '$lib/docs/...'. SvelteKit 3 ships no $lib alias, so Vite provides one.
   resolve: { alias: { $lib: fileURLToPath(new URL('./src/lib', import.meta.url)) } },
-  test: { include: ['tests/unit/**/*.test.ts', 'src/**/*.test.ts'], environment: 'node' }
+  test: {
+    include: ['tests/unit/**/*.test.ts', 'src/**/*.test.ts', 'services/**/*.test.ts'],
+    environment: 'node'
+  }
 });
