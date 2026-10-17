@@ -16,9 +16,7 @@ const editBtn = (page: Page) => page.getByRole('button', { name: 'Edit layout' }
 async function ready(page: Page) {
   await page.goto('/');
   await expect(editBtn(page)).toBeVisible();
-  await expect(
-    page.getByText('Press T to change the theme.', { exact: false }).first()
-  ).toBeVisible();
+  await expect(page.getByText('Press T, or tap here', { exact: false }).first()).toBeVisible();
 }
 async function edit(page: Page) {
   await ready(page);
