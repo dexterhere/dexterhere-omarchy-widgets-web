@@ -39,14 +39,6 @@ export default defineConfig({
       extensions: ['.svelte', '.md'],
       preprocess: [vitePreprocess(), mdsvex(mdsvexOptions)],
       adapter: adapter({ pages: 'build', assets: 'build', strict: true }),
-      // TEMPORARY: the docs catalog links to /widgets/<id>/, which is built on another branch.
-      // Only that one missing-page case from /docs/ is tolerated; remove once those pages merge.
-      prerender: {
-        handleHttpError: ({ path, referrer, message }) => {
-          if (path.startsWith('/widgets/') && referrer?.startsWith('/docs/')) return;
-          throw new Error(message);
-        }
-      },
       // Static CSP as a <meta> tag: same-origin only; the single inline theme bootstrap
       // script is allowed by hash. No unsafe-inline scripts, no unsafe-eval, no third parties.
       csp: {

@@ -203,7 +203,7 @@ test('Callout shows its type as text', async ({ page }) => {
 test('Widgets catalog lists every registry widget with working links', async ({
   page,
   request
-}, info) => {
+}) => {
   await page.goto('/docs/next/widgets/catalog/');
   const items = page.getByRole('list', { name: 'Widgets in the registry' }).getByRole('listitem');
   await expect(items).toHaveCount(widgets.length);
@@ -214,14 +214,10 @@ test('Widgets catalog lists every registry widget with working links', async ({
   await expect(items.first()).toContainText('Status');
   await expect(items.first()).toContainText('Trust tier');
   await expect(items.first()).toContainText('Compatibility');
-  // The /widgets/<id>/ pages are built on another branch: until they exist, a 404 for every
-  // link is reported as an annotation instead of a failure. Once they exist this is strict.
   const codes = await Promise.all(
     widgets.map((w) => request.get(`/widgets/${w.id}/`).then((r) => r.status()))
   );
-  if (codes.every((c) => c === 404))
-    info.annotations.push({ type: 'pending', description: '/widgets/<id>/ pages not merged yet' });
-  else expect(codes.every((c) => c === 200)).toBe(true);
+  expect(codes.every((c) => c === 200)).toBe(true);
 });
 
 test('a theme switch restyles the docs', async ({ page }) => {
