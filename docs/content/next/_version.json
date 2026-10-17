@@ -1,0 +1,7 @@
+{
+  "version": "next",
+  "label": "next (unreleased)",
+  "status": "unreleased",
+  "codeRepoRef": "main",
+  "note": "Documents unreleased work. Features marked Planned do not exist yet."
+}
