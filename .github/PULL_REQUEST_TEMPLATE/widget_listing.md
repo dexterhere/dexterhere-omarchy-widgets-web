@@ -8,6 +8,7 @@ Commit SHA (40 hex):
 Path: new listing / update to an existing listing
 
 ## Checklist
+
 - [ ] The file is `registry/widgets/<id>.json` and the `id` is reverse-domain (for example `io.github.you.my-widget`)
 - [ ] The widget repository is public
 - [ ] `commit` is a full 40-character SHA, not a branch or tag name

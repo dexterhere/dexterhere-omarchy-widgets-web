@@ -3,6 +3,7 @@
 <!-- What does this change do, and why is it needed? Link the issue if there is one. -->
 
 ## Checklist
+
 - [ ] One concern, small diff
 - [ ] `bun run check`, `bun run lint`, `bun run test` and `bun run build` pass
 - [ ] Tests added or updated for new behaviour

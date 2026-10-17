@@ -4,15 +4,15 @@ Thanks for helping. You do not need to know SvelteKit to contribute, and you do 
 
 ## Ways to contribute
 
-| You are good at | You can |
-|---|---|
-| Design | Review the gallery, detail page and theme picker, propose empty and error states |
-| Accessibility | Test with a keyboard and a screen reader, report contrast problems, fix focus order |
-| Writing | Improve the docs, the contribute page and error messages |
-| Themes | Check the 22 themes on real screens, report text that is hard to read |
-| Front end | Pick an issue labelled `good first issue`, fix a page or a component |
-| Registry | Submit a widget listing, or review someone else's listing on a pull request |
-| Anything | Triage issues, reproduce bugs, answer questions |
+| You are good at | You can                                                                             |
+| --------------- | ----------------------------------------------------------------------------------- |
+| Design          | Review the gallery, detail page and theme picker, propose empty and error states    |
+| Accessibility   | Test with a keyboard and a screen reader, report contrast problems, fix focus order |
+| Writing         | Improve the docs, the contribute page and error messages                            |
+| Themes          | Check the 22 themes on real screens, report text that is hard to read               |
+| Front end       | Pick an issue labelled `good first issue`, fix a page or a component                |
+| Registry        | Submit a widget listing, or review someone else's listing on a pull request         |
+| Anything        | Triage issues, reproduce bugs, answer questions                                     |
 
 Not sure where to start? Open an issue and say what you are interested in.
 
@@ -48,10 +48,10 @@ The planned CI also runs the registry build (schema validation), the theme contr
 
 The same model as the [code repository](https://github.com/dexterhere/omarchy-widgets).
 
-| Branch | Purpose | Merges in from |
-|---|---|---|
-| `main` | Production. Deployed site. | `staging` (release PR), `hotfix/*` |
-| `staging` | Review and soak before a release. | `develop` (promotion PR) |
+| Branch    | Purpose                                                      | Merges in from                                           |
+| --------- | ------------------------------------------------------------ | -------------------------------------------------------- |
+| `main`    | Production. Deployed site.                                   | `staging` (release PR), `hotfix/*`                       |
+| `staging` | Review and soak before a release.                            | `develop` (promotion PR)                                 |
 | `develop` | Integration. **Open your pull request against this branch.** | `feat/*`, `fix/*`, `chore/*`, `docs/*`, `test/*`, `ci/*` |
 
 Flow: `feat/x` to `develop` by pull request, then a promotion pull request from `develop` to `staging`, then a release pull request from `staging` to `main`. A hotfix branches from `main`, merges into `main`, and is merged back into `develop`. Direct pushes to these three branches are blocked.
@@ -64,7 +64,7 @@ Flow: `feat/x` to `develop` by pull request, then a promotion pull request from 
 - **Docs**: update the relevant page. If you decide something, record it in [docs/DECISIONS.md](docs/DECISIONS.md) with the date, the decision, the reason, the evidence and what would change it.
 - **No secrets** in code, fixtures, logs or screenshots.
 - **UI changes** need a check in light and dark themes and a keyboard pass. Say in the pull request what you checked.
-- Fill in the pull request template. Explain *why*, not just what.
+- Fill in the pull request template. Explain _why_, not just what.
 - Be ready for review comments. Reviews are about the change, never about you.
 
 ## Submit a widget to the registry
@@ -73,7 +73,7 @@ This is how a widget gets listed on the site. Listing a widget does not install 
 
 Status of the tooling: `ow new`, `ow check` and `ow publish --listing` are **planned** (they are Phase 1 work in the code repository). They do not exist yet. Each step below shows the manual way to do the same thing, which works today.
 
-1. **Pick a path.** A *spec widget* is JSON with no code. It is the easiest to list and is the most trusted tier. A *code widget* is QML and has full control, but it is not sandboxed and runs as you.
+1. **Pick a path.** A _spec widget_ is JSON with no code. It is the easiest to list and is the most trusted tier. A _code widget_ is QML and has full control, but it is not sandboxed and runs as you.
 2. **Scaffold.** Planned: `ow new <id> --template <name>`. Manual: create a folder with `manifest.json`, `widget.json`, a README, a license and a preview.
 3. **Develop** against a throwaway shell configuration, never your real one.
 4. **Check.** Planned: `ow check`, which validates `manifest.json` and `widget.json`, lints for colour literals and undeclared access, cross-checks declared capabilities against the code, and renders previews on three themes. Manual: validate both JSON files against the schemas in the code repository's `spec/`, and check the capabilities by reading your own code.
@@ -116,12 +116,12 @@ CI cannot see what your code does at runtime. Reviewers read the pinned commit.
 
 ### Trust tiers
 
-| Tier | Meaning | Who sets it |
-|---|---|---|
-| `core` | Maintained by this project. | Maintainers only |
-| `verified` | A maintainer read the pinned commit and recorded the review. Review is not isolation. | Maintainers only, in `registry/review/<id>.json` |
-| `spec` | Schema-valid JSON with no custom code. The widget gets only the fields it is granted. | Set by CI from the widget's contents |
-| `community` | Unreviewed code. It runs unsandboxed as you. | Default for any code widget without review |
+| Tier        | Meaning                                                                               | Who sets it                                      |
+| ----------- | ------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| `core`      | Maintained by this project.                                                           | Maintainers only                                 |
+| `verified`  | A maintainer read the pinned commit and recorded the review. Review is not isolation. | Maintainers only, in `registry/review/<id>.json` |
+| `spec`      | Schema-valid JSON with no custom code. The widget gets only the fields it is granted. | Set by CI from the widget's contents             |
+| `community` | Unreviewed code. It runs unsandboxed as you.                                          | Default for any code widget without review       |
 
 The tier is set by maintainers only. A listing cannot claim `core` or `verified`, and a tier badge describes review, not isolation. A `community` code widget can read anything you can read.
 

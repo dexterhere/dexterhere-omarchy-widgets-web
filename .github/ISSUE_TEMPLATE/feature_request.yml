@@ -4,11 +4,19 @@ labels: [enhancement]
 body:
   - type: textarea
     id: problem
-    attributes: { label: Problem, description: "What are you trying to do that is hard today?" }
+    attributes: { label: Problem, description: 'What are you trying to do that is hard today?' }
     validations: { required: true }
   - type: textarea
     id: proposal
-    attributes: { label: Proposal, description: "What would you like to see? For widgets: which data does it need and from where?" }
+    attributes:
+      {
+        label: Proposal,
+        description: 'What would you like to see? For widgets: which data does it need and from where?'
+      }
   - type: textarea
     id: data
-    attributes: { label: Data and privacy, description: "Does it need credentials or personal data? What is the least access it needs?" }
+    attributes:
+      {
+        label: Data and privacy,
+        description: 'Does it need credentials or personal data? What is the least access it needs?'
+      }
