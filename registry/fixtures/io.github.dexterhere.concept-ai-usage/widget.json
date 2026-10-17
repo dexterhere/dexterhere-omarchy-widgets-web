@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 0,
+  "id": "io.github.dexterhere.concept-ai-usage",
+  "tier": "spec",
+  "category": "ai-agents",
+  "surfaces": ["desktop"],
+  "sizeClasses": [
+    {
+      "name": "compact",
+      "min": [160, 100],
+      "max": [240, 160],
+      "aspectLock": null
+    },
+    {
+      "name": "wide",
+      "min": [280, 120],
+      "max": [480, 200],
+      "aspectLock": null
+    }
+  ],
+  "variants": ["counts", "sparkline"],
+  "providers": [
+    {
+      "name": "ai-usage",
+      "topics": ["ai-usage.sessions"],
+      "fields": ["sessions", "requests", "activeMinutes"],
+      "auth": "none"
+    }
+  ],
+  "capabilities": {
+    "network": [],
+    "files": [],
+    "spawn": []
+  },
+  "interactiveRegions": [],
+  "settings": [
+    {
+      "key": "range",
+      "type": "enum",
+      "label": "Time range",
+      "default": "today",
+      "options": ["today", "week"]
+    }
+  ],
+  "compat": {
+    "omarchy": ">=4.0",
+    "widgetsKit": "^1"
+  }
+}

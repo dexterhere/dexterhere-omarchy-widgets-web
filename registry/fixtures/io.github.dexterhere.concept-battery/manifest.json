@@ -1,0 +1,7 @@
+{
+  "id": "io.github.dexterhere.concept-battery",
+  "name": "Battery (concept)",
+  "version": "0.0.0-concept",
+  "description": "Concept battery widget with ring and bar variants.",
+  "license": "MIT"
+}

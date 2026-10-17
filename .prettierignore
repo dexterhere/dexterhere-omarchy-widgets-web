@@ -6,3 +6,4 @@ docs/reference
 package.json
 src/lib/themes/themes.css
 static/theme-boot.js
+registry/dist

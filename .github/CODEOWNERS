@@ -2,3 +2,6 @@
 /registry/             @dexterhere
 /.github/              @dexterhere
 /scripts/              @dexterhere
+/registry/review/        @dexterhere
+/registry/namespaces.json @dexterhere
+/registry/MAINTAINERS.json @dexterhere

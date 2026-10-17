@@ -1,0 +1,7 @@
+{
+  "id": "io.github.dexterhere.concept-docker",
+  "name": "Docker (concept)",
+  "version": "0.0.0-concept",
+  "description": "Concept Docker widget with counts and list variants.",
+  "license": "MIT"
+}

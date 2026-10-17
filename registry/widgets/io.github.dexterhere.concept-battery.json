@@ -1,0 +1,10 @@
+{
+  "id": "io.github.dexterhere.concept-battery",
+  "repo": "https://github.com/dexterhere/omarchy-widgets",
+  "commit": "0000000000000000000000000000000000000000",
+  "category": "system",
+  "tags": ["battery", "power"],
+  "summary": "Shows battery charge, whether it is charging, and the estimated time left.",
+  "status": "planned",
+  "source": "fixture"
+}
