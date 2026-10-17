@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omarchy-widgets.invalid/schema/listing.schema.json",
+  "title": "Registry listing",
+  "description": "A listing is a pointer to a widget repo at a pinned commit. It carries no trust tier: tiers come only from maintainer review records.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "repo", "commit", "category", "tags", "summary", "status"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "maxLength": 100,
+      "pattern": "^(?!omarchy\\.)[a-z][a-z0-9-]*(\\.[a-z0-9][a-z0-9-]*)+$"
+    },
+    "repo": {
+      "type": "string",
+      "pattern": "^https://github\\.com/[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})/(?!\\.{1,2}$)[A-Za-z0-9._-]{1,100}$"
+    },
+    "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "category": {
+      "enum": [
+        "system",
+        "time-calendar",
+        "productivity",
+        "dev-git",
+        "ai-agents",
+        "media",
+        "communication",
+        "network-containers",
+        "ambient-fun",
+        "utilities"
+      ]
+    },
+    "tags": {
+      "type": "array",
+      "maxItems": 8,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z0-9-]{1,24}$" }
+    },
+    "summary": { "type": "string", "minLength": 1, "maxLength": 140 },
+    "status": { "enum": ["planned", "alpha", "stable", "removed"] },
+    "source": { "const": "fixture" }
+  },
+  "if": { "required": ["source"], "properties": { "source": true } },
+  "then": { "properties": { "status": { "const": "planned" } } }
+}

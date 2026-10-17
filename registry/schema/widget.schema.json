@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omarchy-widgets.invalid/schema/widget.schema.json",
+  "$comment": "DRAFT v0, replace with the pinned release of spec/widget.schema.json from the code repo",
+  "title": "widget.json (draft v0)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "id",
+    "tier",
+    "category",
+    "surfaces",
+    "sizeClasses",
+    "variants",
+    "providers",
+    "capabilities",
+    "interactiveRegions",
+    "settings",
+    "compat"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 0 },
+    "id": {
+      "type": "string",
+      "maxLength": 100,
+      "pattern": "^(?!omarchy\\.)[a-z][a-z0-9-]*(\\.[a-z0-9][a-z0-9-]*)+$"
+    },
+    "tier": { "enum": ["spec", "code"] },
+    "category": {
+      "enum": [
+        "system",
+        "time-calendar",
+        "productivity",
+        "dev-git",
+        "ai-agents",
+        "media",
+        "communication",
+        "network-containers",
+        "ambient-fun",
+        "utilities"
+      ]
+    },
+    "surfaces": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "enum": ["desktop", "bar"] }
+    },
+    "sizeClasses": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 8,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "min", "max"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,23}$" },
+          "min": { "$ref": "#/$defs/size" },
+          "max": { "$ref": "#/$defs/size" },
+          "aspectLock": { "type": ["number", "null"], "exclusiveMinimum": 0 }
+        }
+      }
+    },
+    "variants": {
+      "type": "array",
+      "maxItems": 16,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,23}$" }
+    },
+    "providers": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "topics", "fields"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,31}$" },
+          "topics": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 16,
+            "items": { "type": "string", "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9][a-z0-9-]*)+$" }
+          },
+          "fields": {
+            "type": "array",
+            "maxItems": 32,
+            "items": { "type": "string", "pattern": "^[a-zA-Z][a-zA-Z0-9_.-]{0,39}$" }
+          },
+          "auth": {
+            "description": "Draft addition: does the provider need a credential held in the daemon vault? The widget never holds the secret.",
+            "enum": ["none", "vault"]
+          }
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["network", "files", "spawn"],
+      "properties": {
+        "network": {
+          "type": "array",
+          "maxItems": 16,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$",
+            "maxLength": 253
+          }
+        },
+        "files": {
+          "type": "array",
+          "maxItems": 16,
+          "items": { "type": "string", "pattern": "^[~/][^\\u0000-\\u001f\\u007f<>]{0,198}$" }
+        },
+        "spawn": {
+          "type": "array",
+          "maxItems": 16,
+          "items": { "type": "string", "pattern": "^[A-Za-z0-9._+-]{1,64}$" }
+        }
+      }
+    },
+    "interactiveRegions": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,31}$" },
+          "action": { "type": "string", "pattern": "^[a-z][a-z0-9.-]{0,63}$" }
+        }
+      }
+    },
+    "settings": {
+      "type": "array",
+      "maxItems": 32,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["key", "type", "default"],
+        "properties": {
+          "key": { "type": "string", "pattern": "^[a-z][a-zA-Z0-9_-]{0,31}$" },
+          "type": { "enum": ["int", "number", "bool", "string", "enum"] },
+          "label": { "type": "string", "maxLength": 80 },
+          "default": { "type": ["integer", "number", "boolean", "string"] },
+          "min": { "type": "number" },
+          "max": { "type": "number" },
+          "options": {
+            "type": "array",
+            "maxItems": 32,
+            "items": { "type": "string", "maxLength": 40 }
+          }
+        }
+      }
+    },
+    "compat": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["omarchy", "widgetsKit"],
+      "properties": {
+        "omarchy": { "type": "string", "maxLength": 40 },
+        "widgetsKit": { "type": "string", "maxLength": 40 }
+      }
+    }
+  },
+  "$defs": {
+    "size": {
+      "type": "array",
+      "prefixItems": [
+        { "type": "integer", "minimum": 1, "maximum": 8192 },
+        { "type": "integer", "minimum": 1, "maximum": 8192 }
+      ],
+      "items": false,
+      "minItems": 2
+    }
+  }
+}
