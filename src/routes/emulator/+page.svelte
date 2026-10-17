@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Emulator from '../../lib/emulator/Emulator.svelte';
+  import Emulator from '../../lib/emulator/widgets/WidgetEmulator.svelte';
   import { theme } from '../../lib/themes/store.svelte';
 </script>
 

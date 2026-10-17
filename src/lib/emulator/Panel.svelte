@@ -33,7 +33,9 @@
   ] as const;
 </script>
 
-{#if id}
+{#if id === 'widgets' && widgetCenter}
+  {@render widgetCenter(api)}
+{:else if id}
   <div
     class="panel"
     class:wide={id === 'widgets'}

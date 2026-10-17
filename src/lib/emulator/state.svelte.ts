@@ -107,6 +107,8 @@ export class EmulatorState {
   /** One-line "not emulated" message shown in the Omarchy menu. */
   notice = $state('');
   peek = $state(false);
+  /** True while a physical Super+Alt+P is held (released on keyup). */
+  peekHeld = false;
 
   captured = $state(false);
   sticky = $state<Mod[]>([]);
@@ -114,6 +116,9 @@ export class EmulatorState {
 
   /** Callback props from the host page. */
   pickTheme: () => void = () => {};
+  /** Widget layer hooks: Esc leaves edit mode (return true when it did), Reset restores widgets. */
+  escapeHook: () => boolean = () => false;
+  resetHook: () => void = () => {};
 
   readonly registry = new Registry();
   private seq = 0;
@@ -149,6 +154,9 @@ export class EmulatorState {
     this.add('monitor', 0, true);
     this.add('terminal', 1, true);
     this.focused[0] = Object.keys(this.windows)[0];
+    this.peek = false;
+    this.peekHeld = false;
+    this.resetHook();
   }
 
   private add(kind: WinKind, ws: number, quiet = false): string {
@@ -314,7 +322,7 @@ export class EmulatorState {
   togglePeek() {
     this.peek = !this.peek;
     this.announce(
-      `Peek widgets (proposed) ${this.peek ? 'on' : 'off'}. Widgets arrive in the next step, so nothing changes yet.`
+      `Peek widgets (proposed) ${this.peek ? 'on: widgets are above the windows' : 'off: widgets are under the windows'}`
     );
   }
 
