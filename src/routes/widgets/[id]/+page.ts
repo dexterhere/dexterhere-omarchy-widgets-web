@@ -11,7 +11,7 @@ export function load({ params }) {
   const widget = getById(params.id);
   if (!widget) error(404, 'Widget not found');
   const similar = getAll()
-    .filter((w) => w.category === widget.category && w.id !== widget.id)
+    .filter((w) => w.categories.some((c) => widget.categories.includes(c)) && w.id !== widget.id)
     .map((w) => ({ id: w.id, name: w.name, status: w.status }))
     .sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id))
     .slice(0, 6);

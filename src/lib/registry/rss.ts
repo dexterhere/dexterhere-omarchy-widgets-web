@@ -25,7 +25,7 @@ export function buildRss(widgets: RegistryWidget[], site: string): string {
       <link>${xmlEscape(link)}</link>
       <guid isPermaLink="true">${xmlEscape(link)}</guid>
       <description>${xmlEscape(`${w.summary} (${statusLabels[w.status]})`)}</description>
-      <category>${xmlEscape(categoryLabels[w.category])}</category>
+${w.categories.map((c) => `      <category>${xmlEscape(categoryLabels[c])}</category>`).join('\n')}
     </item>`;
     })
     .join('\n');

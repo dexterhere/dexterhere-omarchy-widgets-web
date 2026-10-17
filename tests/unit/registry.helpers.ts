@@ -7,7 +7,7 @@ export const listing = (over: Record<string, unknown> = {}) => ({
   id: ID,
   repo: 'https://github.com/someone/demo',
   commit: COMMIT,
-  category: 'dev-git',
+  categories: ['dev-git'],
   tags: ['demo'],
   summary: 'Shows a demo number.',
   status: 'alpha',

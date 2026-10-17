@@ -317,8 +317,11 @@
           <dd>{w.version}</dd>
         </div>
         <div>
-          <dt>Category</dt>
-          <dd>{categoryLabels[w.category]}</dd>
+          <dt>Categories</dt>
+          <dd class="cats">
+            {#each w.categories as c, i (c)}{#if i},
+              {/if}<a href={`${resolve('/widgets')}?cat=${c}`}>{categoryLabels[c]}</a>{/each}
+          </dd>
         </div>
         <div>
           <dt>Id</dt>
@@ -351,7 +354,9 @@
         {/each}
       </ul>
     {:else}
-      <p class="small text-2">No other widget in {categoryLabels[w.category]} yet.</p>
+      <p class="small text-2">
+        No other widget in {w.categories.map((c) => categoryLabels[c]).join(', ')} yet.
+      </p>
     {/if}
   </section>
 </div>
