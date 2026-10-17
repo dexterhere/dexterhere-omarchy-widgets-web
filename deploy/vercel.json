@@ -1,0 +1,142 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "trailingSlash": true,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "frame-ancestors 'none'"
+        }
+      ]
+    },
+    {
+      "source": "/pagefind/:file(wasm\\..+\\.pagefind)",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/wasm"
+        }
+      ]
+    },
+    {
+      "source": "/pagefind/:dir(index|fragment|filter)/:rest*",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/octet-stream"
+        }
+      ]
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/docs/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "^docs\\.example\\.com$"
+        }
+      ],
+      "destination": "https://docs.example.com/:path*",
+      "statusCode": 308
+    },
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "^docs\\.example\\.com$"
+        }
+      ],
+      "destination": "https://docs.example.com/next/start/what-it-is/",
+      "statusCode": 302
+    },
+    {
+      "source": "/docs/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "^example\\.com$"
+        }
+      ],
+      "destination": "https://docs.example.com/:path*",
+      "statusCode": 308
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/_app/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "^docs\\.example\\.com$"
+        }
+      ],
+      "destination": "/_app/:path*"
+    },
+    {
+      "source": "/pagefind/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "^docs\\.example\\.com$"
+        }
+      ],
+      "destination": "/pagefind/:path*"
+    },
+    {
+      "source": "/favicon.svg",
+      "has": [
+        {
+          "type": "host",
+          "value": "^docs\\.example\\.com$"
+        }
+      ],
+      "destination": "/favicon.svg"
+    },
+    {
+      "source": "/theme-boot.js",
+      "has": [
+        {
+          "type": "host",
+          "value": "^docs\\.example\\.com$"
+        }
+      ],
+      "destination": "/theme-boot.js"
+    },
+    {
+      "source": "/robots.txt",
+      "has": [
+        {
+          "type": "host",
+          "value": "^docs\\.example\\.com$"
+        }
+      ],
+      "destination": "/robots.txt"
+    },
+    {
+      "source": "/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "^docs\\.example\\.com$"
+        }
+      ],
+      "destination": "/docs/:path*"
+    }
+  ]
+}

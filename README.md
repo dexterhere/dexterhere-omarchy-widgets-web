@@ -31,7 +31,23 @@ bun run lint     # lint and format checks
 bun run test     # unit tests and registry checks
 ```
 
-The commands above are the planned scripts. Until the scaffold lands (milestone M0 in [PLAN.md](PLAN.md)), there is no `package.json` to run them from.
+### Docs on their own host (docs.localhost)
+
+The same build can serve the docs at `docs.<domain>` while the product site stays at `<domain>`. Locally:
+
+```bash
+bun run serve:local            # builds into build-hosts/ if needed, then serves both hosts
+PORT=4400 bun run serve:local  # another port (default 4300)
+```
+
+- site: <http://localhost:4300/>
+- docs: <http://docs.localhost:4300/> (browsers resolve `*.localhost` to loopback, no hosts-file edit)
+
+`bun run build:hosts` only builds. Rebuild after code changes (`serve:local` rebuilds only when the origins change). The server binds 127.0.0.1, answers 421 to unknown Host headers and sends no cache headers. Without the two settings below nothing changes: one host, docs under `/docs/`.
+
+For a real deployment set both before `bun run build`: `PUBLIC_SITE_ORIGIN=https://example.com` and `PUBLIC_DOCS_ORIGIN=https://docs.example.com` (see `.env.example`; origins only, different hostnames), then generate the host rules with `bun run emit:host-config`. Hosting options (Caddy, nginx, Netlify, Vercel, Cloudflare; not GitHub Pages) are in [deploy/README.md](deploy/README.md).
+
+Two Playwright projects cover both modes: `chromium` (path mode, `vite preview`) and `hosts` (`serve-local`). `PW_PORT=4380 bun run test:e2e` runs both; the host server uses `PW_PORT + 1`.
 
 ## Repository layout
 

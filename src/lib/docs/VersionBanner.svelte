@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { resolve } from '$app/paths';
+  import { docsPath } from '../site';
   import type { DocsVersion } from './content';
 
   let { version, latest }: { version: DocsVersion; latest: string } = $props();
@@ -12,7 +12,7 @@
       <strong>{version.label}.</strong>
       {version.note}
       {#if !isLatest}
-        <a href={resolve(`/docs/${latest}/` as '/docs')}>Read the {latest} docs</a>.
+        <a href={docsPath(`/docs/${latest}/`)}>Read the {latest} docs</a>.
       {/if}
     </p>
   </aside>

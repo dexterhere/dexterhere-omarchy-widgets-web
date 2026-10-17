@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { resolve } from '$app/paths';
+  import { docsPath, docsUrl, links } from '../../../../lib/site';
   import { prevNext } from '../../../../lib/docs/content';
   import EditLink from '../../../../lib/docs/EditLink.svelte';
   import PrevNext from '../../../../lib/docs/PrevNext.svelte';
@@ -10,6 +10,9 @@
 </script>
 
 <svelte:head>
+  {#if links.hosts}
+    <link rel="canonical" href={docsUrl(`/docs/${params.version}/${data.slug}/`)} />
+  {/if}
   {#if data.kind === 'page'}
     <title>{data.meta.title} - Docs {data.version.version} - Omarchy Widgets</title>
     <meta name="description" content={data.meta.description} />
@@ -36,7 +39,7 @@
       <h1 data-pagefind-meta="title">{data.section.title}</h1>
       <ul class="index">
         {#each data.section.pages as p (p.slug)}
-          <li><a href={resolve(p.href as '/docs')}>{p.title}</a></li>
+          <li><a href={docsPath(p.href)}>{p.title}</a></li>
         {/each}
       </ul>
     {/if}

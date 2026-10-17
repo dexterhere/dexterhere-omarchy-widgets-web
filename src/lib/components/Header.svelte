@@ -1,26 +1,27 @@
 <script lang="ts">
-  import { resolve } from '$app/paths';
   import { theme } from '../themes/store.svelte';
+  import { docsUrl, sitePath } from '../site';
 
   let menuOpen = $state(false);
-  const links: { href: '/widgets' | '/docs' | '/contribute'; label: string }[] = [
-    { href: '/widgets', label: 'Widgets' },
-    { href: '/docs', label: 'Docs' },
-    { href: '/docs', label: 'Create' },
-    { href: '/contribute', label: 'Contribute' }
+  // In host mode the docs live on their own host: these are absolute links (see lib/links.ts).
+  const links = [
+    { href: sitePath('/widgets'), label: 'Widgets' },
+    { href: docsUrl('/docs'), label: 'Docs' },
+    { href: docsUrl('/docs'), label: 'Create' },
+    { href: sitePath('/contribute'), label: 'Contribute' }
   ];
 </script>
 
 <header class="site-header">
   <div class="container wide bar">
-    <a class="brand" href={resolve('/')} aria-label="Omarchy Widgets, home">
+    <a class="brand" href={sitePath('/')} aria-label="Omarchy Widgets, home">
       <span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
       <span class="name">Widgets</span>
     </a>
 
     <nav class="links" class:open={menuOpen} id="site-nav" aria-label="Main">
       {#each links as l (l.label)}
-        <a href={resolve(l.href)} onclick={() => (menuOpen = false)}>{l.label}</a>
+        <a href={l.href} onclick={() => (menuOpen = false)}>{l.label}</a>
       {/each}
     </nav>
 
@@ -59,7 +60,7 @@
       href="https://github.com/dexterhere/omarchy-widgets"
       rel="noopener noreferrer">GitHub</a
     >
-    <a class="btn-primary small install" href={resolve('/docs')}>Install</a>
+    <a class="btn-primary small install" href={docsUrl('/docs')}>Install</a>
 
     <button
       class="btn small menu-btn"
