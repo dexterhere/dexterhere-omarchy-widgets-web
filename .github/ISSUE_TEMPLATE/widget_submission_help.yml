@@ -1,0 +1,54 @@
+name: Stuck on a widget submission
+description: Ask for help with listing your widget in the registry
+labels: [question, registry]
+body:
+  - type: markdown
+    attributes:
+      value: "Use this form if you are stuck while submitting a widget. Read CONTRIBUTING.md, section \"Submit a widget to the registry\", first. Do not paste tokens, secrets or personal data. Do not report security problems here; use SECURITY.md."
+  - type: dropdown
+    id: step
+    attributes:
+      label: Which step are you on?
+      options:
+        - "1. Pick a path (spec widget or code widget)"
+        - "2. Scaffold"
+        - "3. Develop"
+        - "4. Check"
+        - "5. Publish the widget repository"
+        - "6. Submit the listing (pull request)"
+        - "7. Review and merge"
+        - "Not sure"
+    validations: { required: true }
+  - type: dropdown
+    id: path
+    attributes:
+      label: Widget type
+      options:
+        - "Spec widget (JSON, no code)"
+        - "Code widget (QML)"
+        - "Not decided yet"
+    validations: { required: true }
+  - type: input
+    id: repo
+    attributes:
+      label: Widget repository URL (public)
+      description: "Leave empty if the repository is not public yet"
+  - type: textarea
+    id: tried
+    attributes:
+      label: What you tried, and what happened
+      description: "Commands you ran, the files you wrote, and the error message or CI output you got (secrets removed)"
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+  - type: checkboxes
+    id: understand
+    attributes:
+      label: Understanding
+      options:
+        - label: "I know the trust tier is set by maintainers and a listing does not make a widget reviewed or safe"
+          required: true
+        - label: "I have removed any secrets or personal data from what I pasted"
+          required: true

@@ -1,0 +1,23 @@
+name: Bug report
+description: Something on the website or in the docs does not work as expected
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "Do **not** report security vulnerabilities here. Use the private link in SECURITY.md. Remove any secrets or personal data from what you paste."
+  - type: textarea
+    id: what
+    attributes: { label: What happened, description: "What did you do, what did you expect, what happened?" }
+    validations: { required: true }
+  - type: textarea
+    id: where
+    attributes: { label: Where, description: "Page URL, widget id or docs path, and theme if it is visual" }
+  - type: textarea
+    id: versions
+    attributes:
+      label: Versions
+      description: "Browser and operating system, and the commit or version of this site you tested"
+    validations: { required: true }
+  - type: textarea
+    id: logs
+    attributes: { label: Console output or screenshots (secrets removed), description: "Browser console messages, or a screenshot. Do not include tokens or personal data." }
