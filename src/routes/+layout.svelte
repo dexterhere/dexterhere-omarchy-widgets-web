@@ -13,6 +13,14 @@
   onMount(() => theme.init());
 </script>
 
+<svelte:head
+  ><link
+    rel="alternate"
+    type="application/rss+xml"
+    title="Omarchy Widgets"
+    href="/rss.xml"
+  /></svelte:head
+>
 <a class="skip" href="#main">Skip to content</a>
 <Header />
 <main id="main">
