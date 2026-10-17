@@ -7,3 +7,6 @@ package.json
 src/lib/themes/themes.css
 static/theme-boot.js
 registry/dist
+docs/content/*/reference/protocol.md
+docs/content/*/reference/vault-format.md
+docs/content/*/reference/threat-model.md

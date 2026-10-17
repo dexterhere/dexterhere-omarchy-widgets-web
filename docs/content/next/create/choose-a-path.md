@@ -1,6 +1,6 @@
 ---
 title: Choose a path
-description: Three ways to make a widget: a JSON spec widget, a QML code widget, or agent-assisted. Which to pick and what exists today.
+description: 'Three ways to make a widget: a JSON spec widget, a QML code widget, or agent-assisted. Which to pick and what exists today.'
 ---
 
 <script>import Callout from '$lib/docs/Callout.svelte';</script>
