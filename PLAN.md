@@ -14,15 +14,15 @@ Non-goals (for now): user accounts, ratings or comments, a hosted API, translati
 
 ## 2. Stack (decided)
 
-| Concern | Choice | Why |
-|---|---|---|
-| App | SvelteKit (Svelte 5) with `adapter-static`, TypeScript | Requested. Prerenders everything, ships little JS. |
-| Package manager | bun (`bun install --frozen-lockfile`) | Requested. Lockfile is committed. |
-| Docs | In the same app: Markdown via `mdsvex`, code highlighting via `shiki` at build time, search via `pagefind` (static index) | See section 7 for the comparison and the fallback. |
-| Fonts | `@fontsource-variable/jetbrains-mono` and `@fontsource-variable/geist`, self-hosted | Same families omarchy.org loads (checked in its CSS). OFL. No CDN. |
-| Validation | `ajv` against JSON Schema 2020-12 | Same contract as the code repo (`spec/`). |
-| Tests | `vitest` (units, registry, theme contrast), `@playwright/test` (e2e, keyboard, a11y with axe) | |
-| Hosting | GitHub Pages via Actions | Free, static. A custom domain is the maintainer's to buy. |
+| Concern         | Choice                                                                                                                    | Why                                                                |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| App             | SvelteKit (Svelte 5) with `adapter-static`, TypeScript                                                                    | Requested. Prerenders everything, ships little JS.                 |
+| Package manager | bun (`bun install --frozen-lockfile`)                                                                                     | Requested. Lockfile is committed.                                  |
+| Docs            | In the same app: Markdown via `mdsvex`, code highlighting via `shiki` at build time, search via `pagefind` (static index) | See section 7 for the comparison and the fallback.                 |
+| Fonts           | `@fontsource-variable/jetbrains-mono` and `@fontsource-variable/geist`, self-hosted                                       | Same families omarchy.org loads (checked in its CSS). OFL. No CDN. |
+| Validation      | `ajv` against JSON Schema 2020-12                                                                                         | Same contract as the code repo (`spec/`).                          |
+| Tests           | `vitest` (units, registry, theme contrast), `@playwright/test` (e2e, keyboard, a11y with axe)                             |                                                                    |
+| Hosting         | GitHub Pages via Actions                                                                                                  | Free, static. A custom domain is the maintainer's to buy.          |
 
 Versions checked on 2026-10-17: svelte 5.57, @sveltejs/kit 3.1, adapter-static 4.0, mdsvex 0.12.8, vite 8.3, vitest 5.0, playwright 1.64, pagefind 1.5, shiki 4.5, ajv 8.20, zod 4.6 (not needed). Re-check at scaffold time and record in `docs/DECISIONS.md`.
 
@@ -82,6 +82,7 @@ registry/
 ```
 
 **Build, in order:**
+
 1. Validate the listing against `listing.schema.json`.
 2. Fetch `manifest.json` and `widget.json` **at the pinned commit** from github.com raw URLs (host allow-list, size cap, timeout, no redirects to other hosts).
 3. Validate `widget.json` against the pinned widget schema. Check that the ids in the listing, `manifest.json` and `widget.json` match.
@@ -92,8 +93,9 @@ registry/
 **Honesty rules:** `status` is `planned`, `alpha` or `stable` and is always shown. Until real widgets exist the gallery shows clearly labelled **concept** entries taken from the approved design, never presented as installable. Code widgets are never described as safe or sandboxed; tier badges describe review, not isolation.
 
 **Previews:**
-- *Spec widgets* render live in the browser by a small Svelte renderer from the same layout JSON the shell will use, with sample data, on the selected theme and size class. (This is also the first step of the TypeScript web renderer in the project plan.)
-- *Code widgets* use screenshots per theme supplied at submission (at least three themes: one light, one dark, one high-contrast) until CI can render previews from real QML (code-repo spike S11).
+
+- _Spec widgets_ render live in the browser by a small Svelte renderer from the same layout JSON the shell will use, with sample data, on the selected theme and size class. (This is also the first step of the TypeScript web renderer in the project plan.)
+- _Code widgets_ use screenshots per theme supplied at submission (at least three themes: one light, one dark, one high-contrast) until CI can render previews from real QML (code-repo spike S11).
 
 ## 6. Detail page (`/widgets/<id>`)
 
@@ -127,14 +129,15 @@ The access block is the product's promise made visible, so it is generated, neve
 
 **Tool decision.** Options weighed against: same theme system as the site, light, modern, versioned, widget list inside the docs, Svelte-friendly.
 
-| Option | Verdict |
-|---|---|
-| **SvelteKit + mdsvex + Pagefind (chosen)** | One design system and one theme engine, so the docs get every theme and the picker for free. Docs pages can embed live widget components and the generated catalog. Real versioning via folders. Pagefind is a tiny static search. Cost: we write the sidebar, table of contents and version switcher glue (a few hundred lines). |
-| Starlight (Astro) | Excellent and batteries-included, theming is CSS variables, versions need a plugin. But a second framework and build, a second theme layer to keep in sync, and embedding Svelte widget previews is more awkward. **Fallback** if the glue grows beyond about two days of work. |
-| VitePress (Vue), Docusaurus (React, heavy), Fumadocs (React) | Wrong framework for this team and heavier. |
-| mdBook (Rust) | Very light, but theming and widget embedding are limited and it is a separate site. |
+| Option                                                       | Verdict                                                                                                                                                                                                                                                                                                                           |
+| ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **SvelteKit + mdsvex + Pagefind (chosen)**                   | One design system and one theme engine, so the docs get every theme and the picker for free. Docs pages can embed live widget components and the generated catalog. Real versioning via folders. Pagefind is a tiny static search. Cost: we write the sidebar, table of contents and version switcher glue (a few hundred lines). |
+| Starlight (Astro)                                            | Excellent and batteries-included, theming is CSS variables, versions need a plugin. But a second framework and build, a second theme layer to keep in sync, and embedding Svelte widget previews is more awkward. **Fallback** if the glue grows beyond about two days of work.                                                   |
+| VitePress (Vue), Docusaurus (React, heavy), Fumadocs (React) | Wrong framework for this team and heavier.                                                                                                                                                                                                                                                                                        |
+| mdBook (Rust)                                                | Very light, but theming and widget embedding are limited and it is a separate site.                                                                                                                                                                                                                                               |
 
 **Versioning.**
+
 - Content lives in `docs/content/<version>/...` (`next`, `v0.1`, and later `v0.2`...). A version maps to a code-repo release tag (`widgetsKit` / daemon version). `next` is the unreleased branch and shows a banner.
 - `/docs/latest` points at the newest stable version; the switcher in the sidebar header lists all versions and keeps you on the same page when it exists there, otherwise goes to that version's index.
 - Old versions get a banner and are never deleted. Search is per version.
@@ -248,16 +251,16 @@ Security: strict Content-Security-Policy via `<meta>` (self only; the one inline
 
 ## 12. Milestones (each a small PR chain into `develop`)
 
-| | Deliverable | Depends on |
-|---|---|---|
-| M0 | Repo governance files, SvelteKit + bun scaffold, CI, tokens and 22 themes, header, **theme picker** (coverflow, keyboard, persisted), contrast check | none |
-| M1 | Home page with the live desktop and first widget components on sample data | M0 |
-| M2 | Registry: listing schema, **draft** widget schema (vendored, pinned, marked draft), build script, fixtures, a handful of clearly labelled **concept** listings | M0. Final widget schema comes from the code repo (Phase 0 deliverable) |
-| M3 | Gallery (search, filters, sort, views) and the detail page | M2 |
-| M4 | Docs engine: sidebar, toc, search, **versions** (`next`, `v0.1-draft`), reference sync from the code repo, generated Widgets catalog | M0, M2 |
-| M5 | Docs content: Start, Use, Create (three paths), Publish, Reference. `/contribute` page and PR templates | M4 |
-| M6 | Spec-widget web renderer and live previews on detail pages, golden tests | final spec schema |
-| M7 | Pages deploy, custom domain (maintainer), RSS, `registry.json`, security review of the build pipeline | M3 |
+|     | Deliverable                                                                                                                                                    | Depends on                                                             |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| M0  | Repo governance files, SvelteKit + bun scaffold, CI, tokens and 22 themes, header, **theme picker** (coverflow, keyboard, persisted), contrast check           | none                                                                   |
+| M1  | Home page with the live desktop and first widget components on sample data                                                                                     | M0                                                                     |
+| M2  | Registry: listing schema, **draft** widget schema (vendored, pinned, marked draft), build script, fixtures, a handful of clearly labelled **concept** listings | M0. Final widget schema comes from the code repo (Phase 0 deliverable) |
+| M3  | Gallery (search, filters, sort, views) and the detail page                                                                                                     | M2                                                                     |
+| M4  | Docs engine: sidebar, toc, search, **versions** (`next`, `v0.1-draft`), reference sync from the code repo, generated Widgets catalog                           | M0, M2                                                                 |
+| M5  | Docs content: Start, Use, Create (three paths), Publish, Reference. `/contribute` page and PR templates                                                        | M4                                                                     |
+| M6  | Spec-widget web renderer and live previews on detail pages, golden tests                                                                                       | final spec schema                                                      |
+| M7  | Pages deploy, custom domain (maintainer), RSS, `registry.json`, security review of the build pipeline                                                          | M3                                                                     |
 
 M0 and M1 are independent of the open code-repo decisions. M2 onward uses a draft schema and says so until the code repo publishes the real one; the pin makes that swap a one-line change plus fixes.
 
