@@ -34,6 +34,23 @@ export function checkReviewChanges(i: {
   };
 }
 
+/** Trusted bootstrap list, used ONLY while the base branch has no MAINTAINERS.json yet (a fresh
+ * staging or main before the first promotion). It lives in this script, never in PR content. */
+export const BOOTSTRAP_MAINTAINERS = ['dexterhere'];
+
+/** Maintainers come from the BASE branch. Fail closed: any problem other than "the file does not
+ * exist on the base branch" yields nobody, so guarded changes are rejected. */
+export function maintainersFromBase(showFile: () => string): unknown {
+  try {
+    return JSON.parse(showFile());
+  } catch (e) {
+    const msg =
+      e instanceof Error ? `${e.message} ${String((e as { stderr?: unknown }).stderr ?? '')}` : '';
+    if (/does not exist|exists on disk, but not in/.test(msg)) return BOOTSTRAP_MAINTAINERS;
+    return [];
+  }
+}
+
 function main() {
   const eventName = process.env.GITHUB_EVENT_NAME;
   if (eventName !== 'pull_request')
@@ -43,19 +60,9 @@ function main() {
   if (!/^[A-Za-z0-9._/-]+$/.test(base)) throw new Error('unexpected base ref');
   const git = (...a: string[]) => execFileSync('git', a, { encoding: 'utf8' });
   const changed = git('diff', '--name-only', `origin/${base}...HEAD`).split('\n').filter(Boolean);
-  let maintainers: unknown = [];
-  try {
-    maintainers = JSON.parse(git('show', `origin/${base}:registry/MAINTAINERS.json`));
-  } catch {
-    // One-time bootstrap: the base branch has no list yet, so the PR that introduces it
-    // supplies it. Once the file exists on the base branch this fallback is never used.
-    try {
-      maintainers = JSON.parse(readFileSync('registry/MAINTAINERS.json', 'utf8'));
-      console.log('check-review-changes: bootstrap, base has no MAINTAINERS.json');
-    } catch {
-      // no list anywhere: nobody is a maintainer
-    }
-  }
+  const maintainers = maintainersFromBase(() =>
+    git('show', `origin/${base}:registry/MAINTAINERS.json`)
+  );
   const r = checkReviewChanges({
     eventName,
     changed,
