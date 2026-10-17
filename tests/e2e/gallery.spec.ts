@@ -2,12 +2,18 @@ import AxeBuilder from '@axe-core/playwright';
 import { expect, test, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 
-type W = { id: string; name: string; installable: boolean; access: Record<string, string[]> };
+type W = {
+  id: string;
+  name: string;
+  categories: string[];
+  installable: boolean;
+  access: Record<string, string[]>;
+};
 const index = JSON.parse(readFileSync('registry/dist/index.json', 'utf8')) as { widgets: W[] };
 const widgets = index.widgets;
 const PORT = process.env.PW_PORT ?? 4173;
 
-const search = (page: Page) => page.getByRole('searchbox', { name: 'Search' });
+const search = (page: Page) => page.getByRole('combobox', { name: 'Search widgets' });
 const count = (page: Page) => page.getByTestId('count');
 async function gallery(page: Page, qs = '') {
   await page.goto(`/widgets/${qs}`);
@@ -53,21 +59,235 @@ test('"/" and Ctrl+K focus the search box; "/" is ignored while typing', async (
   await expect(search(page)).toBeFocused();
 });
 
-test('filters, sort, clear and the empty state', async ({ page }) => {
+const cards = (page: Page) => page.getByTestId('cards').locator(':scope > li');
+const cats = (page: Page) => page.getByRole('group', { name: 'Categories' });
+const catBtn = (page: Page, c: string) =>
+  cats(page).locator(`button:has([data-testid="cat-count-${c}"])`);
+const inCat = (c: string) => widgets.filter((w) => w.categories.includes(c));
+
+test('category chips filter, show counts, and a multi-category widget appears under each', async ({
+  page
+}) => {
   await gallery(page);
-  await page.getByLabel('Category').selectOption('system');
-  await expect(page.getByTestId('cards').locator(':scope > li')).toHaveCount(2);
-  await expect(page).toHaveURL(/cat=system/);
+  const multi = widgets.find((w) => w.categories.length > 1)!;
+  expect(multi).toBeTruthy();
+  for (const c of new Set(widgets.flatMap((w) => w.categories)))
+    await expect(page.getByTestId(`cat-count-${c}`)).toHaveText(String(inCat(c).length));
+  // the same widget shows up under each of its categories
+  for (const c of multi.categories) {
+    await catBtn(page, c).click();
+    await expect(catBtn(page, c)).toHaveAttribute('aria-pressed', 'true');
+    await expect(cards(page).getByRole('link', { name: multi.name })).toHaveCount(1);
+    await expect(cards(page)).toHaveCount(inCat(c).length);
+    await expect(page).toHaveURL(new RegExp(`cat=${c}$`));
+    await catBtn(page, c).click();
+    await expect(cards(page)).toHaveCount(widgets.length);
+  }
+  // multi-select is a union and the URL carries both
+  const [c1, c2] = multi.categories;
+  await catBtn(page, c1).click();
+  await catBtn(page, c2).click();
+  const union = new Set([...inCat(c1), ...inCat(c2)].map((w) => w.id));
+  await expect(cards(page)).toHaveCount(union.size);
+  await expect(page).toHaveURL(/cat=[a-z-]+%2C[a-z-]+/);
+  // counts reflect the other filters: a search narrows every count
+  await search(page).fill(multi.name);
+  for (const c of multi.categories)
+    await expect(page.getByTestId(`cat-count-${c}`)).toHaveText('1');
+});
+
+test('active filter chips can be removed and Clear all resets', async ({ page }) => {
+  await gallery(page, '?cat=system%2Cutilities&status=planned');
+  const active = page.getByTestId('active');
+  await expect(active.locator('li')).toHaveCount(3);
+  await active.getByRole('button', { name: 'Remove filter Category: System' }).click();
+  await expect(active.locator('li')).toHaveCount(2);
+  await expect(page).not.toHaveURL(/cat=system/);
+  await page.getByRole('button', { name: 'Clear all' }).click();
+  await expect(page.getByTestId('active')).toHaveCount(0);
+  await expect(cards(page)).toHaveCount(widgets.length);
+  await expect(page).not.toHaveURL(/cat=|status=/);
+});
+
+test('sort menu changes order and is kept in the URL', async ({ page }) => {
+  await gallery(page);
   await page.getByLabel('Sort').selectOption('status');
   await expect(page).toHaveURL(/sort=status/);
-  await expect(page.getByLabel('Category').locator('option[value="media"]')).toHaveCount(0);
+  await page.getByLabel('Sort').selectOption('name');
+  await expect(page).toHaveURL(/sort=name/);
+  const names = await cards(page).locator('h2').allTextContents();
+  expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
+});
 
+test('the empty state offers suggested searches and category buttons', async ({ page }) => {
+  await gallery(page);
   await search(page).fill('zzzz-nothing');
+  const empty = page.getByTestId('empty');
+  await expect(empty).toBeVisible();
+  await expect(empty).toContainText('zzzz-nothing');
+  await expect(count(page)).toHaveText(`0 of ${widgets.length} widgets`);
+  await empty.getByRole('button', { name: 'clock', exact: true }).click();
+  await expect(search(page)).toHaveValue('clock');
+  await expect(cards(page).first()).toBeVisible();
+  await search(page).fill('zzzz-nothing');
+  await page.getByTestId('empty').getByRole('button', { name: 'Utilities' }).click();
+  await expect(cards(page)).toHaveCount(inCat('utilities').length);
+  await expect(search(page)).toHaveValue('');
+  await search(page).fill('zzzz-nothing');
+  await page.getByTestId('empty').getByRole('button', { name: 'Clear all' }).click();
+  await expect(cards(page)).toHaveCount(widgets.length);
+});
+
+test('typeahead is labelled by kind and fully keyboard operable', async ({ page }) => {
+  await gallery(page);
+  const box = search(page);
+  await box.focus();
+  await box.pressSequentially('doc');
+  const list = page.getByRole('listbox', { name: 'Suggestions' });
+  await expect(list).toBeVisible();
+  await expect(box).toHaveAttribute('aria-expanded', 'true');
+  const opts = list.getByRole('option');
+  expect(await opts.count()).toBeGreaterThan(1);
+  expect((await list.locator('.kind').allTextContents()).join(' ')).toMatch(/Widget/);
+  // Down moves aria-activedescendant, Up wraps
+  await page.keyboard.press('ArrowDown');
+  await expect(box).toHaveAttribute(
+    'aria-activedescendant',
+    (await opts.nth(0).getAttribute('id'))!
+  );
+  await expect(opts.nth(0)).toHaveAttribute('aria-selected', 'true');
+  await page.keyboard.press('ArrowDown');
+  await expect(box).toHaveAttribute(
+    'aria-activedescendant',
+    (await opts.nth(1).getAttribute('id'))!
+  );
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('ArrowUp');
+  const last = (await opts.count()) - 1;
+  await expect(box).toHaveAttribute(
+    'aria-activedescendant',
+    (await opts.nth(last).getAttribute('id'))!
+  );
+  // Esc closes the list, a second Esc clears
+  await page.keyboard.press('Escape');
+  await expect(list).toBeHidden();
+  await expect(box).toHaveValue('doc');
+  await page.keyboard.press('Escape');
+  await expect(box).toHaveValue('');
+  // Enter selects the active suggestion
+  await box.pressSequentially('docker');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expect(box).toHaveValue('docker'); // the exact tag ranks first
+  await expect(list).toBeHidden();
+  await expect(cards(page)).toHaveCount(1);
+  // Tab leaves the field: nothing traps focus
+  await page.keyboard.press('Tab');
+  await expect(box).not.toBeFocused();
+});
+
+test('picking a category suggestion turns that chip on', async ({ page }) => {
+  await gallery(page);
+  await search(page).fill('time and');
+  await page.getByRole('option', { name: /Time and Calendar/ }).click();
+  await expect(search(page)).toHaveValue('');
+  await expect(page).toHaveURL(/cat=time-calendar/);
+  await expect(cards(page)).toHaveCount(inCat('time-calendar').length);
+});
+
+test('matches are highlighted and hostile input is escaped, never parsed', async ({ page }) => {
+  await gallery(page);
+  await search(page).fill('clock');
+  const marks = page.getByTestId('cards').locator('mark');
+  expect(await marks.count()).toBeGreaterThan(0);
+  for (const t of await marks.allTextContents()) expect(t.toLowerCase()).toBe('clock');
+  await search(page).fill('<img onerror=1>');
   await expect(page.getByTestId('empty')).toBeVisible();
-  await page.getByTestId('empty').getByRole('button', { name: 'Clear filters' }).click();
-  await expect(page.getByTestId('cards').locator(':scope > li')).toHaveCount(7);
-  await expect(page).toHaveURL(/sort=status/); // sort is kept, filters are gone
-  await expect(page).not.toHaveURL(/cat=|q=/);
+  await expect(page.getByTestId('empty').locator('q')).toHaveText('<img onerror=1>');
+  await expect(page.locator('main img, main script')).toHaveCount(0);
+  await expect(page.locator('[onerror]')).toHaveCount(0);
+  await page.reload();
+  await expect(search(page)).toHaveValue('<img onerror=1>');
+  await expect(page.locator('[onerror]')).toHaveCount(0);
+});
+
+test('recent searches are saved locally, capped, offered and clearable', async ({ page }) => {
+  await gallery(page);
+  await expect(page.getByTestId('recent')).toHaveCount(0);
+  for (const q of ['clock', 'docker', 'battery', 'tasks', 'github', 'system']) {
+    await search(page).fill(q);
+    await search(page).press('Enter');
+  }
+  const recent = page.getByTestId('recent');
+  await expect(recent.locator('li')).toHaveCount(5);
+  await expect(recent.locator('li').first()).toHaveText('system');
+  await expect(recent.getByRole('button', { name: 'clock', exact: true })).toHaveCount(0);
+  await page.reload();
+  await recent.getByRole('button', { name: 'docker', exact: true }).click();
+  await expect(search(page)).toHaveValue('docker');
+  await recent.getByRole('button', { name: 'Clear history' }).click();
+  await expect(recent).toHaveCount(0);
+  expect(await page.evaluate(() => localStorage.getItem('ow-recent-searches'))).toBeNull();
+});
+
+test('the gallery works when localStorage is blocked', async ({ browser }) => {
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  await page.addInitScript(() => {
+    Object.defineProperty(window, 'localStorage', {
+      get() {
+        throw new DOMException('blocked', 'SecurityError');
+      }
+    });
+  });
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  await gallery(page);
+  await search(page).fill('clock');
+  await search(page).press('Enter');
+  await expect(cards(page).first()).toBeVisible();
+  expect(errors).toEqual([]);
+  await ctx.close();
+});
+
+test('URL state round-trips: query, categories, sort and view', async ({ page }) => {
+  await gallery(page, '?q=clock&cat=time-calendar%2Cambient-fun&sort=status&view=list');
+  await expect(search(page)).toHaveValue('clock');
+  await expect(catBtn(page, 'time-calendar')).toHaveAttribute('aria-pressed', 'true');
+  await expect(catBtn(page, 'ambient-fun')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.getByLabel('Sort')).toHaveValue('status');
+  await expect(page.getByTestId('list')).toBeVisible();
+  await page.reload();
+  await expect(search(page)).toHaveValue('clock');
+  await expect(page).toHaveURL(/q=clock&cat=time-calendar%2Cambient-fun&sort=status&view=list$/);
+});
+
+test('the search bar shows its key hints and clears', async ({ page }) => {
+  await gallery(page);
+  await expect(page.locator('.keys kbd').first()).toHaveText('/');
+  await expect(page.locator('.keys kbd').nth(1)).toHaveText('Ctrl K');
+  await search(page).fill('abc');
+  await page.getByRole('button', { name: 'Clear search' }).click();
+  await expect(search(page)).toHaveValue('');
+  await expect(search(page)).toBeFocused();
+});
+
+test('the result count is a live status region', async ({ page }) => {
+  await gallery(page);
+  await expect(count(page)).toHaveAttribute('role', 'status');
+  await expect(count(page)).toHaveAttribute('aria-live', 'polite');
+  await search(page).fill('docker');
+  await expect(count(page)).toHaveText(`1 of ${widgets.length} widgets`);
+});
+
+test('typing does not shift the layout', async ({ page }) => {
+  await gallery(page);
+  const y = () => count(page).evaluate((e) => e.getBoundingClientRect().top);
+  const before = await y();
+  await search(page).focus();
+  await search(page).pressSequentially('sys');
+  await expect(page.getByRole('listbox', { name: 'Suggestions' })).toBeVisible();
+  expect(await y()).toBe(before);
 });
 
 test('junk URL state falls back to the full list', async ({ page }) => {
@@ -247,6 +467,30 @@ for (const id of ['tokyo-night', 'white']) {
   }
 }
 
+for (const id of ['tokyo-night', 'white']) {
+  test(`axe: no serious or critical violations with suggestions, chips and filters in ${id}`, async ({
+    browser
+  }) => {
+    const ctx = await browser.newContext({ reducedMotion: 'reduce' });
+    const page = await ctx.newPage();
+    await page.addInitScript((t) => localStorage.setItem('ow-theme', t), id);
+    await gallery(page, '?cat=system%2Cutilities&status=planned');
+    await search(page).focus();
+    await search(page).pressSequentially('sys');
+    await page.keyboard.press('ArrowDown');
+    await expect(page.getByRole('listbox', { name: 'Suggestions' })).toBeVisible();
+    const { violations } = await new AxeBuilder({ page }).analyze();
+    const bad = violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+    expect(bad.map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(' ')}`)).toEqual([]);
+    await search(page).fill('zzzz-nothing');
+    const empty = await new AxeBuilder({ page }).analyze();
+    expect(
+      empty.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical')
+    ).toEqual([]);
+    await ctx.close();
+  });
+}
+
 test('no horizontal overflow at 360px (gallery, list, detail)', async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 740 });
   const overflow = () =>
@@ -255,6 +499,12 @@ test('no horizontal overflow at 360px (gallery, list, detail)', async ({ page })
     );
   await gallery(page);
   expect(await overflow()).toBe(false);
+  await search(page).fill('sys');
+  await expect(page.getByRole('listbox', { name: 'Suggestions' })).toBeVisible();
+  expect(await overflow()).toBe(false);
+  await search(page).fill('zzzz-nothing-with-a-very-long-unbroken-query-string-to-test-wrapping');
+  expect(await overflow()).toBe(false);
+  await search(page).fill('');
   await page.getByRole('button', { name: 'List' }).click();
   expect(await overflow()).toBe(false);
   for (const w of widgets) {
