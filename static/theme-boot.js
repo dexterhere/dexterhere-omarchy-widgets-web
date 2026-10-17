@@ -3,9 +3,35 @@
   try {
     var ids = ["tokyo-night","white","catppuccin","gruvbox","matte-black","rose-pine","catppuccin-latte","ethereal","everforest","flexoki-light","hackerman","kanagawa","last-horizon","lumon","lupine","miasma","nord","osaka-jade","retro-82","ristretto","solitude","vantablack"];
     var t = null;
-    try {
-      t = localStorage.getItem('ow-theme');
-    } catch (e) {}
+    // ?theme=<id> comes from a link on the other host (localStorage is per origin): take it only
+    // if it is a known id, remember it, and remove just that parameter from the address.
+    var parts = location.search.slice(1).split('&');
+    var rest = parts.filter(function (p) {
+      return p.split('=')[0] !== 'theme';
+    });
+    if (rest.length !== parts.length && location.search) {
+      var q = parts.filter(function (p) {
+        return p.split('=')[0] === 'theme';
+      })[0].split('=')[1];
+      if (ids.indexOf(q) >= 0) {
+        t = q;
+        try {
+          localStorage.setItem('ow-theme', t);
+        } catch (e) {}
+      }
+      try {
+        history.replaceState(
+          history.state,
+          '',
+          location.pathname + (rest.length ? '?' + rest.join('&') : '') + location.hash
+        );
+      } catch (e) {}
+    }
+    if (t === null) {
+      try {
+        t = localStorage.getItem('ow-theme');
+      } catch (e) {}
+    }
     if (ids.indexOf(t) < 0) {
       t = matchMedia('(prefers-color-scheme: light)').matches ? 'catppuccin-latte' : 'tokyo-night';
     }

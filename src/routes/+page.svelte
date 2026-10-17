@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { resolve } from '$app/paths';
+  import { docsUrl, sitePath } from '../lib/site';
   import Desktop from '../lib/components/Desktop.svelte';
 </script>
 
@@ -23,8 +23,8 @@
       widgets are in development.
     </p>
     <div class="row">
-      <a class="btn-primary" href={resolve('/widgets')}>Browse widgets</a>
-      <a class="btn" href={resolve('/docs')}>Read the docs</a>
+      <a class="btn-primary" href={sitePath('/widgets')}>Browse widgets</a>
+      <a class="btn" href={docsUrl('/docs')}>Read the docs</a>
     </div>
   </section>
 
@@ -70,26 +70,26 @@
     <h2 id="make-h">Make your own</h2>
     <ul class="paths">
       <li>
-        <a href={resolve('/docs')}>Write a spec widget</a>
+        <a href={docsUrl('/docs')}>Write a spec widget</a>
         <span class="text-2"
           >A JSON file that describes the layout and the data it needs. It holds no code.</span
         >
       </li>
       <li>
-        <a href={resolve('/docs')}>Write a code widget</a>
+        <a href={docsUrl('/docs')}>Write a code widget</a>
         <span class="text-2"
           >For what a spec cannot do. It runs as you, so people should read it first.</span
         >
       </li>
       <li>
-        <a href={resolve('/docs')}>Ask an agent to write one</a>
+        <a href={docsUrl('/docs')}>Ask an agent to write one</a>
         <span class="text-2"
           >Describe the widget to your coding agent and review the spec it writes.</span
         >
       </li>
     </ul>
     <p class="text-2">
-      Finished one? <a href={resolve('/contribute')}>Read how to contribute it</a> to the gallery.
+      Finished one? <a href={sitePath('/contribute')}>Read how to contribute it</a> to the gallery.
     </p>
   </section>
 </div>

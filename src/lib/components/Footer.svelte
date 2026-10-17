@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { resolve } from '$app/paths';
+  import { sitePath } from '../site';
 </script>
 
 <footer class="site-footer">
   <div class="container wide foot">
     <p class="small">Independent of Omarchy and 37signals. MIT licensed.</p>
     <nav aria-label="Footer" class="small">
-      <a href={resolve('/security')}>Security</a>
+      <a href={sitePath('/security')}>Security</a>
       <a href="https://github.com/dexterhere/omarchy-widgets" rel="noopener noreferrer">GitHub</a>
     </nav>
   </div>

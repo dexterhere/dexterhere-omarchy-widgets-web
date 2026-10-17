@@ -23,3 +23,9 @@ Pages are Markdown processed by mdsvex (Svelte in Markdown). Content lives in `d
 ## Versions
 
 `bun run docs:snapshot <version> [--status draft|stable] [--ref <tag>]` copies `next` to `docs/content/<version>` and rewrites `_version.json`. It refuses to overwrite. Old versions are never deleted. Search is scoped to the version being read.
+
+## Docs on their own host
+
+Authors change nothing. Write links to other docs pages as `/docs/<version>/<section>/<page>/` and to site pages as `/widgets/`, `/contribute/`, `/security/`. In a host-mode build (`PUBLIC_SITE_ORIGIN` and `PUBLIC_DOCS_ORIGIN` set, see `deploy/README.md`) the build rewrites exactly those authored links: docs links lose the `/docs` prefix (the docs host serves the build's `/docs/*` at `/*`), site links become absolute site URLs. Any other link (external, `#anchor`) is left alone. In path mode nothing is rewritten. Do not hard-code a hostname in content.
+
+Run both hosts locally with `bun run serve:local`: site on `http://localhost:4300`, docs on `http://docs.localhost:4300`. Rebuild with `bun run build:hosts` after editing content.
