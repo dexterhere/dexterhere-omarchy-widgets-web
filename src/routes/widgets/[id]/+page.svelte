@@ -12,6 +12,8 @@
   } from '../../../lib/registry';
   import { REPORT_URL, safeRepoUrl, shortCommit } from '../../../lib/registry/links';
   import { CARD_SIZE, previewType } from '../../../lib/registry/preview';
+  import LazyEmulator from '../../../lib/emulator/LazyEmulator.svelte';
+  import { theme } from '../../../lib/themes/store.svelte';
 
   let { data } = $props();
   const w = $derived(data.widget);
@@ -188,6 +190,25 @@
       </dl>
     </section>
   </div>
+
+  <section class="block" aria-labelledby="h-try" data-try-desktop>
+    <h2 id="h-try">Try it on a desktop</h2>
+    <p class="small text-2">
+      Emulated desktop, sample data. {w.installable ? '' : 'This is a concept preview. '}Press Super
+      + Alt + W (proposed) or click Widgets in the bar to open the Widget Center.
+    </p>
+    <div class="try">
+      {#key w.id}
+        <LazyEmulator
+          compact
+          initialWidgets={[w.id]}
+          selectedWidgetId={w.id}
+          workspace={3}
+          onPickTheme={() => theme.openPicker()}
+        />
+      {/key}
+    </div>
+  </section>
 
   <section class="block" aria-labelledby="h-access">
     <h2 id="h-access">What it can access</h2>
@@ -396,6 +417,10 @@
   }
   .block > * {
     max-width: 100%;
+  }
+  .try {
+    align-self: stretch;
+    min-width: 0;
   }
   .sub {
     margin-top: 8px;

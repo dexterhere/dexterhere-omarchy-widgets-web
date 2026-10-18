@@ -88,3 +88,25 @@ export async function flip(el: HTMLElement, mutate: () => Promise<void>) {
     await once();
   }
 }
+
+/**
+ * Svelte action: the Widget Center sheet slides up from the bottom edge. `data-anim` is
+ * "running" while it moves and "idle" otherwise; under reduced motion it never moves.
+ */
+export function sheetIn(el: HTMLElement) {
+  el.dataset.anim = 'idle';
+  if (prefersReducedMotion()) return;
+  el.dataset.anim = 'running';
+  void loadGsap()
+    .then((g) =>
+      g.from(el, {
+        yPercent: 100,
+        opacity: 0.4,
+        duration: motion.base,
+        ease: motion.easeOut,
+        clearProps: 'transform,opacity',
+        onComplete: () => void (el.dataset.anim = 'idle')
+      })
+    )
+    .catch(() => void (el.dataset.anim = 'idle'));
+}
