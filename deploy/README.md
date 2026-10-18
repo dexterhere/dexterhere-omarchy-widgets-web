@@ -35,6 +35,16 @@ This writes `Caddyfile`, `nginx.conf`, `netlify/_redirects`, `netlify/_headers` 
 | site | `/docs/*`                                                                 | 308 to the docs origin         |
 | site | anything else                                                             | served as-is                   |
 | any  | not found                                                                 | `404.html`                     |
+| any  | `/400/`, `/404/`, `/500/` (and `/…/index.html` under them)                | served as-is, with their HTML  |
+
+## Error pages
+
+Each host answers with the designed error pages from the build, with the status the visitor needs:
+
+- **Not found** (any host, any unknown path): `404.html` with status **404**. It is the same page as the prerendered `/404/`, copied by `scripts/finalize-errors.ts` so it also renders without JavaScript.
+- **Bad request**: Caddy (`handle_errors`) and nginx (`error_page 400`) serve `/400/index.html` with status 400.
+- **Server errors** (nginx `500 502 503 504`, Caddy `>= 500`): `/500/index.html`, status kept. A static build has no upstream, so these only occur when a proxy or the host itself fails.
+- **Netlify and Vercel**: they serve `404.html` for unmatched paths with status 404 by themselves; `netlify/_redirects` and `vercel.json` rewrite the `/400/`, `/404/` and `/500/` directories so they also work on the docs host. Netlify and Vercel do not map 400 or 5xx to our pages (their `_redirects` and `routes` have no status mapping for that here); not tested on those products.
 
 Redirect targets are always the configured docs origin plus the request path, never a value taken from the `Host` header. Directories get a trailing slash (`trailingSlash: 'always'`); links in the site always carry it.
 

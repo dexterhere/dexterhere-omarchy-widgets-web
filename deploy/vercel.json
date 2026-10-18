@@ -99,6 +99,36 @@
       "destination": "/pagefind/:path*"
     },
     {
+      "source": "/400/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "^docs\\.example\\.com$"
+        }
+      ],
+      "destination": "/400/:path*"
+    },
+    {
+      "source": "/404/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "^docs\\.example\\.com$"
+        }
+      ],
+      "destination": "/404/:path*"
+    },
+    {
+      "source": "/500/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "^docs\\.example\\.com$"
+        }
+      ],
+      "destination": "/500/:path*"
+    },
+    {
       "source": "/favicon.svg",
       "has": [
         {

@@ -26,6 +26,7 @@ export function buildHosts(env: Record<string, string | undefined> = process.env
   run(['bun', 'scripts/gen-themes.ts'], e);
   run(['bun', 'scripts/build-registry.ts'], e);
   run(['bunx', 'vite', 'build'], e);
+  run(['bun', 'scripts/finalize-errors.ts', HOSTS_DIR], e);
   run(['bunx', 'pagefind', '--site', HOSTS_DIR], e);
   writeFileSync(join(ROOT, HOSTS_DIR, '.origins.json'), marker(o)); // dot file: never served
 }

@@ -5,9 +5,12 @@
   import { theme } from '../themes/store.svelte';
   import { links } from '../site';
 
-  let { info }: { info: BuildInfo } = $props();
+  // `info` is missing when SvelteKit renders an error page after a client navigation: the footer
+  // still renders, with the docs root instead of the latest version and no build details.
+  let { info }: { info?: BuildInfo } = $props();
+  const version = $derived(info?.docsVersion ?? '');
 
-  const columns = $derived(footerColumns(links, info.docsVersion));
+  const columns = $derived(footerColumns(links, version));
   const themeName = $derived(THEMES.find((t) => t.id === theme.current)?.name ?? theme.current);
 
   function toTop() {
@@ -31,7 +34,7 @@
       <p class="small status">
         Pre-release: the daemon, vault and CLI work today; widgets and the desktop canvas are in
         development.
-        <a href={statusHref(links, info.docsVersion)}>Read the status in the docs</a>
+        <a href={statusHref(links, version)}>Read the status in the docs</a>
       </p>
     </div>
 
@@ -40,7 +43,7 @@
         <div class="col">
           <h2 class="col-title">{col.title}</h2>
           <ul>
-            {#each col.links as l (l.href)}
+            {#each col.links as l, i (`${i}:${l.href}`)}
               <li class:sub={l.sub}>
                 <a href={l.href} rel={l.external ? 'noopener noreferrer' : undefined}
                   >{l.label}{#if l.external}<span class="sr-only"> (external site)</span>{/if}</a
@@ -54,22 +57,24 @@
 
     <div class="base">
       <p class="small muted legal">Independent of Omarchy and 37signals. MIT licensed.</p>
-      <dl class="build small" aria-label="Build information">
-        <div>
-          <dt>Docs</dt>
-          <dd>{info.docsLabel}</dd>
-        </div>
-        <div>
-          <dt>Widget schema</dt>
-          <dd>{info.schema}</dd>
-        </div>
-        {#if info.commit}
+      {#if info}
+        <dl class="build small" aria-label="Build information">
           <div>
-            <dt>Commit</dt>
-            <dd><code>{info.commit}</code></dd>
+            <dt>Docs</dt>
+            <dd>{info.docsLabel}</dd>
           </div>
-        {/if}
-      </dl>
+          <div>
+            <dt>Widget schema</dt>
+            <dd>{info.schema}</dd>
+          </div>
+          {#if info.commit}
+            <div>
+              <dt>Commit</dt>
+              <dd><code>{info.commit}</code></dd>
+            </div>
+          {/if}
+        </dl>
+      {/if}
       <div class="tools">
         <button class="btn small theme" type="button" onclick={() => theme.openPicker()}>
           <span>{themeName}</span><span class="sr-only">, open the theme picker</span><kbd

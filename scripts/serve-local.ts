@@ -17,19 +17,20 @@ const text = (status: number, body: string, extra: Record<string, string> = {}) 
     headers: { ...HEADERS, 'content-type': 'text/plain; charset=utf-8', ...extra }
   });
 
+/** A prerendered error page with its status; plain text if the build has no such page. */
+function errorPage(root: string, file: string, status: number, plain: string, head: boolean) {
+  const page = join(root, file);
+  return existsSync(page)
+    ? new Response(head ? null : readFileSync(page), {
+        status,
+        headers: { ...HEADERS, 'content-type': 'text/html; charset=utf-8' }
+      })
+    : text(status, head ? '' : plain);
+}
+
 /** Pure request handler (exported for tests): no sockets. */
 export function makeHandler(root: string, ctx: HostCtx) {
-  const page404 = join(root, '404.html');
-  const notFound = (head: boolean) =>
-    existsSync(page404)
-      ? new Response(head ? null : readFileSync(page404), {
-          status: 404,
-          headers: { ...HEADERS, 'content-type': 'text/html; charset=utf-8' }
-        })
-      : text(404, head ? '' : 'Not found\n');
-
-  return (req: Request): Response => {
-    const head = req.method === 'HEAD';
+  const route = (req: Request, head: boolean): Response => {
     if (req.method !== 'GET' && !head)
       return text(405, 'Method not allowed\n', { allow: 'GET, HEAD' });
     const host = hostKindOf(req.headers.get('host'), ctx);
@@ -41,7 +42,7 @@ export function makeHandler(root: string, ctx: HostCtx) {
     const pathname = qi < 0 ? target : target.slice(0, qi);
     const search = qi < 0 ? '' : target.slice(qi);
     const d = decide(host, pathname, search, ctx);
-    if (d.kind === 'notfound') return notFound(head);
+    if (d.kind === 'notfound') return errorPage(root, '404.html', 404, 'Not found\n', head);
     if (d.kind === 'redirect')
       return new Response(null, {
         status: d.status,
@@ -57,7 +58,7 @@ export function makeHandler(root: string, ctx: HostCtx) {
         headers: { ...HEADERS, location: pathname + '/' + search }
       });
     }
-    if (r.kind === 'notfound') return notFound(head);
+    if (r.kind === 'notfound') return errorPage(root, '404.html', 404, 'Not found\n', head);
     return new Response(head ? null : readFileSync(r.file), {
       headers: {
         ...HEADERS,
@@ -65,6 +66,16 @@ export function makeHandler(root: string, ctx: HostCtx) {
         'content-length': String(statSync(r.file).size)
       }
     });
+  };
+
+  // An internal error gets the designed 500 page with status 500, never a stack trace or a path.
+  return (req: Request): Response => {
+    const head = req.method === 'HEAD';
+    try {
+      return route(req, head);
+    } catch {
+      return errorPage(root, join('500', 'index.html'), 500, 'Something broke\n', head);
+    }
   };
 }
 
