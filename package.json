@@ -6,7 +6,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "vite dev",
-    "build": "bun run themes:gen && bun run registry && vite build && bun run search-index",
+    "build": "bun run themes:gen && bun run registry && vite build && bun scripts/finalize-errors.ts && bun run search-index",
     "preview": "vite preview",
     "build:hosts": "bun scripts/build-hosts.ts",
     "serve:local": "bun scripts/serve-local.ts",

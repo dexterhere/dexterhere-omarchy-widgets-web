@@ -21,6 +21,16 @@ https://example.com {
 		file_server
 	}
 	handle_errors {
+		@badRequest expression {http.error.status_code} == 400
+		handle @badRequest {
+			rewrite * /400/index.html
+			file_server
+		}
+		@serverError expression {http.error.status_code} >= 500
+		handle @serverError {
+			rewrite * /500/index.html
+			file_server
+		}
 		rewrite * /404.html
 		file_server
 	}
@@ -53,7 +63,7 @@ https://docs.example.com {
 	header @wasm Content-Type application/wasm
 	@pfbin path_regexp ^/pagefind/.*\.pf_[a-z]+$
 	header @pfbin Content-Type application/octet-stream
-	@static path /_app/* /pagefind/* /favicon.svg /theme-boot.js /robots.txt
+	@static path /_app/* /pagefind/* /400/* /404/* /500/* /favicon.svg /theme-boot.js /robots.txt
 	handle @static {
 		file_server
 	}
@@ -62,6 +72,16 @@ https://docs.example.com {
 		file_server
 	}
 	handle_errors {
+		@badRequest expression {http.error.status_code} == 400
+		handle @badRequest {
+			rewrite * /400/index.html
+			file_server
+		}
+		@serverError expression {http.error.status_code} >= 500
+		handle @serverError {
+			rewrite * /500/index.html
+			file_server
+		}
 		rewrite * /404.html
 		file_server
 	}

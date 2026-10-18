@@ -3,7 +3,7 @@
 // into Caddy, nginx, Netlify and Vercel config. Pure: no filesystem, no request objects.
 //
 //  docs host:  /                -> 302 to the latest start page
-//              /_app/* /pagefind/* + a few root files -> served as-is
+//              /_app/* /pagefind/* + a few root files and /400/ /404/ /500/ -> served as-is
 //              /docs/*          -> 308 to /*   (one canonical URL)
 //              everything else  -> the build's /docs/<path>
 //  site host:  /docs/*          -> 308 to the docs origin
@@ -19,6 +19,8 @@ export const RULES = {
   docsPassthroughPrefixes: ['/_app/', '/pagefind/'],
   /** Root files served as-is on the docs host. */
   docsPassthroughFiles: ['/favicon.svg', '/theme-boot.js', '/robots.txt'],
+  /** Static error pages (each a directory with index.html), served as-is on the docs host too. */
+  docsPassthroughDirs: ['/400/', '/404/', '/500/'],
   /** Where the build keeps the docs. */
   docsPrefix: '/docs',
   rootRedirectStatus: 302,
@@ -78,6 +80,7 @@ export function decide(host: HostKind, pathname: string, search: string, ctx: Ho
     };
   if (
     RULES.docsPassthroughPrefixes.some((p) => pathname.startsWith(p)) ||
+    RULES.docsPassthroughDirs.some((p) => pathname.startsWith(p)) ||
     RULES.docsPassthroughFiles.includes(pathname as never)
   )
     return { kind: 'serve', path: pathname };

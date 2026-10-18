@@ -2,6 +2,9 @@
 
 http://docs.example.com/_app/* /_app/:splat 200
 http://docs.example.com/pagefind/* /pagefind/:splat 200
+http://docs.example.com/400/* /400/:splat 200
+http://docs.example.com/404/* /404/:splat 200
+http://docs.example.com/500/* /500/:splat 200
 http://docs.example.com/favicon.svg /favicon.svg 200
 http://docs.example.com/theme-boot.js /theme-boot.js 200
 http://docs.example.com/robots.txt /robots.txt 200
@@ -14,6 +17,9 @@ http://example.com/docs/* https://docs.example.com/:splat 308!
 
 https://docs.example.com/_app/* /_app/:splat 200
 https://docs.example.com/pagefind/* /pagefind/:splat 200
+https://docs.example.com/400/* /400/:splat 200
+https://docs.example.com/404/* /404/:splat 200
+https://docs.example.com/500/* /500/:splat 200
 https://docs.example.com/favicon.svg /favicon.svg 200
 https://docs.example.com/theme-boot.js /theme-boot.js 200
 https://docs.example.com/robots.txt /robots.txt 200
