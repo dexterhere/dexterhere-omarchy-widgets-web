@@ -64,8 +64,8 @@ test('the overlay is bare: a name, previews and two arrows', async ({ page }) =>
   await expect(dialog(page).locator('h2, kbd')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Previous theme' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Next theme' })).toBeVisible();
-  // one large preview, two neighbours each side
-  await expect(page.locator('.picker .card:not([inert])')).toHaveCount(5);
+  // one large preview and a strip of slabs each side
+  expect(await page.locator('.picker .card:not([inert])').count()).toBeGreaterThan(7);
   const vw = page.viewportSize()!.width;
   const b = (await centre(page).boundingBox())!;
   expect(b.width / vw).toBeGreaterThan(0.3);
@@ -128,8 +128,9 @@ test('clicking a side preview recentres it; the backdrop closes without a change
   await ready(page);
   await page.keyboard.press('t');
   await settled(page);
-  await page.getByRole('button', { name: 'Show Catppuccin', exact: true }).click();
-  await expect(name(page)).toHaveText('Catppuccin');
+  // a slab shows only a strip of its card: click inside the strip
+  await page.locator('.picker .card[data-o="1"]').click({ position: { x: 10, y: 150 } });
+  await expect(name(page)).toHaveText('White');
   await settled(page);
   expect(await theme(page)).toBe('tokyo-night');
   await dialog(page).click({ position: { x: 300, y: 40 } });

@@ -4,7 +4,7 @@
   import ThemePreview from './ThemePreview.svelte';
   import { theme } from '../themes/store.svelte';
   import { THEMES } from '../themes/themes';
-  import { OFFSETS, slot, swipeStep, wrap } from '../themes/picker';
+  import { offset, reachFor, slot, swipeStep, wrap } from '../themes/picker';
   import { loadGsap, motion, prefersReducedMotion, type Gsap } from '../motion';
 
   const n = THEMES.length;
@@ -15,15 +15,24 @@
   let narrow = $state(false);
   let gsap: Gsap | undefined;
 
-  const visible = $derived(OFFSETS.map((o) => ({ o, t: THEMES[wrap(index + o, n)] })));
+  let reach = $state(8);
+  const cards = $derived(THEMES.map((t, i) => ({ t, o: offset(i, index, n) })));
   const active = $derived(THEMES[index]);
 
   onMount(() => {
     const mq = matchMedia('(max-width: 640px)');
-    const set = () => (narrow = mq.matches);
+    const set = () => {
+      narrow = mq.matches;
+      const w = stage?.querySelector<HTMLElement>('.card')?.offsetWidth;
+      if (w) reach = reachFor(innerWidth, w);
+    };
     set();
     mq.addEventListener('change', set);
-    return () => mq.removeEventListener('change', set);
+    addEventListener('resize', set);
+    return () => {
+      mq.removeEventListener('change', set);
+      removeEventListener('resize', set);
+    };
   });
 
   // Put every card in its slot. Animated moves kill whatever tween is running first and
@@ -33,13 +42,20 @@
     if (!gsap || !stage) return;
     const instant = !animate || prefersReducedMotion();
     for (const el of stage.querySelectorAll<HTMLElement>('.card')) {
-      const s = slot(Number(el.dataset.o), narrow);
+      const o = Number(el.dataset.o);
+      const s = slot(o, narrow, reach);
       const shade = el.querySelector('.shade');
-      const props = { x: s.x * el.offsetWidth, scale: s.scale, opacity: s.hidden ? 0 : 1 };
+      const props = {
+        x: s.x * el.offsetWidth,
+        scaleY: s.scaleY,
+        skewX: s.skew,
+        opacity: s.hidden ? 0 : 1
+      };
       el.style.zIndex = String(s.z);
       el.inert = s.hidden;
-      const fresh = !el.dataset.placed;
-      el.dataset.placed = '1';
+      // a card that wraps from one end of the strip to the other jumps instead of sliding across
+      const fresh = !el.dataset.placed || Math.abs(o - Number(el.dataset.placed)) > n / 2;
+      el.dataset.placed = String(o);
       gsap.killTweensOf([el, shade]);
       if (instant || fresh) {
         gsap.set(el, props);
@@ -61,6 +77,10 @@
       dialog.showModal();
       void loadGsap().then(async (g) => {
         gsap = g;
+        reach = reachFor(
+          innerWidth,
+          stage?.querySelector<HTMLElement>('.card')?.offsetWidth ?? 600
+        );
         place(false);
         ready = true;
         await tick();
@@ -72,7 +92,14 @@
   $effect(() => {
     void index;
     void narrow;
-    if (ready) place(true);
+    void reach;
+    if (!ready) return;
+    place(true);
+    // Focus follows the highlight so a slab never wears the focus outline.
+    void tick().then(() => {
+      if (document.activeElement?.closest('.stage'))
+        stage?.querySelector<HTMLElement>('.card[data-o="0"]')?.focus({ preventScroll: true });
+    });
   });
 
   const go = (i: number) => (index = wrap(i, n));
@@ -159,7 +186,7 @@
   onpointerup={onup}
 >
   <div class="stage" class:ready bind:this={stage}>
-    {#each visible as { o, t } (t.id)}
+    {#each cards as { o, t } (t.id)}
       <button
         class="card"
         type="button"
@@ -196,7 +223,7 @@
 
 <style>
   .picker {
-    --w: clamp(220px, 38vw, 720px);
+    --w: clamp(240px, 40vw, 780px);
     position: fixed;
     inset: 0;
     width: 100vw;
@@ -212,7 +239,7 @@
     touch-action: pan-y;
   }
   .picker::backdrop {
-    background: color-mix(in srgb, var(--bg-deep) 88%, transparent);
+    background: color-mix(in srgb, var(--bg-deep) 82%, transparent);
   }
   .picker[open] {
     display: flex;
@@ -224,7 +251,7 @@
   .stage {
     position: relative;
     width: 100%;
-    height: calc(var(--w) * 0.625 + 12px); /* room for the focus ring */
+    height: calc(var(--w) * 0.625 + 16px); /* room for the ring */
     overflow: hidden;
     flex: none;
     visibility: hidden;
@@ -243,6 +270,15 @@
     background: none;
     cursor: pointer;
     will-change: transform;
+    transform-origin: 50% 50%;
+  }
+  /* The highlighted preview wears the theme's accent, like the one on omarchy.org. */
+  .card[data-o='0']::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border: 2px solid var(--brand);
+    pointer-events: none;
   }
   .shade {
     position: absolute;
@@ -272,7 +308,7 @@
     color: var(--text);
     background: transparent;
     border: 2px solid var(--text);
-    z-index: 20;
+    z-index: 200; /* above every card */
   }
   .arrow:hover {
     background: var(--text);
