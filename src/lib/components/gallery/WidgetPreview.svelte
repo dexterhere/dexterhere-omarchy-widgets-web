@@ -40,7 +40,7 @@
 </script>
 
 <div class="stage" bind:clientWidth={bw} bind:clientHeight={bh} aria-hidden="true" inert>
-  <Wallpaper themeId={theme.current} />
+  <Wallpaper themeId={theme.current} thumb />
   <div
     class="mount"
     data-preview-mount
