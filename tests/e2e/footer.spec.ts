@@ -54,7 +54,7 @@ test('every footer link resolves; external ones are well formed', async ({ page,
 
 test('build info is a labelled list', async ({ page }) => {
   await page.goto('/');
-  const dl = footer(page).getByRole('group', { name: 'Build information' });
+  const dl = footer(page).locator('dl[aria-label="Build information"]');
   expect(await dl.locator('dt').allTextContents()).toEqual(
     expect.arrayContaining(['Docs', 'Widget schema'])
   );

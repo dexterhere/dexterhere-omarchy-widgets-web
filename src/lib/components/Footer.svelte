@@ -17,10 +17,10 @@
   }
 </script>
 
-<footer class="site-footer" aria-label="Site">
+<footer class="site-footer" class:hinted={theme.hintVisible} aria-label="Site">
   <div class="frame">
     <div class="intro">
-      <a class="brand" href={links.sitePath('/')} aria-label="Omarchy Widgets, home">
+      <a class="brand" href={links.sitePath('/')}>
         <span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
         <span class="name">Widgets</span>
       </a>
@@ -87,6 +87,10 @@
     margin-top: 64px;
     border-top: 1px solid var(--border);
     background: var(--bg);
+  }
+  /* The fixed theme tip sits bottom right: keep it clear of the last row until it is dismissed. */
+  .hinted {
+    padding-bottom: 72px;
   }
   .frame {
     width: 100%;

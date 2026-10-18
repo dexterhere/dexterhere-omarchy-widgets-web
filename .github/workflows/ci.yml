@@ -8,8 +8,6 @@ permissions:
 jobs:
   web:
     runs-on: ubuntu-latest
-    env:
-      PUBLIC_BUILD_COMMIT: ${{ github.sha }} # shown (7 characters) in the footer
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -27,9 +25,12 @@ jobs:
         run: bun scripts/check-review-changes.ts
       - run: bunx vitest run --passWithNoTests
       - run: bun run build
+        env:
+          PUBLIC_BUILD_COMMIT: ${{ github.sha }} # shown (7 characters) in the footer
       - name: build the host-mode site (localhost + docs.localhost) for the hosts e2e project
         run: bun run build:hosts
         env:
+          PUBLIC_BUILD_COMMIT: ${{ github.sha }}
           PORT: '4174' # the hosts project serves PW_PORT + 1 (4173 + 1)
       - run: bunx playwright install --with-deps chromium
       - run: bunx playwright test --pass-with-no-tests # both projects: chromium (path mode) and hosts
