@@ -381,15 +381,13 @@ test('only same-origin requests while using the widget experience', async ({ pag
   expect([...hosts]).toEqual([`localhost:${process.env.PW_PORT ?? 4173}`]);
 });
 
-test('the widget layer lives in the lazy chunk: the detail page loads it only near the viewport', async ({
-  page
-}) => {
+test('the widget layer lives in the lazy chunk: the gallery never loads it', async ({ page }) => {
   const marker = 'Layout snapshot saved (sample)';
   const loaded: Promise<string>[] = [];
   page.on('response', (r) => {
     if (r.url().endsWith('.js')) loaded.push(r.text().catch(() => ''));
   });
-  await page.goto('/');
+  await page.goto('/widgets/');
   await page.waitForLoadState('networkidle');
   expect((await Promise.all(loaded)).some((b) => b.includes(marker))).toBe(false);
 });

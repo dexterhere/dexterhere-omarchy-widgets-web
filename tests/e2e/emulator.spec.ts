@@ -335,13 +335,13 @@ test('the emulator chunk loads only when it nears the viewport', async ({ page }
   expect((await Promise.all(loaded)).some((b) => b.includes(marker))).toBe(true);
 });
 
-test('the home page does not load the emulator', async ({ page }) => {
+test('pages without a desktop (the gallery) do not load the emulator', async ({ page }) => {
   const marker = 'Hyprland and Omarchy 4 are not running here';
   const loaded: Promise<string>[] = [];
   page.on('response', (r) => {
     if (r.url().endsWith('.js')) loaded.push(r.text().catch(() => ''));
   });
-  await page.goto('/');
+  await page.goto('/widgets/');
   await page.waitForLoadState('networkidle');
   expect((await Promise.all(loaded)).some((b) => b.includes(marker))).toBe(false);
 });
