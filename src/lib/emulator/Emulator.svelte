@@ -130,70 +130,152 @@
   });
 
   // Full view -------------------------------------------------------------------------------
-  let savedOverflow = '';
+  // The scroll lock is a class (no saved value to get wrong when two calls overlap), and the rest
+  // of the page is `inert` while the dialog is open: siblings of root and of each ancestor up to
+  // <body>. Dialogs (the theme picker) stay usable. Always undone on close and on unmount.
+  const LOCK = 'ow-emu-full';
+  let inerted: HTMLElement[] = [];
+  function lockPage(on: boolean) {
+    document.documentElement.classList.toggle(LOCK, on);
+    for (const el of inerted) el.inert = false;
+    inerted = [];
+    if (!on) return;
+    for (let n: HTMLElement | null = root; n && n !== document.body; n = n.parentElement) {
+      for (const s of n.parentElement?.children ?? []) {
+        if (s === n || !(s instanceof HTMLElement) || s.inert) continue;
+        if (s.matches('dialog, script, style') || s.querySelector('dialog')) continue;
+        s.inert = true;
+        inerted.push(s);
+      }
+    }
+  }
+  let busy = false;
+  let pending: boolean | null = null;
   async function setFull(on: boolean) {
+    // A second click (double-click) or Esc while the Flip runs must not start another transition.
+    if (busy) {
+      pending = on;
+      return;
+    }
     if (on === full) return;
-    holdH = root.offsetHeight;
-    root.classList.add('flipping');
-    await flip(root, async () => {
-      full = on;
-      legendOpen = !on;
-      if (on) savedOverflow = document.documentElement.style.overflow;
-      document.documentElement.style.overflow = on ? 'hidden' : savedOverflow;
+    busy = true;
+    try {
+      holdH = root.offsetHeight;
+      root.classList.add('flipping');
+      await flip(root, async () => {
+        full = on;
+        legendOpen = !on;
+        lockPage(on);
+        await tick();
+      });
+      emu.announce(on ? 'Full view opened' : 'Full view closed');
+      setTimeout(() => root?.classList.remove('flipping'), 500);
       await tick();
-    });
-    emu.announce(on ? 'Full view opened' : 'Full view closed');
-    setTimeout(() => root?.classList.remove('flipping'), 500);
-    await tick();
-    expandBtn.focus();
+      expandBtn.focus();
+    } finally {
+      busy = false;
+      if (!full) lockPage(false); // never leave the page inert behind an error
+    }
+    const next = pending;
+    pending = null;
+    if (next !== null && next !== full) void setFull(next);
+  }
+
+  /** Esc, layered: panel or dialog, then edit mode, then the full view, then the capture. */
+  function escape(e: KeyboardEvent) {
+    emu.clearSticky(); // a latched modifier never outlives Esc
+    if (emu.closeOverlays()) {
+      e.preventDefault();
+    } else if (emu.escapeHook()) {
+      e.preventDefault(); // the widget layer left edit mode
+    } else if (full) {
+      e.preventDefault();
+      emu.release();
+      void setFull(false);
+    } else if (emu.captured) {
+      emu.release();
+      e.preventDefault();
+    }
+  }
+
+  /** While the full view is open Tab and Esc are handled on the window, wherever focus is. */
+  function onWindowKey(e: KeyboardEvent) {
+    if (!full || e.defaultPrevented) return;
+    if (document.querySelector('dialog[open]')) return; // the theme picker handles its own keys
+    if (e.key === 'Escape') {
+      escape(e);
+    } else if (e.key === 'Tab' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      const f = focusables();
+      if (!f.length) return;
+      const i = f.indexOf(document.activeElement as HTMLElement);
+      const out = i < 0; // focus is on <body> or outside the dialog
+      if (out || (!e.shiftKey && i === f.length - 1) || (e.shiftKey && i === 0)) {
+        e.preventDefault();
+        (e.shiftKey ? f[f.length - 1] : f[0]).focus();
+      }
+    }
+  }
+  function onFocusIn(e: FocusEvent) {
+    if (
+      full &&
+      e.target instanceof Element &&
+      !root.contains(e.target) &&
+      !e.target.closest('dialog') &&
+      !busy
+    )
+      (focusables()[0] ?? expandBtn)?.focus();
   }
 
   // Keys ------------------------------------------------------------------------------------
+  /** Tab stops inside the emulator in document order. Scroll containers count: browsers make them tab stops. */
   function focusables(): HTMLElement[] {
-    return [
+    const stops = [
       ...root.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), input:not([disabled]), summary, [tabindex="0"], a[href]'
+        'button, input, select, textarea, summary, a[href], [tabindex]:not([tabindex="-1"])'
       )
-    ].filter((el) => !el.closest('[inert]') && el.getClientRects().length > 0);
+    ].filter((el) => !(el as HTMLButtonElement).disabled);
+    // Chrome and Firefox put focusable scrollers (the key legend, the terminal log) in the tab order.
+    for (const el of root.querySelectorAll<HTMLElement>('div, ul, ol, section, pre')) {
+      if (el.tabIndex === 0 && !stops.includes(el)) stops.push(el);
+      else if (
+        el.tabIndex < 0 &&
+        el.scrollHeight > el.clientHeight + 1 &&
+        /auto|scroll/.test(getComputedStyle(el).overflowY) &&
+        !el.querySelector('button, input, a[href], summary, [tabindex]')
+      )
+        stops.push(el);
+    }
+    return stops
+      .filter((el) => {
+        if (el.closest('[inert]')) return false;
+        // closed <details> content still has boxes in Chrome; checkVisibility sees through that
+        const details = el.closest('details');
+        if (details && !details.open && el.tagName !== 'SUMMARY') return false;
+        return el.getClientRects().length > 0 && (el.checkVisibility?.() ?? true);
+      })
+      .sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
+  }
+
+  // Chords the browser owns. They are never intercepted, captured or not (a Ctrl chord is not Super).
+  const BROWSER = /^(w|t|r|l|n|tab|pageup|pagedown|f\d+)$/;
+  function browserOwns(e: KeyboardEvent): boolean {
+    const k = e.key.toLowerCase();
+    if (e.ctrlKey && !e.metaKey && BROWSER.test(k)) return true;
+    if (e.altKey && !e.metaKey && (k === 'arrowleft' || k === 'arrowright')) return true;
+    return /^f\d+$/.test(k);
   }
 
   function onKey(e: KeyboardEvent) {
     if (e.key === 'Escape') {
-      if (emu.closeOverlays()) {
-        e.preventDefault();
-      } else if (emu.escapeHook()) {
-        e.preventDefault(); // the widget layer left edit mode
-      } else if (full) {
-        e.preventDefault();
-        emu.captured = false;
-        void setFull(false);
-      } else if (emu.captured) {
-        emu.captured = false;
-        emu.announce('Keyboard released');
-        e.preventDefault();
-      }
+      escape(e);
       return;
     }
-    if (full && e.key === 'Tab' && !e.metaKey) {
-      const f = focusables();
-      if (f.length) {
-        const first = f[0];
-        const last = f[f.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    }
-    if (e.key === 'Enter' && e.target === desk && !emu.captured && interactive) {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target === desk && !emu.captured && interactive) {
       e.preventDefault();
-      emu.captured = true;
-      emu.announce('Keyboard captured. Escape releases it.');
+      capture();
       return;
     }
+    if (browserOwns(e)) return;
     if ((!emu.captured && emu.sticky.length === 0) || !interactive || e.isComposing) return;
     // A held Super+Alt+P peeks; auto-repeat must not toggle it back.
     if (e.repeat && emu.peekHeld) {
@@ -211,14 +293,14 @@
   function capture() {
     if (!interactive || emu.captured) return;
     emu.captured = true;
-    emu.announce('Keyboard captured. Escape releases it.');
+    emu.announce('Keyboard captured. Press Escape to release it.');
   }
 
   function onWindowPointer(e: PointerEvent) {
     const t = e.target as HTMLElement | null;
     if (!t) return;
     if (!root.contains(t)) {
-      emu.captured = false; // clicked elsewhere on the page
+      emu.release(); // clicked elsewhere on the page
     }
     if (
       (emu.panel || emu.modal) &&
@@ -232,7 +314,7 @@
   }
   function onFocusOut(e: FocusEvent) {
     const to = e.relatedTarget as Node | null;
-    if (to && !root.contains(to)) emu.captured = false;
+    if (to && !root.contains(to)) emu.release();
   }
 
   onMount(() => {
@@ -242,15 +324,20 @@
     return () => cancelAnimationFrame(raf);
   });
   onDestroy(() => {
-    if (typeof document !== 'undefined' && full)
-      document.documentElement.style.overflow = savedOverflow;
+    emu.dispose();
+    if (typeof document !== 'undefined') lockPage(false);
   });
 
   const ws = Array.from({ length: WS_COUNT }, (_, i) => i);
   const view = $derived(emu.layouts.map((l) => l.fullscreen));
 </script>
 
-<svelte:window onpointerdown={onWindowPointer} />
+<svelte:window
+  onpointerdown={onWindowPointer}
+  onkeydown={onWindowKey}
+  onfocusin={onFocusIn}
+  onblur={() => emu.release('Keyboard released: the window lost focus')}
+/>
 
 <div class="hold" style:min-height={full ? `${holdH}px` : undefined}>
   <section
@@ -294,10 +381,9 @@
       tabindex={interactive ? 0 : undefined}
       role="group"
       aria-label={interactive
-        ? 'Desktop. Press Enter or click to capture the keyboard'
+        ? 'Desktop. Press Enter or Space to capture the keyboard'
         : 'Illustration of an emulated Omarchy desktop'}
       inert={!interactive}
-      onpointerdowncapture={capture}
       style="--bar-h: {barH}px"
     >
       <Wallpaper themeId={wpTheme} />
@@ -359,9 +445,20 @@
 
     <div class="under">
       <p class="hint">
-        Click the desktop to capture the keyboard. Esc releases it.
+        {#if interactive}
+          <button
+            type="button"
+            class="tool cap"
+            aria-pressed={emu.captured}
+            onclick={() => (emu.captured ? emu.release() : capture())}
+          >
+            {emu.captured ? 'Release keyboard' : 'Capture keyboard'}
+          </button>
+        {/if}
         <span class="state" data-state={emu.captured ? 'on' : 'off'}>
-          {emu.captured ? 'Keyboard captured.' : 'Keyboard not captured.'}
+          {emu.captured
+            ? 'Keyboard captured, press Esc to release.'
+            : 'Keyboard not captured: browser shortcuts work. Press Enter on the desktop, or use the button, to send keys here.'}
         </span>
       </p>
       {#if interactive}
@@ -526,6 +623,17 @@
   .state {
     color: var(--text);
     font-weight: 700;
+  }
+  .cap {
+    margin-right: 8px;
+  }
+  .emu[data-captured='true'] .state {
+    color: var(--brand-ink);
+    background: var(--brand);
+    padding: 1px 6px;
+  }
+  :global(html.ow-emu-full) {
+    overflow: hidden;
   }
   .legend {
     border: 1px solid var(--border);

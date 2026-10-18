@@ -3,7 +3,7 @@
 </script>
 
 {#if theme.hintVisible && !theme.open}
-  <div class="hint box" role="group" aria-label="Tip">
+  <aside class="hint box" aria-label="Tip">
     <button class="say" type="button" onclick={() => theme.openPicker()}
       >Press <kbd>T</kbd>, or tap here. Inside Omarchy it is Super + Ctrl + Shift + Space.</button
     >
@@ -17,7 +17,7 @@
         ><path d="m3 3 10 10M13 3 3 13" fill="none" stroke="currentColor" stroke-width="2" /></svg
       >
     </button>
-  </div>
+  </aside>
 {/if}
 
 <style>
