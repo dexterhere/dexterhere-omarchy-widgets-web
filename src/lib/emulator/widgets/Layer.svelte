@@ -1,7 +1,7 @@
 <script lang="ts">
   import { sizeClassOf, type ResizeMode } from '../../desktop/layout';
   import { refocus } from './focus';
-  import { drawOrder, isLifted, LAYER_RANK, type WInst } from './model';
+  import { isLifted, LAYER_RANK, type WInst } from './model';
   import type { WidgetLayerState } from './store.svelte';
   import WidgetView from './WidgetView.svelte';
 
@@ -18,9 +18,9 @@
     if (!lifted) wl.setSize(aw, ah, wl.wantNarrow);
   });
 
-  const list = $derived(
-    drawOrder(wl.items.filter((i) => isLifted(i, wl.peek, wl.editing) === lifted))
-  );
+  // Stable DOM order (moving a node would drop focus); stacking comes from z-index, which
+  // follows drawOrder: layer first, then z.
+  const list = $derived(wl.items.filter((i) => isLifted(i, wl.peek, wl.editing) === lifted));
   const ed = $derived(lifted && wl.editing);
 
   const label = (i: WInst) =>
@@ -114,7 +114,7 @@
         onpointermove={(e) => wl.dragging && wl.dragTo(e.clientX, e.clientY)}
         onpointerup={() => wl.endDrag()}
         onpointercancel={() => wl.endDrag()}
-        onfocus={() => ed && wl.select(it.id)}
+        onfocus={() => ed && wl.select(it.id, true)}
         onkeydown={(e) => onKey(e, it)}
       >
         <WidgetView inst={it} editing={ed} />

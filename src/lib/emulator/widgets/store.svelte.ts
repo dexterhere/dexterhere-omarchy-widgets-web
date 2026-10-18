@@ -25,7 +25,7 @@ interface Drag {
 }
 
 export class WidgetLayerState {
-  api: EmulatorApi | null = null;
+  api = $state.raw<EmulatorApi | null>(null);
 
   st = $state.raw<M.WState>(M.emptyState());
   /** Registry ids installed in this emulator (concept widgets count as a preview install). */
@@ -56,8 +56,15 @@ export class WidgetLayerState {
   }
 
   private newId = () => `w${++this.seq}`;
+  private startMsg = '';
   private say(msg: string) {
-    this.api?.announce(msg);
+    if (this.api) this.api.announce(msg);
+    else this.startMsg = msg; // the shell is not attached yet: say it on attach
+  }
+  attach(api: EmulatorApi) {
+    this.api = api;
+    if (this.startMsg) api.announce(this.startMsg);
+    this.startMsg = '';
   }
   /** Mark the first change of a session: an automatic snapshot (sample) is "taken". */
   private touch(): string {
@@ -173,13 +180,14 @@ export class WidgetLayerState {
     return true;
   }
 
-  select(id: string | null) {
+  /** Select (and raise) an instance. Focus-driven selection stays silent: the group's label speaks. */
+  select(id: string | null, silent = false) {
     if (id === this.selected) return;
     this.selected = id;
     if (id) {
       this.st = L.raise(this.st, id) as M.WState;
       const i = this.inst(id);
-      if (i) this.say(`${this.instLabel(i)} selected`);
+      if (i && !silent) this.say(`${this.instLabel(i)} selected`);
     }
   }
 

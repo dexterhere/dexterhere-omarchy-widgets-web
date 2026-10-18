@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { tick } from 'svelte';
-  import { resolve } from '$app/paths';
+  import { onMount, tick } from 'svelte';
+  import { docsUrl, sitePath } from '../../site';
   import { getAll, statusLabels, tierLabels } from '../../registry';
   import type { EmulatorApi } from '../api';
   import { sheetIn } from '../fx';
@@ -30,6 +30,14 @@
   const all = getAll();
   let sheet: HTMLElement;
   let layoutName = $state('');
+
+  // The shell focuses the first button when a panel opens; the selected tab is the right target.
+  onMount(() => {
+    const raf = requestAnimationFrame(() =>
+      sheet.querySelector<HTMLElement>('[role="tab"][tabindex="0"]')?.focus()
+    );
+    return () => cancelAnimationFrame(raf);
+  });
 
   async function tabKey(e: KeyboardEvent) {
     const i = TABS.findIndex((t) => t.id === wl.tab);
@@ -99,10 +107,7 @@
   "size": "wide",
   "color": "accent"
 }`;
-  const docsHref = resolve('/docs/[version]/[...slug]', {
-    version: 'next',
-    slug: 'create/choose-a-path'
-  });
+  const docsHref = docsUrl('/docs/next/create/choose-a-path/');
   const doors = [
     {
       name: 'Tweak a template',
@@ -134,30 +139,32 @@
   <header>
     <h2>Widget Center <span class="prop">Proposed</span></h2>
     <span class="mode">Edit mode is on</span>
+  </header>
+
+  <div class="tabrow">
+    <div
+      class="tabs"
+      role="tablist"
+      aria-label="Widget Center sections"
+      tabindex="-1"
+      onkeydown={tabKey}
+    >
+      {#each TABS as t (t.id)}
+        <button
+          type="button"
+          role="tab"
+          id="wc-tab-{t.id}"
+          data-tab={t.id}
+          aria-selected={wl.tab === t.id}
+          aria-controls="wc-panel"
+          tabindex={wl.tab === t.id ? 0 : -1}
+          onclick={() => (wl.tab = t.id)}>{t.name}</button
+        >
+      {/each}
+    </div>
     <button type="button" class="close" onclick={() => api.closeWidgetCenter()}
       >Close<span class="sr"> Widget Center</span></button
     >
-  </header>
-
-  <div
-    class="tabs"
-    role="tablist"
-    aria-label="Widget Center sections"
-    tabindex="-1"
-    onkeydown={tabKey}
-  >
-    {#each TABS as t (t.id)}
-      <button
-        type="button"
-        role="tab"
-        id="wc-tab-{t.id}"
-        data-tab={t.id}
-        aria-selected={wl.tab === t.id}
-        aria-controls="wc-panel"
-        tabindex={wl.tab === t.id ? 0 : -1}
-        onclick={() => (wl.tab = t.id)}>{t.name}</button
-      >
-    {/each}
   </div>
 
   <div class="body">
@@ -178,10 +185,9 @@
                 type="button"
                 class="pick"
                 disabled={n === 0}
-                aria-label="Inspect {labelOf(reg)}"
                 onclick={() => pickInstalled(reg)}
               >
-                <strong>{labelOf(reg)}</strong>
+                <strong>{labelOf(reg)}</strong><span class="sr">, inspect</span>
                 {#if isConcept(reg)}<span class="tag">concept preview</span>{/if}
                 <span class="meta">{health(reg)}</span>
               </button>
@@ -314,8 +320,10 @@
           <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
           <pre tabindex="0"><code>{SPEC}</code></pre>
           <p class="links">
+            <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
             <a href={docsHref}>Choose a path in the docs</a>
-            <a href={resolve('/contribute')}>Contribute a widget</a>
+            <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+            <a href={sitePath('/contribute/')}>Contribute a widget</a>
           </p>
         </div>
       {/if}
@@ -346,7 +354,7 @@
     left: 8px;
     right: 8px;
     bottom: 8px;
-    height: min(46%, 400px);
+    height: min(54%, 460px);
     min-height: 268px;
     max-height: calc(100% - var(--bar-h) - 16px);
     box-sizing: border-box;
@@ -384,10 +392,15 @@
     color: var(--text-2);
     flex: 1;
   }
+  .tabrow {
+    display: flex;
+    align-items: flex-end;
+    border-bottom: 1px solid var(--border-strong);
+  }
   .tabs {
+    flex: 1;
     display: flex;
     gap: 0;
-    border-bottom: 1px solid var(--border-strong);
   }
   .tabs [role='tab'] {
     all: unset;
@@ -501,7 +514,7 @@
     outline-offset: 2px;
   }
   .close {
-    margin-left: auto;
+    margin: 0 0 3px auto;
   }
   .rows,
   .cards {

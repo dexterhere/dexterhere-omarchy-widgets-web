@@ -30,7 +30,7 @@
 
   function handleApi(a: EmulatorApi) {
     api = a;
-    wl.api = a;
+    wl.attach(a);
     a.state.escapeHook = () => wl.escape();
     a.state.resetHook = () => wl.reset();
     onapi?.(a);
