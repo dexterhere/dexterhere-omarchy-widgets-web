@@ -2,7 +2,8 @@
   import { resolve } from '$app/paths';
   import Badges from '../../../lib/components/Badges.svelte';
   import CopyButton from '../../../lib/components/CopyButton.svelte';
-  import WidgetPreview from '../../../lib/components/WidgetPreview.svelte';
+  import WidgetPreview from '../../../lib/components/gallery/WidgetPreview.svelte';
+  import StatsRow from '../../../lib/components/stats/StatsRow.svelte';
   import { SIZE_CLASSES, fitToClass, snap, type SizeClass } from '../../../lib/desktop/layout';
   import {
     categoryLabels,
@@ -31,7 +32,6 @@
   let pw = $state(0);
   let ph = $state(0);
   let variant = $state('');
-  let boxW = $state(0);
   $effect(() => {
     if (!type) return;
     const c = classes.includes('wide') ? 'wide' : classes[0];
@@ -52,8 +52,6 @@
     pw = Math.min(s.maxW, Math.max(s.minW, snap(f.w)));
     ph = Math.min(s.maxH, Math.max(s.minH, snap(f.h)));
   }
-  // Scale down (never up) so the widget always fits a narrow screen.
-  const zoom = $derived(boxW > 0 && pw > boxW - 32 ? Math.max(0.3, (boxW - 32) / pw) : 1);
 
   const installCmd = $derived(`ow install ${w.id}@${w.commit}`);
   const manualCmd = $derived(repo ? `omarchy plugin add ${repo}` : '');
@@ -84,17 +82,18 @@
     <h1>{w.name}</h1>
     <p class="text-2">{w.summary}</p>
     <Badges {w} />
+    <p class="small text-2">{w.categories.map((c) => categoryLabels[c]).join(', ')}</p>
+    <!-- Opening this page records one view (once a day, never when DNT or GPC is on). -->
+    {#key w.id}<StatsRow id={w.id} name={w.name} repo={w.repo} view />{/key}
   </header>
 
   <div class="top">
     <section class="block" aria-labelledby="h-preview">
       <h2 id="h-preview">Preview</h2>
+      <div class="pstage" data-testid="detail-preview">
+        <WidgetPreview widget={w} w={type ? pw : undefined} h={type ? ph : undefined} {variant} />
+      </div>
       {#if type && spec}
-        <div class="pstage" bind:clientWidth={boxW}>
-          <div class="fit" style:zoom>
-            <WidgetPreview {type} w={pw} h={ph} {variant} />
-          </div>
-        </div>
         <div class="controls">
           <div class="ctl" role="group" aria-label="Size class">
             <span class="label small">Size class</span>
@@ -134,10 +133,7 @@
           it. Only the clock has more than one rendering; other variants show the same one.
         </p>
       {:else}
-        <div class="pstage none"><p class="small muted">No preview yet</p></div>
-        <p class="tiny muted">
-          This listing has no live preview. The preview follows the page theme once one exists.
-        </p>
+        <p class="tiny muted">Sample data generated from the listing, not your machine.</p>
       {/if}
     </section>
 
@@ -428,19 +424,7 @@
   }
   .pstage {
     align-self: stretch;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 240px;
-    padding: 16px;
-    overflow: hidden;
-    background: var(--bg-deep);
-    border: 1px solid var(--border);
-  }
-  .pstage.none {
-    justify-content: flex-start;
-    align-items: flex-start;
-    background: var(--surface-2);
+    border: 1px solid var(--border-strong);
   }
   .controls {
     align-self: stretch;

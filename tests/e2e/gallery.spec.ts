@@ -22,17 +22,82 @@ async function gallery(page: Page, qs = '') {
   await expect(search(page)).toBeVisible();
 }
 
-test('lists every registry widget (7 concept widgets) as text-labelled cards', async ({ page }) => {
+test('lists every registry widget (7 concept widgets) as preview-first cards', async ({ page }) => {
   await gallery(page);
   expect(widgets).toHaveLength(7);
   await expect(page.getByTestId('cards').locator(':scope > li')).toHaveCount(7);
   await expect(count(page)).toHaveText('7 widgets');
-  const first = page.getByTestId('cards').locator(':scope > li').first();
-  await expect(first).toContainText('Concept, not installable');
-  await expect(first).toContainText('Tier: Concept');
-  await expect(page.getByText('No preview yet').first()).toBeVisible();
-  // live previews for the four known ids
-  await expect(page.locator('.card .live')).toHaveCount(4);
+  await expect(page.getByText('No preview yet')).toHaveCount(0);
+  // the long concept explanation lives on the detail page, not on cards
+  const text = await page.getByTestId('cards').innerText();
+  expect(text).not.toContain('Nothing has been built or reviewed');
+  expect(text).not.toContain('Tier: Concept');
+  await expect(page.locator('article.card [data-preview-mount]')).toHaveCount(7);
+});
+
+test('every card has a large unclipped preview, status, author, like and keyboard order', async ({
+  page
+}) => {
+  await gallery(page);
+  const cardEls = page.locator('article.card');
+  for (let i = 0; i < 7; i++) {
+    const card = cardEls.nth(i);
+    const mount = card.locator('[data-preview-mount]');
+    await expect(mount).toBeVisible();
+    const stage = (await card.locator('.pv > div').boundingBox())!;
+    const box = (await mount.boundingBox())!;
+    expect(box.width).toBeGreaterThan(120);
+    expect(box.height).toBeGreaterThan(60);
+    expect(box.x).toBeGreaterThanOrEqual(stage.x - 0.5);
+    expect(box.y).toBeGreaterThanOrEqual(stage.y - 0.5);
+    expect(box.x + box.width).toBeLessThanOrEqual(stage.x + stage.width + 0.5);
+    expect(box.y + box.height).toBeLessThanOrEqual(stage.y + stage.height + 0.5);
+    // the widget content itself is not clipped by its own frame
+    const clipped = await mount.evaluate((m) =>
+      [...m.querySelectorAll('*')].some(
+        (e) =>
+          e.scrollHeight > e.clientHeight + 1 &&
+          getComputedStyle(e).overflow === 'hidden' &&
+          e.clientHeight > 0 &&
+          !getComputedStyle(e).webkitLineClamp.match(/\d/) &&
+          e.tagName !== 'svg'
+      )
+    );
+    expect(clipped).toBe(false);
+    await expect(card.locator('.badge')).toContainText(/^(Concept|Alpha|Stable)/);
+    await expect(card.getByRole('link', { name: /^@/ })).toBeVisible();
+    await expect(card.getByRole('button', { name: /^Like / })).toBeVisible();
+    await expect(card.getByRole('link', { name: 'Details' })).toBeVisible();
+    await expect(card.locator('.pv')).toHaveAttribute('aria-hidden', 'true');
+  }
+  // keyboard order inside one card: Details, then Like
+  const first = cardEls.first();
+  await first.getByRole('link', { name: 'Details' }).focus();
+  await page.keyboard.press('Tab');
+  await expect(first.getByRole('button', { name: /^Like / })).toBeFocused();
+});
+
+test('the grid uses 4 columns at 1440 and 1 on a phone; carousel/list variants differ', async ({
+  page
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await gallery(page);
+  const xs = async () =>
+    new Set(
+      await page
+        .locator('article.card')
+        .evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().x)))
+    ).size;
+  expect(await xs()).toBeGreaterThanOrEqual(3);
+  await page.setViewportSize({ width: 360, height: 800 });
+  await expect.poll(xs).toBe(1);
+});
+
+test('a card carries one status word with a hidden full explanation', async ({ page }) => {
+  await gallery(page);
+  const badge = page.locator('article.card').first().locator('.badge');
+  await expect(badge).toContainText('Concept');
+  await expect(badge.locator('.sr-only')).toContainText('not installable');
 });
 
 test('search narrows the list and the URL follows; reload restores it', async ({ page }) => {
@@ -378,13 +443,13 @@ test('the size control stays inside the widget type limits', async ({ page }) =>
   await page.goto('/widgets/io.github.dexterhere.concept-clock/');
   const width = page.getByLabel(/^Width /);
   const height = page.getByLabel(/^Height /);
-  await expect(page.locator('.pstage .live')).toBeVisible();
+  await expect(page.locator('.pstage [data-preview-mount]')).toBeVisible();
   const check = async (minW: number, maxW: number, minH: number, maxH: number) => {
     expect(Number(await width.getAttribute('min'))).toBe(minW);
     expect(Number(await width.getAttribute('max'))).toBe(maxW);
     expect(Number(await height.getAttribute('min'))).toBe(minH);
     expect(Number(await height.getAttribute('max'))).toBe(maxH);
-    const box = await page.locator('.pstage .live').evaluate((e) => ({
+    const box = await page.locator('.pstage [data-preview-mount]').evaluate((e) => ({
       w: parseInt((e as HTMLElement).style.width),
       h: parseInt((e as HTMLElement).style.height)
     }));
@@ -406,10 +471,22 @@ test('the size control stays inside the widget type limits', async ({ page }) =>
   await expect(page.locator('.pstage svg').first()).toBeVisible();
 });
 
-test('a widget without a live component says "No preview yet"', async ({ page }) => {
+test('a widget without a dedicated component gets a generic sample preview and no controls', async ({
+  page
+}) => {
   await page.goto('/widgets/io.github.dexterhere.concept-docker/');
-  await expect(page.locator('.pstage')).toContainText('No preview yet');
+  const pv = page.getByTestId('detail-preview');
+  await expect(pv.locator('[data-preview-mount]')).toBeVisible();
+  await expect(pv).not.toContainText('No preview yet');
   await expect(page.getByLabel(/^Width /)).toHaveCount(0);
+});
+
+test('the detail header shows the preview, author and like control', async ({ page }) => {
+  await page.goto('/widgets/io.github.dexterhere.concept-clock/');
+  await expect(page.getByTestId('detail-preview').locator('[data-preview-mount]')).toBeVisible();
+  const head = page.locator('header.head');
+  await expect(head.getByRole('link', { name: /^@/ })).toBeVisible();
+  await expect(head.getByRole('button', { name: /^Like / })).toBeVisible();
 });
 
 test('registry.json is the registry index', async ({ request }) => {
@@ -450,7 +527,7 @@ test('the layout advertises the feed', async ({ page }) => {
   await expect(page.locator('link[rel="alternate"][type="application/rss+xml"]')).toHaveCount(1);
 });
 
-for (const id of ['tokyo-night', 'white']) {
+for (const id of ['tokyo-night', 'white', 'catppuccin-latte']) {
   for (const path of ['/widgets/', '/widgets/io.github.dexterhere.concept-system-monitor/']) {
     test(`axe: no serious or critical violations on ${path} in ${id}`, async ({ browser }) => {
       const ctx = await browser.newContext({ reducedMotion: 'reduce' });
@@ -458,7 +535,7 @@ for (const id of ['tokyo-night', 'white']) {
       await page.addInitScript((t) => localStorage.setItem('ow-theme', t), id);
       await page.goto(path);
       await expect(page.locator('html')).toHaveAttribute('data-theme', id);
-      await expect(page.locator('.live').first()).toBeVisible();
+      await expect(page.locator('[data-preview-mount]').first()).toBeVisible();
       const { violations } = await new AxeBuilder({ page }).analyze();
       const bad = violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
       expect(bad.map((v) => `${v.id}: ${v.nodes.map((n) => n.target).join(' ')}`)).toEqual([]);
@@ -527,6 +604,6 @@ test('makes no request to any origin other than localhost', async ({ page }) => 
   await gallery(page);
   await search(page).fill('clock');
   await page.goto('/widgets/io.github.dexterhere.concept-clock/');
-  await expect(page.locator('.live')).toBeVisible();
+  await expect(page.locator('[data-preview-mount]').first()).toBeVisible();
   expect([...hosts]).toEqual([`localhost:${PORT}`]);
 });
