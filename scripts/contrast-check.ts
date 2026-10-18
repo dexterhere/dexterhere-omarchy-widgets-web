@@ -1,4 +1,5 @@
 import { contrast } from '../src/lib/themes/color';
+import { widgetFailures } from '../src/lib/emulator/wallpaper-contrast';
 import { RESOLVED, RULES } from '../src/lib/themes/css';
 
 let failed = 0;
@@ -15,6 +16,10 @@ for (const r of RESOLVED) {
       failed++;
       console.error(`FAIL ${r.id}: ${label} ${got.toFixed(2)} < ${min}`);
     }
+  }
+  for (const f of widgetFailures(r)) {
+    failed++;
+    console.error(`FAIL ${f}`);
   }
   for (const a of r.adjusted) console.log(`adjusted ${r.id}: ${a}`);
 }

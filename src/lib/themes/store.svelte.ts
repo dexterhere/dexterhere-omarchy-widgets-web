@@ -68,6 +68,7 @@ class ThemeState {
 
   dismissHint() {
     this.hintVisible = false;
+    if (typeof document !== 'undefined') document.documentElement.removeAttribute('data-hint');
     write(HINT_KEY, '1');
   }
 }

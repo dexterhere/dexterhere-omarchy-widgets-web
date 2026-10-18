@@ -1,8 +1,8 @@
 <script lang="ts">
   import { WP_H, WP_W, wallpaper } from './wallpaper';
 
-  let { themeId }: { themeId: string } = $props();
-  const paths = $derived(wallpaper(themeId));
+  let { themeId, thumb = false }: { themeId: string; thumb?: boolean } = $props();
+  const paths = $derived(wallpaper(themeId, { thumb }));
 </script>
 
 <svg

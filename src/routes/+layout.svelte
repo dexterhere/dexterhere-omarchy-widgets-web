@@ -72,9 +72,9 @@
 >
 <a class="skip" href="#main">Skip to content</a>
 <Header />
+<ThemeHint />
 <main id="main" bind:this={main}>
   {@render children()}
 </main>
 <Footer info={data.footer} />
 <ThemePicker />
-<ThemeHint />

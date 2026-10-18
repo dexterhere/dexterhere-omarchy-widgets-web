@@ -45,6 +45,8 @@
     background: var(--surface);
     color: var(--text);
     border: 1px solid var(--border-strong);
+    /* A second, outer hairline so the card separates from any wallpaper. */
+    box-shadow: 0 0 0 1px var(--bg-deep);
     font: 400 12px / 16px var(--font-mono);
     user-select: none;
   }
