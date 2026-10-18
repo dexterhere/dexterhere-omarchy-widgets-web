@@ -41,7 +41,6 @@ test('the header has the right destinations and icons', async ({ page }) => {
   expect(await href('Widgets')).toMatch(/\/widgets\/$/);
   expect(await href('Docs')).toMatch(/\/docs\/$/);
   expect(await href('Create')).toMatch(/\/docs\/[^/]+\/create\/$/);
-  expect(await href('Build with AI')).toMatch(/\/docs\/[^/]+\/ai\/$/);
   expect(await href('Contribute')).toMatch(/\/contribute\/$/);
   const gh = page.locator('header a.gh');
   const install = page.locator('header a.install');

@@ -65,7 +65,6 @@ test('every header and footer link on the site is absolute and on the right host
     `${SITE}/widgets/`,
     `${DOCS}/`,
     `${DOCS}/next/create/`,
-    `${DOCS}/next/ai/`,
     `${SITE}/contribute/`
   ]);
   expect(await hrefs('Footer')).toContain(`${SITE}/security/`);
