@@ -28,7 +28,9 @@ describe('emit-host-config', () => {
     const t = caddyfile(c);
     expect(t).toContain('https://example.com {');
     expect(t).toContain('https://docs.example.com {');
-    expect(t).toContain('@static path /_app/* /pagefind/* /favicon.svg /theme-boot.js /robots.txt');
+    expect(t).toContain(
+      '@static path /_app/* /pagefind/* /400/* /404/* /500/* /favicon.svg /theme-boot.js /robots.txt'
+    );
     expect(t.indexOf('handle @static')).toBeLessThan(t.indexOf('rewrite * /docs{path}'));
     expect(t).toContain('uri strip_prefix /docs\n\t\t\tredir https://docs.example.com{uri} 308');
     expect(t).not.toContain('{re.old');

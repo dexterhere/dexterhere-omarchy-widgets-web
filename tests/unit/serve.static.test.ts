@@ -18,6 +18,9 @@ beforeAll(() => {
   mkdirSync(root);
   w('index.html', 'HOME');
   w('404.html', 'NOT FOUND PAGE');
+  w('400/index.html', 'BAD REQUEST PAGE');
+  w('404/index.html', 'DIR NOT FOUND PAGE');
+  w('500/index.html', 'SERVER ERROR PAGE');
   w('widgets/index.html', 'WIDGETS');
   w('docs/next/start/what-it-is/index.html', 'DOC');
   w('docs/index.html', 'DOCS');
@@ -212,5 +215,66 @@ describe('serve-local handler', () => {
     const wasm = await get('docs.localhost:4300', '/pagefind/wasm.en.pagefind');
     expect(wasm.headers.get('content-type')).toBe('application/wasm');
     expect((await get('localhost:4300', '/rss.xml')).headers.get('content-type')).toContain('xml');
+  });
+});
+
+describe('serve-local error pages', () => {
+  const ctx = {
+    siteOrigin: 'http://localhost:4300',
+    docsOrigin: 'http://docs.localhost:4300',
+    docsHome: '/docs/next/start/what-it-is/'
+  };
+  const req = (r: (req: Request) => Response, host: string, path: string) =>
+    r(new Request(`http://localhost:4300${path}`, { headers: { host } }));
+
+  it('error page directories are served as-is on the docs host', async () => {
+    const h = makeHandler(root, ctx);
+    for (const p of ['/400/', '/404/', '/500/']) {
+      const r = await req(h, 'docs.localhost:4300', p);
+      expect(r.status, p).toBe(200);
+      expect(r.headers.get('content-type')).toContain('text/html');
+    }
+    expect(await (await req(h, 'docs.localhost:4300', '/500/')).text()).toBe('SERVER ERROR PAGE');
+  });
+
+  it('an unknown path on either host is the 404 page with status 404', async () => {
+    const h = makeHandler(root, ctx);
+    for (const host of ['localhost:4300', 'docs.localhost:4300']) {
+      const r = await req(h, host, '/definitely-missing/');
+      expect(r.status).toBe(404);
+      expect(await r.text()).toBe('NOT FOUND PAGE');
+    }
+  });
+
+  it('an internal error gets the 500 page with status 500, and no request detail', async () => {
+    // A 404.html that cannot be read makes the 404 branch throw: the handler must answer 500.
+    const bad = join(base, 'broken-build');
+    mkdirSync(join(bad, '500'), { recursive: true });
+    mkdirSync(join(bad, '404.html'), { recursive: true });
+    writeFileSync(join(bad, '500', 'index.html'), 'SERVER ERROR PAGE');
+    const r = await req(makeHandler(bad, ctx), 'localhost:4300', '/secret-place/');
+    expect(r.status).toBe(500);
+    const body = await r.text();
+    expect(body).toBe('SERVER ERROR PAGE');
+    expect(body).not.toContain('secret-place');
+  });
+
+  it('a build without error pages still answers with the right status', async () => {
+    const bare = join(base, 'bare-build');
+    mkdirSync(bare, { recursive: true });
+    const r = await req(makeHandler(bare, ctx), 'localhost:4300', '/nope/');
+    expect(r.status).toBe(404);
+    expect(await r.text()).toBe('Not found\n');
+  });
+
+  it('traversal still ends in a 404 and never leaks a path', async () => {
+    const h = makeHandler(root, ctx);
+    for (const p of ['/..%2fsecret.txt', '/%2e%2e/secret.txt', '/%00', '/%zz']) {
+      const r = await req(h, 'localhost:4300', p);
+      expect(r.status, p).toBe(404);
+      const body = await r.text();
+      expect(body).not.toContain('OUTSIDE');
+      expect(body).not.toContain(base);
+    }
   });
 });
