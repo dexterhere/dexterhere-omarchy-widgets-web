@@ -16,13 +16,14 @@
     initialWidgets,
     openCenter = false,
     selectedWidgetId,
+    zoom = 1,
     onwidgets,
     onapi,
     ...rest
   }: WidgetEmulatorProps = $props();
 
   // svelte-ignore state_referenced_locally
-  const wl = new WidgetLayerState(initialWidgets, selectedWidgetId);
+  const wl = new WidgetLayerState(initialWidgets, selectedWidgetId, zoom);
   let api = $state<EmulatorApi>();
   const narrow = new MediaQuery('max-width: 719px');
   const themeName = $derived(

@@ -113,14 +113,19 @@
   });
 
   // The coach hint sits under the Widgets bar item until the first interaction.
+  // One line, centred under the item and clamped inside the desk; the arrow keeps pointing at it.
   let coachLeft = $state(8);
+  let coachArrow = $state(16);
+  let coachW = $state(0);
   $effect(() => {
     if (!emu.coach || !desk) return;
     const el = desk.querySelector<HTMLElement>('[data-bar="widgets"]');
     if (!el) return;
     const r = el.getBoundingClientRect();
     const dr = desk.getBoundingClientRect();
-    coachLeft = Math.max(4, Math.round(r.right - dr.left - 232));
+    const center = r.left - dr.left + r.width / 2;
+    coachLeft = Math.round(Math.max(4, Math.min(dr.width - coachW - 4, center - coachW / 2)));
+    coachArrow = Math.round(Math.max(10, Math.min(coachW - 10, center - coachLeft)));
   });
   $effect(() => {
     if (emu.panel) emu.coach = false;
@@ -473,7 +478,13 @@
         </div>
       </div>
       {#if emu.coach && interactive && !emu.panel}
-        <p class="coach" style:left="{coachLeft}px" data-coach>
+        <p
+          class="coach"
+          style:left="{coachLeft}px"
+          style:--arrow="{coachArrow}px"
+          bind:clientWidth={coachW}
+          data-coach
+        >
           Click Widgets, or press Super + Alt + W
         </p>
       {/if}
@@ -606,17 +617,28 @@
   }
   .coach {
     position: absolute;
-    top: calc(var(--bar-h) + 8px);
+    top: calc(var(--bar-h) + 10px);
     z-index: 30;
     margin: 0;
-    max-width: 232px;
-    padding: 6px 10px;
+    max-width: calc(100% - 8px);
+    padding: 4px 10px;
+    white-space: nowrap;
     text-align: left;
     font: 700 12px / 18px var(--font-mono);
     color: var(--brand-ink);
     background: var(--brand);
     border: 1px solid var(--bg-deep);
     pointer-events: none;
+  }
+  /* Arrow from borders, pointing up at the bar item. */
+  .coach::before {
+    content: '';
+    position: absolute;
+    bottom: 100%;
+    left: calc(var(--arrow) - 6px);
+    border: 6px solid transparent;
+    border-top: 0;
+    border-bottom-color: var(--brand);
   }
   .emu[data-captured='true'] .desk {
     outline: 2px solid var(--brand);

@@ -58,8 +58,10 @@ export class WidgetLayerState {
   private drag: Drag | null = null;
   private init: { widgets: InitialWidget[] | undefined; selected: string | undefined };
 
-  constructor(widgets?: InitialWidget[], selected?: string) {
+  private zoom: number;
+  constructor(widgets?: InitialWidget[], selected?: string, zoom = 1) {
     this.init = { widgets, selected };
+    this.zoom = zoom;
   }
 
   private newId = () => `w${++this.seq}`;
@@ -115,7 +117,7 @@ export class WidgetLayerState {
   /** Called with the desktop area in real pixels. */
   setSize(w: number, h: number, narrow: boolean) {
     if (w <= 0 || h <= 0) return;
-    const v = M.computeView(w, h, narrow);
+    const v = M.computeView(w, h, narrow, this.zoom);
     this.narrow = narrow;
     if (
       this.ready &&

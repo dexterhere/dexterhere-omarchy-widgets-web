@@ -300,6 +300,9 @@
     margin-left: auto;
   }
   .all {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
     margin-right: 8px;
   }
   .btn:disabled {
