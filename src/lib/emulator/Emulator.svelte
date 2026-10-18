@@ -419,6 +419,7 @@
         ? 'Desktop. Press Enter or Space to capture the keyboard'
         : 'Illustration of an emulated Omarchy desktop'}
       inert={!interactive}
+      onpointerdowncapture={() => (emu.coach = false)}
       style="--bar-h: {barH}px"
     >
       <Wallpaper themeId={wpTheme} />

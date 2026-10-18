@@ -5,7 +5,7 @@ import { expect, test, type Page } from '@playwright/test';
 test.use({ colorScheme: 'dark' });
 
 const emu = (p: Page) => p.locator('[data-emulator]');
-const expand = (p: Page) => p.getByRole('button', { name: /Expand|Close full view/ });
+const expand = (p: Page) => p.getByRole('button', { name: /Open full view|Close full view/ });
 
 async function ready(page: Page, url = '/emulator/') {
   await page.goto(url);
@@ -28,8 +28,13 @@ test.describe('full view', () => {
     expect(lock.html).toBe('');
     expect(lock.body).toBe('');
     expect(lock.computed).not.toBe('hidden');
-    await page.mouse.wheel(0, 300);
-    await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
+    await expect(emu(page)).not.toHaveClass(/flipping/); // the close animation is done
+    await expect
+      .poll(async () => {
+        await page.mouse.wheel(0, 300);
+        return page.evaluate(() => window.scrollY);
+      })
+      .toBeGreaterThan(0);
     // and nothing stays inert behind
     expect(await page.evaluate(() => document.querySelectorAll('[inert]').length)).toBe(
       await page.locator('[data-emulator] [inert]').count()
@@ -68,7 +73,7 @@ test.describe('full view', () => {
     await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
     await page.keyboard.press('Escape');
     await expect(emu(page)).not.toHaveClass(/full/);
-    await expect(page.getByRole('button', { name: 'Expand' })).toBeFocused();
+    await expect(page.getByRole('button', { name: 'Open full view' })).toBeFocused();
     await expect(page.locator('html')).not.toHaveClass(/ow-emu-full/);
     expect(await page.evaluate(() => document.querySelectorAll('body [inert]').length)).toBe(
       await page.locator('[data-emulator] [inert]').count()
