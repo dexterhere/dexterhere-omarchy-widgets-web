@@ -12,7 +12,7 @@ export interface ResolvedTheme {
 }
 
 /** The contrast floors every theme must meet (PLAN.md section 8). */
-export const RULES = { text: 7, muted: 4.5, brandInk: 4.5, brand: 3 } as const;
+export const RULES = { text: 7, muted: 4.5, brandInk: 4.5, brand: 3, edge: 2 } as const;
 
 /**
  * Nudge `fg` away from the page background in 0.5% lightness steps until it clears `min`
@@ -41,7 +41,12 @@ export function resolveTheme(t: ThemeDef): ResolvedTheme {
     if (value !== fg) adjusted.push(`${name} ${fg} -> ${value} (${why})`);
     return value;
   };
-  const text = fix('--text', t.text, pushAway(t.text, [t.bg], RULES.text), 'text on bg >= 7:1');
+  const text = fix(
+    '--text',
+    t.text,
+    pushAway(t.text, [t.bg, t.surface], RULES.text),
+    'text on bg and surface >= 7:1'
+  );
   const text2 = fix(
     '--text-2',
     t.text2,
@@ -53,6 +58,13 @@ export function resolveTheme(t: ThemeDef): ResolvedTheme {
     t.muted,
     pushAway(t.muted, [t.bg, t.surface], RULES.muted),
     'muted on bg and surface >= 4.5:1'
+  );
+  // Widget outlines must stand off the page and the deepest background (the wallpaper's colours).
+  const borderStrong = fix(
+    '--border-strong',
+    t.borderStrong,
+    pushAway(t.borderStrong, [t.bg, t.bgDeep], RULES.edge),
+    'border-strong on bg and bg-deep >= 2:1'
   );
   // Brand moves away from the page background until it has 3:1 on it and brand-ink reads on it.
   const brand = fix(
@@ -72,8 +84,8 @@ export function resolveTheme(t: ThemeDef): ResolvedTheme {
       '--surface': t.surface,
       '--surface-2': t.surface2,
       // Derived, not an adjustment: official hairlines are often invisible on the page background.
-      '--border': mix(t.bg, t.borderStrong, 0.45),
-      '--border-strong': t.borderStrong,
+      '--border': mix(t.bg, borderStrong, 0.45),
+      '--border-strong': borderStrong,
       '--text': text,
       '--text-2': text2,
       '--muted': muted,
