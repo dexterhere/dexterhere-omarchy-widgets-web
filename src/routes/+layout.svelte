@@ -11,7 +11,7 @@
   import { carryOnClick } from '../lib/themes/carry';
   import { links, origins, sitePath } from '../lib/site';
 
-  let { children } = $props();
+  let { children, data } = $props();
   onMount(() => theme.init());
 </script>
 
@@ -34,6 +34,6 @@
 <main id="main">
   {@render children()}
 </main>
-<Footer />
+<Footer info={data.footer} />
 <ThemePicker />
 <ThemeHint />

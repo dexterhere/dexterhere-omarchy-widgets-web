@@ -53,6 +53,10 @@ export default defineConfig(({ mode }) => {
     throw new Error('PUBLIC_STATS_URL must be an https origin (http only for localhost), no path.');
   return {
     define: {
+      // PUBLIC_BUILD_COMMIT: commit hash for the footer; the app validates it, '' hides it.
+      __BUILD_COMMIT__: JSON.stringify(
+        loadEnv(mode, process.cwd(), 'PUBLIC_').PUBLIC_BUILD_COMMIT ?? ''
+      ),
       __STATS_URL__: JSON.stringify(statsOrigin(rawStatsUrl) ?? ''),
       ...(origins.site
         ? {
