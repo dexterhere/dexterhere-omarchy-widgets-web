@@ -45,8 +45,10 @@ test('every footer link resolves; external ones are well formed', async ({ page,
       expect(l.rel, l.href).toBe('noopener noreferrer');
       expect(l.name, l.href).toContain('(external site)');
     } else {
-      expect(l.href, l.href).toMatch(/^\/([^/]|$)/);
-      const res = await request.get(l.href);
+      // SvelteKit may emit "./" for "/": resolve against the page like a browser does.
+      const abs = new URL(l.href, page.url());
+      expect(abs.origin, l.href).toBe(new URL(page.url()).origin);
+      const res = await request.get(abs.href);
       expect(res.status(), l.href).toBe(200);
     }
   }

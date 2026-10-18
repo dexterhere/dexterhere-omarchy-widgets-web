@@ -19,7 +19,13 @@ function watch(page: Page) {
     (m) => m.type() === 'error' && problems.push(`console: ${m.text().slice(0, 300)}`)
   );
   page.on('pageerror', (e) => problems.push(`pageerror: ${String(e).slice(0, 300)}`));
-  page.on('requestfailed', (r) => problems.push(`failed: ${r.url()} ${r.failure()?.errorText}`));
+  page.on(
+    'requestfailed',
+    (r) =>
+      // a prefetch of page data that a navigation cancelled is not a failure
+      !(r.failure()?.errorText === 'net::ERR_ABORTED' && /__data\.json/.test(r.url())) &&
+      problems.push(`failed: ${r.url()} ${r.failure()?.errorText}`)
+  );
   page.on('response', (r) => r.status() >= 400 && problems.push(`${r.status()}: ${r.url()}`));
   return problems;
 }
