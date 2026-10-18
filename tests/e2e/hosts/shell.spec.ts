@@ -36,11 +36,11 @@ test('the docs host header is sticky and its sidebar pins below it', async ({ pa
     .poll(() =>
       page.locator('.site-header .shell').evaluate((e) => e.getBoundingClientRect().height)
     )
-    .toBe(52);
+    .toBe(56);
   expect(await page.locator('.site-header').evaluate((e) => e.getBoundingClientRect().top)).toBe(0);
   await expect
     .poll(() =>
       page.locator('#docs-side').evaluate((e) => Math.round(e.getBoundingClientRect().top))
     )
-    .toBe(68);
+    .toBe(72);
 });

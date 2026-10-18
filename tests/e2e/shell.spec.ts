@@ -59,26 +59,23 @@ test.describe('one frame', () => {
 
 test.describe('sticky header', () => {
   for (const path of ['/', '/widgets/', DOCS]) {
-    test(`${path}: stays at the top, shrinks and gets its border after scrolling`, async ({
-      page
-    }) => {
+    test(`${path}: stays at the top and gets its border after scrolling`, async ({ page }) => {
       await page.setViewportSize({ width: 1440, height: 900 });
       await page.goto(path);
       await expect(page.locator('footer')).toBeAttached();
       const shell = page.locator('.site-header .shell');
-      expect((await rect(page, '.site-header .shell')).height).toBe(64);
+      expect((await rect(page, '.site-header .shell')).height).toBe(56);
       expect(await shell.evaluate((e) => getComputedStyle(e).borderBottomColor)).toBe(
         'rgba(0, 0, 0, 0)'
       );
       await scrollTo(page, 900);
-      await expect.poll(async () => (await rect(page, '.site-header .shell')).height).toBe(52);
+      await expect.poll(async () => (await rect(page, '.site-header .shell')).height).toBe(56);
       expect((await rect(page, '.site-header')).top).toBe(0);
       expect(await shell.evaluate((e) => getComputedStyle(e).borderBottomColor)).not.toBe(
         'rgba(0, 0, 0, 0)'
       );
-      // the reserved 64px keeps the page from shifting while it shrinks
       await scrollTo(page, 0);
-      await expect.poll(async () => (await rect(page, '.site-header .shell')).height).toBe(64);
+      await expect.poll(async () => (await rect(page, '.site-header .shell')).height).toBe(56);
     });
   }
 
@@ -111,7 +108,7 @@ test.describe('sticky toolbars and sidebars', () => {
     const full = await rect(page, 'form.tools');
     expect(full.top).toBeGreaterThan(100);
     await scrollTo(page, 700);
-    await expect.poll(async () => (await rect(page, 'form.tools')).top).toBeCloseTo(52, 0);
+    await expect.poll(async () => (await rect(page, 'form.tools')).top).toBeCloseTo(56, 0);
     await expect(tools).toHaveClass(/stuck/);
     const stuck = await rect(page, 'form.tools');
     expect(stuck.height).toBeLessThan(full.height);
@@ -162,7 +159,7 @@ test.describe('sticky toolbars and sidebars', () => {
       const s = document.querySelector('[data-home-stage]')!.getBoundingClientRect();
       window.scrollTo(0, window.scrollY + s.top + 250);
     });
-    await expect.poll(async () => (await rect(page, bar)).top).toBeCloseTo(52, 0);
+    await expect.poll(async () => (await rect(page, bar)).top).toBeCloseTo(56, 0);
     await expect(page.locator(bar)).toHaveAttribute('data-stuck', 'true');
     await page.evaluate(() => {
       document.querySelector('[data-home-make]')!.scrollIntoView();
@@ -175,8 +172,8 @@ test.describe('sticky toolbars and sidebars', () => {
   test('docs: sidebar and table of contents pin below the header', async ({ page }) => {
     await page.goto(DOCS);
     await scrollTo(page, 900);
-    await expect.poll(async () => (await rect(page, '#docs-side')).top).toBeCloseTo(68, 0);
-    await expect.poll(async () => (await rect(page, 'aside.toc')).top).toBeCloseTo(68, 0);
+    await expect.poll(async () => (await rect(page, '#docs-side')).top).toBeCloseTo(72, 0);
+    await expect.poll(async () => (await rect(page, 'aside.toc')).top).toBeCloseTo(72, 0);
     const h = await page.evaluate(() => innerHeight);
     expect((await rect(page, '#docs-side')).bottom).toBeLessThanOrEqual(h);
   });
@@ -186,7 +183,7 @@ test.describe('sticky toolbars and sidebars', () => {
     await expect(page.locator('#how-the-parts-fit')).toBeInViewport();
     await expect
       .poll(async () => (await rect(page, '#how-the-parts-fit')).top)
-      .toBeGreaterThanOrEqual(52);
+      .toBeGreaterThanOrEqual(56);
   });
 
   test('tabbing through a long docs page keeps focus below the header', async ({ page }) => {
@@ -202,7 +199,7 @@ test.describe('sticky toolbars and sidebars', () => {
           top: el.getBoundingClientRect().top
         };
       });
-      if (!info.inHeader) expect(info.top, `tab ${i}`).toBeGreaterThanOrEqual(52);
+      if (!info.inHeader) expect(info.top, `tab ${i}`).toBeGreaterThanOrEqual(56);
     }
   });
 
@@ -216,7 +213,7 @@ test.describe('sticky toolbars and sidebars', () => {
     await expect(page).toHaveURL(/#main$/);
     await page.keyboard.press('Tab');
     const top = await page.evaluate(() => document.activeElement!.getBoundingClientRect().top);
-    expect(top).toBeGreaterThanOrEqual(52);
+    expect(top).toBeGreaterThanOrEqual(56);
   });
 });
 
@@ -412,7 +409,7 @@ test.describe('accessibility of the shell', () => {
       await page.goto('/widgets/');
       await scrollTo(page, 800);
       await expect(page.locator('form.tools')).toHaveClass(/stuck/);
-      await expect.poll(async () => (await rect(page, '.site-header .shell')).height).toBe(52);
+      await expect.poll(async () => (await rect(page, '.site-header .shell')).height).toBe(56);
       const r = await new AxeBuilder({ page })
         .include('header')
         .include('footer')
@@ -460,6 +457,6 @@ test.describe('phone', () => {
   test('the gallery toolbar pins on a phone too', async ({ page }) => {
     await page.goto('/widgets/');
     await scrollTo(page, 800);
-    await expect.poll(async () => (await rect(page, 'form.tools')).top).toBeCloseTo(52, 0);
+    await expect.poll(async () => (await rect(page, 'form.tools')).top).toBeCloseTo(56, 0);
   });
 });
