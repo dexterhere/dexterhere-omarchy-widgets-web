@@ -265,3 +265,20 @@ describe('chords', () => {
     expect(p).toMatchObject({ chord: 'Super+Alt+P', proposed: true });
   });
 });
+
+describe('caps (second security review)', () => {
+  it('stops at 50 widget instances and 20 saved layouts, and says so', async () => {
+    const { MAX_INSTANCES, MAX_LAYOUTS } =
+      await import('../../src/lib/emulator/widgets/store.svelte');
+    const wl = new WidgetLayerState();
+    wl.setSize(1280, 700, false);
+    const spoken: string[] = [];
+    wl.attach({ announce: (m: string) => spoken.push(m) } as never);
+    for (let i = 0; i < 120; i++) wl.addAnother(M.TYPE_REG.clock);
+    expect(wl.items.length + wl.st.tray.length).toBe(MAX_INSTANCES);
+    expect(spoken.some((m) => m.includes('Widget limit reached'))).toBe(true);
+    for (let i = 0; i < 60; i++) wl.saveLayout(`L${i}`);
+    expect(wl.layouts.length).toBe(MAX_LAYOUTS);
+    expect(spoken.some((m) => m.includes('Layout limit reached'))).toBe(true);
+  });
+});

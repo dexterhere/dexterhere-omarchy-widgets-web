@@ -85,7 +85,7 @@ test('the two actions are real links and they work', async ({ page }) => {
   );
   await expect(page.getByRole('link', { name: 'Browse widgets' })).toHaveAttribute(
     'href',
-    '/widgets'
+    '/widgets/'
   );
   await page.getByRole('link', { name: 'Browse widgets' }).click();
   await page.waitForURL(/\/widgets\/?$/);
