@@ -3,7 +3,7 @@
 </script>
 
 {#if theme.hintVisible && !theme.open}
-  <aside class="hint box" aria-label="Tip">
+  <aside class="hint" aria-label="Tip">
     <button class="say" type="button" onclick={() => theme.openPicker()}
       >Press <kbd>T</kbd>, or tap here. Inside Omarchy it is Super + Ctrl + Shift + Space.</button
     >
@@ -21,18 +21,16 @@
 {/if}
 
 <style>
+  /* A slim bar under the header, in flow: it never covers page content. */
   .hint {
-    position: fixed;
-    right: 16px;
-    top: 72px;
-    z-index: 20;
     display: flex;
-    align-items: flex-start;
-    gap: 4px;
-    padding: 8px 8px 8px 12px;
+    align-items: center;
+    gap: 8px;
+    padding: 4px max(var(--gutter), calc((100% - var(--frame-max)) / 2));
     background: var(--surface-2);
-    width: 320px;
-    max-width: calc(100vw - 32px);
+    border: 0;
+    border-bottom: 1px solid var(--border);
+    width: 100%;
   }
   .say,
   .close {
@@ -44,7 +42,7 @@
   }
   .say {
     flex: 1;
-    padding: 0;
+    padding: 4px 0;
     text-align: left;
     font-size: var(--fs-2);
     line-height: 20px;
@@ -59,5 +57,10 @@
   }
   .close:hover {
     color: var(--text);
+  }
+  @media (min-width: 1100px) {
+    .say {
+      text-align: right;
+    }
   }
 </style>
