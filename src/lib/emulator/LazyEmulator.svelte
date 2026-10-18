@@ -5,12 +5,20 @@
 
   // Loads the emulator chunk only when this box nears the viewport, so pages that embed it keep
   // their initial JavaScript. The placeholder has the same size as the desktop.
-  let props: WidgetEmulatorProps = $props();
+  // `loadNow` loads the chunk without waiting for the viewport (a host page that needs the
+  // emulator right now, for example to place a widget in it).
+  let { loadNow = false, ...props }: WidgetEmulatorProps & { loadNow?: boolean } = $props();
   let host: HTMLElement;
   let Loaded = $state<Component<WidgetEmulatorProps> | null>(null);
+  let loading: Promise<void> | undefined;
+  const load = () =>
+    (loading ??= import('./widgets/WidgetEmulator.svelte').then((m) => void (Loaded = m.default)));
+
+  $effect(() => {
+    if (loadNow) void load();
+  });
 
   onMount(() => {
-    const load = () => import('./widgets/WidgetEmulator.svelte').then((m) => (Loaded = m.default));
     if (typeof IntersectionObserver === 'undefined') {
       void load();
       return;
@@ -33,7 +41,13 @@
   {#if Loaded}
     <Loaded {...props} />
   {:else}
-    <div class="ph" class:compact={props.compact} role="img" aria-label="Emulated desktop, loading">
+    <div
+      class="ph"
+      class:compact={props.compact}
+      class:stage={props.stage}
+      role="img"
+      aria-label="Emulated desktop, loading"
+    >
       <span>Emulated desktop</span>
     </div>
   {/if}
@@ -60,9 +74,22 @@
     aspect-ratio: 3 / 1;
     min-height: 320px;
   }
+  /* Same box as the loaded stage (toolbar above, key strip below), so nothing shifts on load. */
+  .ph.stage {
+    aspect-ratio: 16 / 10;
+    min-height: 560px;
+    max-height: clamp(560px, 76vh, 880px);
+    margin-block: 38px 168px;
+  }
   @media (max-width: 719px) {
-    .ph {
+    .ph,
+    .ph.stage {
       aspect-ratio: 4 / 3;
+      min-height: 0;
+      max-height: none;
+    }
+    .ph.stage {
+      margin-block: 64px 120px;
     }
   }
 </style>

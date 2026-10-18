@@ -205,7 +205,7 @@ test('a theme change restyles the wallpaper and the bar', async ({ page }) => {
 
 test('Expand opens the full view; Esc closes it and restores focus', async ({ page }) => {
   await ready(page);
-  const expand = page.getByRole('button', { name: 'Expand' });
+  const expand = page.getByRole('button', { name: 'Open full view' });
   await expand.click();
   const full = page.getByRole('dialog', { name: 'Emulated Omarchy desktop, full view' });
   await expect(full).toBeVisible();
@@ -224,7 +224,7 @@ test('Expand opens the full view; Esc closes it and restores focus', async ({ pa
     true
   );
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('button', { name: 'Expand' })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Open full view' })).toBeFocused();
   await expect(emu(page)).not.toHaveClass(/full/);
   await expect.poll(() => page.evaluate(() => document.documentElement.style.overflow)).toBe('');
 });
@@ -304,7 +304,7 @@ test('360 px: no horizontal overflow and a static desktop with the needs-a-large
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
   await expect(page.getByText('needs a larger screen')).toBeVisible();
   await expect(page.locator('.keys button')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Expand' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Open full view' })).toBeVisible();
 });
 
 test('only same-origin requests', async ({ page }) => {
@@ -314,7 +314,7 @@ test('only same-origin requests', async ({ page }) => {
   });
   await ready(page);
   await chord(page, ['super'], 'Space');
-  await page.getByRole('button', { name: 'Expand' }).click();
+  await page.getByRole('button', { name: 'Open full view' }).click();
   expect([...hosts]).toEqual([`localhost:${process.env.PW_PORT ?? 4173}`]);
 });
 

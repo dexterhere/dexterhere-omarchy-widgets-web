@@ -170,6 +170,7 @@
       class="item ours"
       type="button"
       data-bar="widgets"
+      class:coach={emu.coach}
       aria-label="Widget Center (proposed, not part of Omarchy)"
       aria-haspopup="dialog"
       aria-expanded={emu.panel === 'widgets'}
@@ -252,6 +253,20 @@
   .logo {
     color: var(--text);
   }
+  .item.coach {
+    outline: 2px solid var(--brand);
+    outline-offset: -2px;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .item.coach {
+      animation: coach 1.6s ease-in-out infinite;
+    }
+    @keyframes coach {
+      50% {
+        outline-color: transparent;
+      }
+    }
+  }
   .clock {
     color: var(--text);
     font-weight: 700;
@@ -269,7 +284,7 @@
   .ws {
     all: unset;
     box-sizing: border-box;
-    width: 22px;
+    width: 24px;
     height: 24px;
     display: grid;
     place-items: center;

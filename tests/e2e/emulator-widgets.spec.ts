@@ -299,7 +299,7 @@ test('widget detail page: Try it on a desktop preloads the widget, Expand works'
   await expect(w).toHaveAttribute('data-selected', 'true');
   await expect(section.locator('[data-widget]')).toHaveCount(1);
   await expect(live(page)).toContainText('Docker');
-  await section.getByRole('button', { name: 'Expand' }).click();
+  await section.getByRole('button', { name: 'Open full view' }).click();
   const full = page.getByRole('dialog', { name: 'Emulated Omarchy desktop, full view' });
   await expect(full).toBeVisible();
   await expect(full.locator(`[data-widget][data-reg="${DOCKER}"]`)).toBeVisible();

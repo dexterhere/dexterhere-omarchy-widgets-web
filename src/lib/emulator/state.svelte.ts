@@ -107,6 +107,10 @@ export class EmulatorState {
   /** One-line "not emulated" message shown in the Omarchy menu. */
   notice = $state('');
   peek = $state(false);
+  /** Start with no windows, also after Reset. */
+  emptyStart = false;
+  /** The one-time hint on the Widgets bar item. */
+  coach = $state(false);
   /** True while a physical Super+Alt+P is held (released on keyup). */
   peekHeld = false;
 
@@ -150,10 +154,12 @@ export class EmulatorState {
     for (const m of MODE_IDS) this.modes[m] = false;
     this.barVisible = true;
     this.barTransparent = false;
-    this.add('terminal', 0, true);
-    this.add('monitor', 0, true);
-    this.add('terminal', 1, true);
-    this.focused[0] = Object.keys(this.windows)[0];
+    if (!this.emptyStart) {
+      this.add('terminal', 0, true);
+      this.add('monitor', 0, true);
+      this.add('terminal', 1, true);
+      this.focused[0] = Object.keys(this.windows)[0];
+    }
     this.peek = false;
     this.peekHeld = false;
     this.resetHook();
