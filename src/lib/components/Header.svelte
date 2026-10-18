@@ -6,6 +6,10 @@
   import { whenMotionOk, motion } from '../motion';
   import { watchStuck } from '../sticky';
   import LogoMark from './LogoMark.svelte';
+  import SiteIcon from './SiteIcon.svelte';
+
+  // `docsVersion` comes from the layout; without it (an error page) the links go to the docs root.
+  let { docsVersion = '' }: { docsVersion?: string } = $props();
 
   let menuOpen = $state(false);
   // `shown` outlives `menuOpen` by the length of the close animation.
@@ -59,12 +63,15 @@
   }
 
   // In host mode the docs live on their own host: these are absolute links (see lib/links.ts).
-  const links = [
-    { href: sitePath('/widgets'), label: 'Widgets' },
-    { href: docsUrl('/docs'), label: 'Docs' },
-    { href: docsUrl('/docs'), label: 'Create' },
-    { href: sitePath('/contribute'), label: 'Contribute' }
-  ];
+  const doc = (slug: string) => docsUrl(docsVersion ? `/docs/${docsVersion}/${slug}` : '/docs/');
+  const links = $derived([
+    { href: sitePath('/widgets/'), label: 'Widgets' },
+    { href: docsUrl('/docs/'), label: 'Docs' },
+    { href: doc('create/'), label: 'Create' },
+    { href: doc('ai/'), label: 'Build with AI' },
+    { href: sitePath('/contribute/'), label: 'Contribute' }
+  ]);
+  const install = $derived(doc('start/install/'));
   const GITHUB = 'https://github.com/dexterhere/omarchy-widgets';
 </script>
 
@@ -79,7 +86,7 @@
         <span class="name">Widgets</span>
       </a>
 
-      <!-- A dropdown on phones (the animated element), plain layout from 760 px up. -->
+      <!-- A dropdown on phones (the animated element), plain layout from 1000 px up. -->
       <div class="dropdown" class:open={shown} id="site-menu" bind:this={panel}>
         <nav class="links" aria-label="Main">
           {#each links as l (l.label)}
@@ -87,8 +94,12 @@
           {/each}
         </nav>
         <div class="extra">
-          <a class="btn small" href={GITHUB} rel="noopener noreferrer">GitHub</a>
-          <a class="btn-primary small" href={docsUrl('/docs')}>Install</a>
+          <a class="btn small with-icon" href={GITHUB} rel="noopener noreferrer"
+            ><SiteIcon name="github" />GitHub</a
+          >
+          <a class="btn-primary small with-icon" href={install}
+            ><SiteIcon name="download" />Install</a
+          >
         </div>
       </div>
 
@@ -101,8 +112,12 @@
       >
         <LogoMark mode="swatch" size={7} />
       </button>
-      <a class="btn small gh" href={GITHUB} rel="noopener noreferrer">GitHub</a>
-      <a class="btn-primary small install" href={docsUrl('/docs')}>Install</a>
+      <a class="btn small with-icon gh" href={GITHUB} rel="noopener noreferrer"
+        ><SiteIcon name="github" />GitHub</a
+      >
+      <a class="btn-primary small with-icon install" href={install}
+        ><SiteIcon name="download" />Install</a
+      >
 
       <button
         class="btn small menu-btn"
@@ -168,6 +183,9 @@
   .menu-btn {
     order: 2;
   }
+  .with-icon {
+    gap: 8px;
+  }
   .gh,
   .install {
     display: none;
@@ -205,7 +223,7 @@
     padding-top: 8px;
   }
 
-  @media (min-width: 760px) {
+  @media (min-width: 1000px) {
     .brand {
       margin-right: 16px;
     }

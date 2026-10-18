@@ -21,6 +21,8 @@ Putting a widget on the desktop needs the QML bridge, the desktop canvas and the
 
 Removing a widget from the desktop keeps it installed with its settings.
 
+See [Browse and install](/docs/next/start/browse-and-install/) for how to read a widget's page before installing, and [Set up a widget](/docs/next/use/set-up-a-widget/) for data and grants.
+
 ## What you can do today
 
-If you want to see the data layer work, follow the developer build on the [Install](/docs/next/start/install/) page. To make a widget instead of using one, start at [Choose a path](/docs/next/create/choose-a-path/).
+If you want to see the data layer work, follow the developer build on the [Install](/docs/next/start/install/) page. To make a widget instead of using one, follow [Your first widget, end to end](/docs/next/create/your-first-widget-end-to-end/) or start at [Choose a path](/docs/next/create/choose-a-path/).

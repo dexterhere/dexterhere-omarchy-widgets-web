@@ -55,7 +55,9 @@ This is the illustrative example from the project brief. Comments are not valid 
     { "name": "wide", "min": [280, 120], "max": [480, 200], "aspectLock": null }
   ],
   "variants": ["list", "counts"],
-  "providers": [{ "name": "github", "topics": ["github.prs"], "fields": ["open", "review"] }],
+  "providers": [
+    { "name": "github", "topics": ["github.prs"], "fields": ["open", "review"], "auth": "vault" }
+  ],
   "capabilities": { "network": [], "files": [], "spawn": [] },
   "interactiveRegions": [],
   "settings": [{ "key": "interval", "type": "int", "default": 60, "min": 30, "max": 600 }],
@@ -63,20 +65,20 @@ This is the illustrative example from the project brief. Comments are not valid 
 }
 ```
 
-| Field                | Meaning                                                                                                                                                                                                                        |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `schemaVersion`      | `0` while the schema is a draft.                                                                                                                                                                                               |
-| `id`                 | Reverse-domain id. Must equal the id in `manifest.json` and in the listing.                                                                                                                                                    |
-| `tier`               | The kind of widget you claim: `spec` or code. It is a hint. The registry derives `spec` or `community` itself and takes `core` and `verified` only from maintainer review records.                                             |
-| `category`           | A registry category such as `dev-git`. The list: System, Time and Calendar, Productivity, Dev and Git, AI and Agents, Media, Communication, Network and Containers, Ambient and Fun, Utilities. The exact slugs are not final. |
-| `surfaces`           | Where it can appear: `desktop`, `bar`.                                                                                                                                                                                         |
-| `sizeClasses`        | Named size classes. `min` and `max` are `[width, height]` in logical pixels. `aspectLock` is a ratio or `null`.                                                                                                                |
-| `variants`           | Names of alternative layouts or skins of the same data. Never a colour.                                                                                                                                                        |
-| `providers`          | Which provider, topics and fields the widget asks for. The user must grant them.                                                                                                                                               |
-| `capabilities`       | What the widget needs outside the daemon: `network` hosts, `files` paths and `spawn` programs. Spec widgets leave all three empty.                                                                                             |
-| `interactiveRegions` | Rectangles that take input. Empty means click-through.                                                                                                                                                                         |
-| `settings`           | Schema-driven settings. The user's values are stored in `shell.json`. Only `int` is shown in the draft. Other types are undecided.                                                                                             |
-| `compat`             | Compatibility ranges: the Omarchy version and the widgets kit version (`widgetsKit`, which follows semantic versioning).                                                                                                       |
+| Field                | Meaning                                                                                                                                                                                                                                                                                   |
+| -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schemaVersion`      | `0` while the schema is a draft.                                                                                                                                                                                                                                                          |
+| `id`                 | Reverse-domain id. Must equal the id in `manifest.json` and in the listing.                                                                                                                                                                                                               |
+| `tier`               | The kind of widget you claim: `spec` or code. It is a hint only. The registry ignores it. Every listing is `community` until a maintainer review record sets `spec`, `verified` or `core`.                                                                                                |
+| `category`           | A registry category such as `dev-git`. The list: System, Time and Calendar, Productivity, Dev and Git, AI and Agents, Media, Communication, Network and Containers, Ambient and Fun, Utilities. The slugs are listed in [Contribute checklist](/docs/next/publish/contribute-checklist/). |
+| `surfaces`           | Where it can appear: `desktop`, `bar`.                                                                                                                                                                                                                                                    |
+| `sizeClasses`        | Named size classes. `min` and `max` are `[width, height]` in logical pixels. `aspectLock` is a ratio or `null`.                                                                                                                                                                           |
+| `variants`           | Names of alternative layouts or skins of the same data. Never a colour.                                                                                                                                                                                                                   |
+| `providers`          | Which provider, topics and fields the widget asks for. The user must grant them. `auth` is `none` or `vault`: whether the provider needs a credential held in the vault.                                                                                                                  |
+| `capabilities`       | What the widget needs outside the daemon: `network` hosts, `files` paths and `spawn` programs. Spec widgets leave all three empty.                                                                                                                                                        |
+| `interactiveRegions` | Rectangles that take input. Empty means click-through.                                                                                                                                                                                                                                    |
+| `settings`           | Schema-driven settings. The user's values are stored in `shell.json`. Only `int` is shown in the draft. Other types are undecided.                                                                                                                                                        |
+| `compat`             | Compatibility ranges: the Omarchy version and the widgets kit version (`widgetsKit`, which follows semantic versioning).                                                                                                                                                                  |
 
 ## Size classes and size rules
 

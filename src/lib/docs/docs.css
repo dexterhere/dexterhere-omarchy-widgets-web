@@ -17,8 +17,12 @@
   --shiki-token-link: var(--text);
 }
 
+/* The article fills the page frame like every other page; only running text keeps a readable measure. */
 article.docs {
-  max-width: 76ch;
+  max-width: none;
+}
+article.docs :is(p, li, blockquote) {
+  max-width: 92ch;
 }
 article.docs > * + * {
   margin-top: 1em;
@@ -39,9 +43,6 @@ article.docs a.anchor {
 article.docs a.anchor:hover,
 article.docs a.anchor:focus-visible {
   color: var(--text);
-}
-article.docs p {
-  max-width: none;
 }
 article.docs :is(ul, ol) {
   padding-left: 1.4em;

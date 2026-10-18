@@ -1,5 +1,11 @@
 {
   "title": "Publish",
   "order": 4,
-  "pages": ["submit-a-widget", "trust-tiers", "review-checklist", "updating-a-listing"]
+  "pages": [
+    "submit-a-widget",
+    "contribute-checklist",
+    "trust-tiers",
+    "review-checklist",
+    "updating-a-listing"
+  ]
 }

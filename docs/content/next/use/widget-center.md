@@ -28,4 +28,4 @@ A provider that lost its token shows up in Installed as a health problem, not as
 
 ## What does not depend on it
 
-You can already store secrets with `ow vault` and run the daemon from the developer build. See [Install](/docs/next/start/install/).
+Until it exists, see [Set up a widget](/docs/next/use/set-up-a-widget/) for the manual steps. You can already store secrets with `ow vault` and run the daemon from the developer build. See [Install](/docs/next/start/install/).

@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { footerColumns, statusHref, type BuildInfo } from '../footer';
+  import { CODE_REPO, footerColumns, statusHref, type BuildInfo } from '../footer';
   import { prefersReducedMotion } from '../motion';
   import { THEMES } from '../themes/themes';
   import { theme } from '../themes/store.svelte';
   import { links } from '../site';
   import { onMount } from 'svelte';
   import LogoMark from './LogoMark.svelte';
+  import SiteIcon from './SiteIcon.svelte';
   import { shortcuts } from '../shortcuts.svelte';
 
   // `info` is missing when SvelteKit renders an error page after a client navigation: the footer
@@ -44,6 +45,13 @@
       <p class="small text-2">
         Open source widgets for the Omarchy desktop, a public registry to find them, and docs to
         build your own.
+      </p>
+      <p>
+        <a class="btn small source" href={CODE_REPO} rel="noopener noreferrer"
+          ><SiteIcon name="github" />View the source code<span class="sr-only">
+            (external site)</span
+          ></a
+        >
       </p>
       <p class="small status">
         Pre-release: the daemon, vault and CLI work today; widgets and the desktop canvas are in
@@ -145,6 +153,9 @@
   .status {
     padding-left: 12px;
     border-left: 1px solid var(--border-strong);
+  }
+  .source {
+    min-height: 44px;
   }
   .status a {
     display: flex;

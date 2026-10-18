@@ -20,7 +20,7 @@ description: Validate your package, lint for colour literals and undeclared acce
 
 ## Manual equivalent
 
-1. Run `omarchy plugin validate` on your plugin folder.
+1. Run `omarchy plugin validate <plugin-folder>` on your plugin folder. This Omarchy command exists today.
 2. Validate `widget.json` against the schema in the code repository's `spec/` folder, once it is published. Until then, compare it to the draft example in [Package reference](/docs/next/create/package-reference/).
 3. Search your own code for hex colours, `Qt.rgba`, named colours and anything that starts a process or opens a connection. Each hit must either go away or appear in `capabilities`.
 4. Read the manifest id, the `widget.json` id and your planned listing id. They must match.

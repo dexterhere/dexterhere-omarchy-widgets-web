@@ -68,10 +68,15 @@
     type="application/rss+xml"
     title="Omarchy Widgets"
     href={links.hosts ? sitePath('/rss.xml') : '/rss.xml'}
+  /><link
+    rel="alternate"
+    type="text/plain"
+    title="Index for language models"
+    href={links.hosts ? sitePath('/llms.txt') : '/llms.txt'}
   /></svelte:head
 >
 <a class="skip" href="#main">Skip to content</a>
-<Header />
+<Header docsVersion={data.footer?.docsVersion} />
 <ThemeHint />
 <main id="main" bind:this={main}>
   {@render children()}

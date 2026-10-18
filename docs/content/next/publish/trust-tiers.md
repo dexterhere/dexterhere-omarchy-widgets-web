@@ -9,13 +9,14 @@ description: What the core, verified, spec and community tiers mean, who sets th
 | ----------- | ------------------------------------------------------------------------------------- | --------------------------------------------------- |
 | `core`      | Maintained by this project.                                                           | Maintainers only                                    |
 | `verified`  | A maintainer read the pinned commit and recorded the review.                          | Maintainers only, in `registry/review/<id>.json`    |
-| `spec`      | Schema-valid JSON with no custom code. The widget gets only the fields it is granted. | The registry build, from the widget's contents      |
-| `community` | Unreviewed code. It runs unsandboxed as you.                                          | Default for any code widget without a review record |
+| `spec`      | A maintainer reviewed the pinned commit and confirmed it is JSON with no custom code. | Maintainers only, in `registry/review/<id>.json`    |
+| `community` | Not reviewed. It passed automated checks only. A code widget runs unsandboxed as you. | The default for any listing without a review record |
 
 ## Rules
 
-- A tier comes only from the registry build and from maintainer review records. A listing cannot claim `core` or `verified`.
-- A review record names the commit that was reviewed. If the pinned commit changes, the widget returns to the default tier until it is reviewed again.
+- A tier comes only from maintainer review records. A listing or a `widget.json` cannot claim `core`, `verified` or `spec`. A widget that declares `spec` itself is shown as "declares itself spec, not reviewed".
+- Concept entries from the approved design show as `concept`: not built, not installable.
+- A review record names the commit that was reviewed. If the pinned commit changes, the widget returns to `community` until the new commit is reviewed.
 - A review checks that declared capabilities match the code. See the [review checklist](/docs/next/publish/review-checklist/).
 
 <Callout type="warning">
@@ -26,8 +27,8 @@ A tier describes review, not isolation. Code widgets are not sandboxed, even at 
 
 ## Why `spec` is different
 
-A spec widget runs no code of its own. Only the trusted renderer talks to the daemon, so the grants you approve are a hard boundary. That is why spec is the most trusted way to ship a widget that shows data.
+A spec widget runs no code of its own. Only the trusted renderer talks to the daemon, so the grants you approve are a hard boundary. That is why spec is the most trusted way to ship a widget that shows data. The renderer is not built yet, so no spec widget runs today.
 
 ## Where the review records live
 
-The plan puts review records in `registry/review/` in the website repository. This is a recorded open question: the alternative is a private list kept by maintainers.
+Review records are in `registry/review/` in the website repository, and only maintainers can change that folder. The folder is empty today, so nothing is reviewed yet. Whether records should stay public is an open question.
