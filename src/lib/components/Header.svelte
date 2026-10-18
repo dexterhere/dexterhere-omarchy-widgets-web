@@ -80,7 +80,7 @@
       </a>
 
       <!-- A dropdown on phones (the animated element), plain layout from 760 px up. -->
-      <div class="panel" class:open={shown} id="site-menu" bind:this={panel}>
+      <div class="dropdown" class:open={shown} id="site-menu" bind:this={panel}>
         <nav class="links" aria-label="Main">
           {#each links as l (l.label)}
             <a href={l.href} onclick={() => menuOpen && setMenu(false)}>{l.label}</a>
@@ -183,7 +183,7 @@
   }
 
   /* Phone: a dropdown under the bar (animated by GSAP, see setMenu). */
-  .panel {
+  .dropdown {
     display: none;
     position: absolute;
     left: 0;
@@ -194,7 +194,7 @@
     background: var(--bg);
     border-bottom: 1px solid var(--border);
   }
-  .panel.open {
+  .dropdown.open {
     display: flex;
   }
   .links {
@@ -218,8 +218,8 @@
     .brand {
       margin-right: 16px;
     }
-    .panel,
-    .panel.open {
+    .dropdown,
+    .dropdown.open {
       display: contents;
     }
     .links {
