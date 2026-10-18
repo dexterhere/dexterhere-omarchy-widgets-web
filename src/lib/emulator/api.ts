@@ -59,6 +59,11 @@ export interface EmulatorProps {
   stage?: boolean;
   /** False starts with no windows open (the wallpaper and widgets show; Reset keeps it so). */
   windows?: boolean;
+  /**
+   * A still picture of the desktop for the theme picker: no toolbar, no keys, not interactive,
+   * and a fixed 1024 by 640 desk that the host scales with CSS.
+   */
+  preview?: boolean;
   /** Show a one-time hint on the Widgets bar item until the first interaction (memory only). */
   coach?: boolean;
 }

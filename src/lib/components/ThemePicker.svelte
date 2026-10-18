@@ -1,6 +1,9 @@
 <script lang="ts">
   import { shortcuts } from '../shortcuts.svelte';
   import { onMount, tick, untrack } from 'svelte';
+  import type { Component } from 'svelte';
+  import type { WidgetEmulatorProps } from '../emulator/api';
+  import ThemeLive from './ThemeLive.svelte';
   import ThemePreview from './ThemePreview.svelte';
   import { theme } from '../themes/store.svelte';
   import { THEMES } from '../themes/themes';
@@ -14,6 +17,27 @@
   let ready = $state(false);
   let narrow = $state(false);
   let gsap: Gsap | undefined;
+
+  // Live preview. The page restyles as the highlight moves; nothing is remembered until Enter or a
+  // click on the centre. Esc, the backdrop and any other close put the old theme back.
+  let original = '';
+  let applied = false;
+  // The real emulator is loaded on first open (its own chunk) and drawn on the centre card once
+  // the highlight has rested for a moment; while it moves the cheap CSS preview slides instead.
+  let Emu = $state<Component<WidgetEmulatorProps>>();
+  let liveId = $state('');
+  let liveOn = $state(false);
+  let liveTimer: ReturnType<typeof setTimeout> | undefined;
+  const LIVE_DELAY = 160;
+
+  function rest() {
+    liveOn = false;
+    clearTimeout(liveTimer);
+    liveTimer = setTimeout(() => {
+      liveId = active.id;
+      liveOn = true;
+    }, LIVE_DELAY);
+  }
 
   let reach = $state(8);
   const cards = $derived(THEMES.map((t, i) => ({ t, o: offset(i, index, n) })));
@@ -74,7 +98,10 @@
         0,
         THEMES.findIndex((t) => t.id === untrack(() => theme.current))
       );
+      original = untrack(() => theme.current);
+      applied = false;
       dialog.showModal();
+      void import('../emulator/widgets/WidgetEmulator.svelte').then((m) => (Emu = m.default));
       void loadGsap().then(async (g) => {
         gsap = g;
         reach = reachFor(
@@ -83,6 +110,7 @@
         );
         place(false);
         ready = true;
+        liveId = active.id;
         await tick();
         stage?.querySelector<HTMLElement>('.card[data-o="0"]')?.focus();
       });
@@ -102,9 +130,14 @@
     });
   });
 
-  const go = (i: number) => (index = wrap(i, n));
+  const go = (i: number) => {
+    index = wrap(i, n);
+    theme.apply(active.id);
+    rest();
+  };
 
   function apply() {
+    applied = true;
     theme.keep(active.id);
     // a keystroke can land before the effect has opened the dialog: then just cancel the open
     if (dialog?.open) dialog.close();
@@ -114,6 +147,9 @@
   // Fires for apply, Esc and anything else that closes the dialog.
   function onclose() {
     ready = false;
+    liveOn = false;
+    clearTimeout(liveTimer);
+    if (!applied && theme.current !== original) theme.apply(original);
     theme.open = false;
     // the opener can be gone (the hint closes itself when the picker opens): fall back to the header button
     const back = theme.opener?.isConnected
@@ -199,6 +235,7 @@
         <span class="shade"></span>
       </button>
     {/each}
+    {#if Emu && ready}<ThemeLive {Emu} id={liveId} on={liveOn} />{/if}
   </div>
 
   <p class="theme-name" aria-hidden="true">{active.name}</p>
