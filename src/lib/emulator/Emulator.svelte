@@ -29,7 +29,8 @@
     workspace,
     stage = false,
     windows = true,
-    coach = false
+    coach = false,
+    preview = false
   }: EmulatorProps = $props();
 
   const emu = new EmulatorState();
@@ -47,7 +48,7 @@
   });
   const wpTheme = $derived(themeId ?? theme.current);
   const narrow = new MediaQuery('max-width: 719px');
-  const interactive = $derived(!narrow.current);
+  const interactive = $derived(!narrow.current && !preview);
 
   const api: EmulatorApi = {
     state: emu,
@@ -61,7 +62,7 @@
   let desk: HTMLElement;
   let area: HTMLElement;
   let strip: HTMLElement;
-  let expandBtn: HTMLButtonElement;
+  let expandBtn = $state<HTMLButtonElement>();
   let areaW = $state(0);
   let areaH = $state(0);
   let full = $state(false);
@@ -200,7 +201,7 @@
       emu.announce(on ? 'Full view opened' : 'Full view closed');
       setTimeout(() => root?.classList.remove('flipping'), 500);
       await tick();
-      expandBtn.focus();
+      expandBtn?.focus();
     } finally {
       busy = false;
       if (!full) lockPage(false); // never leave the page inert behind an error
@@ -377,6 +378,7 @@
     class:full
     class:compact
     class:stage
+    class:preview
     bind:this={root}
     role={full ? 'dialog' : 'region'}
     aria-modal={full ? 'true' : undefined}
@@ -389,30 +391,30 @@
     onkeydown={onKey}
     onfocusout={onFocusOut}
   >
-    <div class="toolbar">
-      <p class="label">
-        Emulated desktop, sample data. Hyprland and Omarchy 4 are not running here.
-      </p>
-      <div class="tools">
-        <button
-          type="button"
-          class="tool"
-          aria-expanded={legendOpen}
-          onclick={() => (legendOpen = !legendOpen)}>Keys</button
-        >
-        <button type="button" class="tool" onclick={() => emu.reset()}>Reset</button>
-        <button
-          type="button"
-          class="tool"
-          bind:this={expandBtn}
-          aria-expanded={full}
-          onclick={() => void setFull(!full)}
-        >
-          <Icon name={full ? 'collapse' : 'expand'} size={12} />
-          {full ? 'Close full view' : 'Open full view'}
-        </button>
-      </div>
-    </div>
+    {#if !preview}<div class="toolbar">
+        <p class="label">
+          Emulated desktop, sample data. Hyprland and Omarchy 4 are not running here.
+        </p>
+        <div class="tools">
+          <button
+            type="button"
+            class="tool"
+            aria-expanded={legendOpen}
+            onclick={() => (legendOpen = !legendOpen)}>Keys</button
+          >
+          <button type="button" class="tool" onclick={() => emu.reset()}>Reset</button>
+          <button
+            type="button"
+            class="tool"
+            bind:this={expandBtn}
+            aria-expanded={full}
+            onclick={() => void setFull(!full)}
+          >
+            <Icon name={full ? 'collapse' : 'expand'} size={12} />
+            {full ? 'Close full view' : 'Open full view'}
+          </button>
+        </div>
+      </div>{/if}
 
     <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
     <div
@@ -614,6 +616,13 @@
     aspect-ratio: 16 / 10;
     min-height: 560px;
     max-height: clamp(560px, 76vh, 880px);
+  }
+  .emu.preview .desk {
+    width: 1024px;
+    height: 640px;
+    aspect-ratio: auto;
+    min-height: 0;
+    max-height: none;
   }
   .coach {
     position: absolute;

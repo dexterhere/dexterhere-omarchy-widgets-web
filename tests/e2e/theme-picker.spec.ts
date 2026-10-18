@@ -61,7 +61,9 @@ test('the overlay is bare: a name, previews and two arrows', async ({ page }) =>
   await settled(page);
   await expect(name(page)).toHaveText('Tokyo Night');
   await expect(page.getByRole('button', { name: /Keep this theme|Cancel/ })).toHaveCount(0);
-  await expect(dialog(page).locator('h2, kbd')).toHaveCount(0);
+  await expect(
+    dialog(page).locator('h2:not([data-live-preview] *), kbd:not([data-live-preview] *)')
+  ).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Previous theme' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Next theme' })).toBeVisible();
   // one large preview and a strip of slabs each side
@@ -72,20 +74,22 @@ test('the overlay is bare: a name, previews and two arrows', async ({ page }) =>
   expect(b.width / vw).toBeLessThan(0.45);
 });
 
-test('arrows browse without restyling the page; wrap-around both ways', async ({ page }) => {
+test('arrows restyle the page live, remember nothing; wrap-around both ways', async ({ page }) => {
   await ready(page);
   await page.keyboard.press('t');
   await settled(page);
   await page.keyboard.press('ArrowRight');
   await expect(name(page)).toHaveText('White');
-  expect(await theme(page)).toBe('tokyo-night');
+  await expect.poll(() => theme(page)).toBe('white');
   await page.keyboard.press('ArrowLeft');
   await page.keyboard.press('ArrowLeft');
   await expect(name(page)).toHaveText('Vantablack');
+  await expect.poll(() => theme(page)).toBe('vantablack');
+  expect(await page.evaluate(() => localStorage.getItem('ow-theme'))).toBeNull();
   await page.keyboard.press('ArrowRight');
   await expect(name(page)).toHaveText('Tokyo Night');
-  expect(await theme(page)).toBe('tokyo-night');
-  await expect(page.locator('.picker [aria-live]')).toHaveText('Tokyo Night');
+  await expect.poll(() => theme(page)).toBe('tokyo-night');
+  await expect(page.locator('.picker > [aria-live]')).toHaveText('Tokyo Night');
 });
 
 test('the arrow buttons step the highlight', async ({ page }) => {
@@ -122,7 +126,7 @@ test('clicking the centre preview applies it', async ({ page }) => {
   expect(await theme(page)).toBe('white');
 });
 
-test('clicking a side preview recentres it; the backdrop closes without a change', async ({
+test('clicking a side preview recentres it; the backdrop closes and restores the theme', async ({
   page
 }) => {
   await ready(page);
@@ -132,9 +136,9 @@ test('clicking a side preview recentres it; the backdrop closes without a change
   await page.locator('.picker .card[data-o="1"]').click({ position: { x: 10, y: 150 } });
   await expect(name(page)).toHaveText('White');
   await settled(page);
-  expect(await theme(page)).toBe('tokyo-night');
   await dialog(page).click({ position: { x: 300, y: 40 } });
   await expect(dialog(page)).toBeHidden();
+  // cancelling puts the old theme back
   expect(await theme(page)).toBe('tokyo-night');
 });
 
@@ -321,4 +325,42 @@ test('makes no request to any origin other than localhost', async ({ page }) => 
   await page.keyboard.press('ArrowRight');
   await page.keyboard.press('Escape');
   expect([...hosts]).toEqual([`localhost:${process.env.PW_PORT ?? 4173}`]);
+});
+
+test('live preview: Esc restores the page theme and tab icon, nothing is stored', async ({
+  page
+}) => {
+  await ready(page);
+  const icon = () => page.locator('link[rel="icon"]').first().getAttribute('href');
+  const before = await icon();
+  await page.keyboard.press('t');
+  await settled(page);
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(() => theme(page)).not.toBe('tokyo-night');
+  await page.keyboard.press('Escape');
+  await expect(dialog(page)).toBeHidden();
+  expect(await theme(page)).toBe('tokyo-night');
+  expect(await icon()).toBe(before);
+  expect(await page.evaluate(() => localStorage.getItem('ow-theme'))).toBeNull();
+});
+
+test('live preview: the centre shows the real emulator with the real widgets, in that theme', async ({
+  page
+}) => {
+  await ready(page);
+  await page.keyboard.press('t');
+  await settled(page);
+  await page.keyboard.press('ArrowRight');
+  const live = page.locator('[data-live-preview]');
+  await expect(live).toHaveClass(/on/);
+  await expect(live).toHaveAttribute('data-theme', 'white');
+  await expect(live.locator('[data-emulator]')).toHaveCount(1);
+  await expect(live.getByText('GitHub activity')).toBeVisible();
+  await expect(live.getByText('Battery', { exact: true })).toBeVisible();
+  // a picture only: nothing in it can take focus or clicks
+  expect(await live.evaluate((e) => (e as HTMLElement).inert)).toBe(true);
+  // the picker still gets Enter and applies the highlighted theme
+  await page.keyboard.press('Enter');
+  expect(await theme(page)).toBe('white');
 });

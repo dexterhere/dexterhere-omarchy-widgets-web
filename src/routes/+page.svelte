@@ -5,7 +5,7 @@
   import WidgetCarousel from '../lib/components/home/WidgetCarousel.svelte';
   import TryList from '../lib/components/home/TryList.svelte';
   import { HomeStage } from '../lib/components/home/stage.svelte';
-  import type { InitialWidget } from '../lib/emulator/api';
+  import { START_WIDGETS as start, START_ZOOM } from '../lib/emulator/startLayout';
   import LazyEmulator from '../lib/emulator/LazyEmulator.svelte';
   import { getAll } from '../lib/registry';
   import { docsUrl, sitePath } from '../lib/site';
@@ -31,15 +31,6 @@
     io.observe(bar);
     return () => io.disconnect();
   });
-
-  // Four widgets on an empty workspace: the wallpaper shows and the widgets are the point.
-  // Two tidy columns of one width (288) with 24 px gaps, drawn 1.3 times larger by `zoom`.
-  const start: InitialWidget[] = [
-    { id: 'github', anchor: 'tl', ox: 32, oy: 32, w: 288, h: 176 },
-    { id: 'battery', anchor: 'tl', ox: 32, oy: 232, w: 288, h: 112 },
-    { id: 'clock', anchor: 'tr', ox: 32, oy: 56, w: 288, h: 120, variant: 'digital' },
-    { id: 'system', anchor: 'tr', ox: 32, oy: 200, w: 288, h: 168 }
-  ];
 
   const paths = [
     {
@@ -101,7 +92,7 @@
     <LazyEmulator
       stage
       coach
-      zoom={1.3}
+      zoom={START_ZOOM}
       windows={false}
       initialWidgets={start}
       loadNow={stage.loadNow}
