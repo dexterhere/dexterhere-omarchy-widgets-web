@@ -1,5 +1,8 @@
 // The fake terminal's tiny command set. Everything printed is sample output and says so.
 
+/** Longest command line the fake terminal takes (input maxlength and echo). */
+export const MAX_INPUT = 512;
+
 export const SAMPLE = '(sample output)';
 
 export const FASTFETCH: string[] = [

@@ -82,6 +82,8 @@ export interface KeyLike {
   ctrlKey: boolean;
   altKey: boolean;
   shiftKey: boolean;
+  /** Auto-repeat of a held key. */
+  repeat?: boolean;
 }
 
 /** Layout-independent key name: `code` first (Shift+1 reports "!" in `key`), then `key`. */

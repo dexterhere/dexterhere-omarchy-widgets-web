@@ -4,6 +4,8 @@
   import { THEMES } from '../themes/themes';
   import { theme } from '../themes/store.svelte';
   import { links } from '../site';
+  import { onMount } from 'svelte';
+  import { shortcuts } from '../shortcuts.svelte';
 
   // `info` is missing when SvelteKit renders an error page after a client navigation: the footer
   // still renders, with the docs root instead of the latest version and no build details.
@@ -13,12 +15,23 @@
   const columns = $derived(footerColumns(links, version));
   const themeName = $derived(THEMES.find((t) => t.id === theme.current)?.name ?? theme.current);
 
+  let said = $state('');
+  onMount(() => shortcuts.init());
+  function toggleKeys() {
+    shortcuts.set(!shortcuts.on);
+    said = shortcuts.on
+      ? 'Single-key shortcuts on: T opens the theme picker, / focuses search.'
+      : 'Single-key shortcuts off. Modifier shortcuts such as Ctrl+K still work.';
+  }
+
   function toTop() {
     window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
     // Keyboard users start again at the top of the page: the skip link is its first stop.
     document.querySelector<HTMLElement>('a.skip')?.focus({ preventScroll: true });
   }
 </script>
+
+<svelte:window onkeydowncapture={shortcuts.guard} />
 
 <footer class="site-footer" class:hinted={theme.hintVisible} aria-label="Site">
   <div class="frame">
@@ -81,7 +94,18 @@
             aria-hidden="true">T</kbd
           >
         </button>
+        <button
+          class="btn small"
+          type="button"
+          data-single-keys
+          aria-pressed={shortcuts.on}
+          title="Letter shortcuts: T (theme picker) and / (search). Turn off to avoid accidental triggers."
+          onclick={toggleKeys}
+          >Single-key shortcuts<span aria-hidden="true">: {shortcuts.on ? 'on' : 'off'}</span
+          ></button
+        >
         <button class="btn small" type="button" onclick={toTop}>Back to top</button>
+        <span class="sr-only" aria-live="polite" data-single-keys-said>{said}</span>
       </div>
     </div>
   </div>
