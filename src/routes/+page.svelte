@@ -54,7 +54,7 @@
   />
 </svelte:head>
 
-<div class="container wide">
+<div class="container wide home">
   <section class="hero" aria-labelledby="hero-h">
     <h1 id="hero-h">Desktop widgets that follow your theme.</h1>
     <div class="cols">
@@ -132,6 +132,9 @@
 </div>
 
 <style>
+  .home {
+    --container-wide: 1600px;
+  }
   .hero {
     display: flex;
     flex-direction: column;

@@ -1,16 +1,18 @@
 <script lang="ts">
   import { onMount, tick } from 'svelte';
   import { resolve } from '$app/paths';
+  import { getStatsProvider, type Stats } from '../../stats';
   import { edges, normalizeStarts, pageTarget, settleTarget, stepTarget } from '../../carousel';
   import { loadGsap, motion, prefersReducedMotion } from '../../motion';
   import { categoryLabels, type Category, type RegistryWidget } from '../../registry';
-  import Card from './CardStub.svelte';
+  import Card from '../gallery/WidgetCard.svelte';
 
   // A native scroll-snap track with real buttons, arrow keys, mouse drag and a GSAP smooth
   // scroll (instant under reduced motion). No autoplay. Touch scrolls natively.
   let { widgets, onTry }: { widgets: RegistryWidget[]; onTry?: (id: string) => void } = $props();
 
   let cat = $state<Category | 'all'>('all');
+  let stats = $state<Record<string, Stats | null>>({});
   const cats = $derived(
     (Object.keys(categoryLabels) as Category[])
       .map((c) => ({ c, n: widgets.filter((w) => w.categories.includes(c)).length }))
@@ -147,6 +149,10 @@
   }
 
   onMount(() => {
+    getStatsProvider()
+      .getStats(widgets.map((w) => w.id))
+      .then((r) => (stats = r))
+      .catch(() => {});
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(track);
@@ -232,8 +238,13 @@
     ondragstart={(e) => e.preventDefault()}
   >
     {#each shown as w, i (w.id)}
-      <li class="slide" aria-label="{w.name}, {i + 1} of {shown.length}" data-slide>
-        <Card widget={w} variant="carousel" {onTry} />
+      <li
+        class="slide"
+        aria-label="{w.name}, {i + 1} of {shown.length}"
+        data-slide
+        data-widget-card={w.id}
+      >
+        <Card widget={w} variant="carousel" {onTry} stats={stats[w.id] ?? null} />
       </li>
     {/each}
   </ul>

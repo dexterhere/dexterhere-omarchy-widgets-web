@@ -3,7 +3,12 @@
   import { getStatsProvider } from '../../stats';
 
   // `likes` is the global count, or null/undefined when there is none (local provider, service down).
-  let { id, name, likes = null }: { id: string; name: string; likes?: number | null } = $props();
+  let {
+    id,
+    name,
+    likes = null,
+    compact = false
+  }: { id: string; name: string; likes?: number | null; compact?: boolean } = $props();
 
   let liked = $state(false);
   let delta = $state(0);
@@ -48,7 +53,8 @@
   onclick={toggle}
 >
   <span aria-hidden="true">{liked ? 'Liked' : 'Like'}</span>
-  {#if count == null}<span class="n" aria-hidden="true">(saved on this device)</span>{/if}
+  {#if count == null && !compact}<span class="n" aria-hidden="true">(saved on this device)</span
+    >{/if}
   {#if count != null}<span class="n" aria-hidden="true">{count.toLocaleString('en-US')}</span>{/if}
 </button>
 <span class="sr" role="status" aria-live="polite">{message}</span>

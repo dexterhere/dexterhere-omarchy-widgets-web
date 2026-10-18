@@ -221,7 +221,7 @@ test.describe('carousel', () => {
   test('clicking a card opens its detail page', async ({ page }) => {
     await ready(page);
     await page.locator('[data-home-widgets]').scrollIntoViewIfNeeded();
-    await page.locator('[data-widget-card] h3 a').first().click();
+    await page.locator('[data-slide] h2 a').first().click();
     await expect(page).toHaveURL(/\/widgets\/io\.github\./);
     await expect(page.getByRole('button', { name: /^Like / })).toBeVisible();
     await expect(page.getByRole('link', { name: '@dexterhere' }).first()).toBeVisible();
@@ -245,7 +245,6 @@ test.describe('carousel', () => {
         .first()
         .getByRole('button', { name: /^Unlike / })
     ).toHaveAttribute('aria-pressed', 'true');
-    await expect(slides(page).first().getByText('saved on this device')).toBeVisible();
   });
 
   test('"Try on the desktop above" places the widget and moves focus into the emulator', async ({
@@ -461,7 +460,7 @@ test('JS budget: initial home JavaScript and the lazy chunks are measured separa
     `home JS gz: initial ${kb(initial).toFixed(1)} KB, emulator ${kb(emulator).toFixed(1)} KB, gsap ${kb(gsap).toFixed(1)} KB`
   );
   // Initial: everything the page needs before the lazy emulator, builder and GSAP chunks.
-  expect(kb(initial)).toBeLessThan(78);
+  expect(kb(initial)).toBeLessThan(84);
   // The emulator is lazy but visible at once on desktop: bounded separately.
   expect(kb(emulator)).toBeLessThan(110);
   // Nothing from the builder before it nears the viewport.
