@@ -78,7 +78,9 @@
 
   function apply() {
     theme.keep(active.id);
-    dialog?.close();
+    // a keystroke can land before the effect has opened the dialog: then just cancel the open
+    if (dialog?.open) dialog.close();
+    else theme.open = false;
   }
 
   // Fires for apply, Esc and anything else that closes the dialog.
