@@ -30,6 +30,9 @@ async function withTheme(page: Page, id: string) {
   await page.addInitScript((t) => localStorage.setItem('ow-theme', t), id);
 }
 
+// The first-visit tip (fixed, top right) would cover the Search and Docs menu buttons below the header.
+test.beforeEach(({ page }) => page.addInitScript(() => localStorage.setItem('ow-theme-hint', '1')));
+
 test('/docs/ lands on the start page of the latest version', async ({ page, request }) => {
   const html = await (await request.get('/docs/')).text();
   expect(html).toContain(`<meta http-equiv="refresh" content="0;url=${START}"`);
@@ -322,7 +325,7 @@ test('no request leaves localhost, search and version switcher included', async 
   expect(external).toEqual([]);
 });
 
-test('JS budget: a docs page ships under 60 KB of gzipped JavaScript', async ({ page }) => {
+test('JS budget: a docs page ships under 64 KB of gzipped JavaScript', async ({ page }) => {
   let gz = 0;
   const jobs: Promise<void>[] = [];
   page.on('response', (r) => {
@@ -332,7 +335,8 @@ test('JS budget: a docs page ships under 60 KB of gzipped JavaScript', async ({ 
   await page.goto('/docs/next/create/spec-widgets/');
   await page.waitForLoadState('networkidle');
   await Promise.all(jobs);
-  expect(gz / 1024).toBeLessThan(60);
+  // 60 until the shell polish (sticky header logic, route transition hook, theme-fade): see SHELL-BUDGET in docs/DECISIONS.md
+  expect(gz / 1024).toBeLessThan(64);
 });
 
 test('synced reference pages render as text, no injected markup', async ({ page }) => {

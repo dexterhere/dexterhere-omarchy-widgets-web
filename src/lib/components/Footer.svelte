@@ -137,7 +137,7 @@
     align-items: center;
     gap: 10px;
     width: fit-content;
-    min-height: var(--ctl);
+    min-height: 40px;
     text-decoration: none;
     font-weight: 700;
     font-size: var(--fs-3);

@@ -79,15 +79,18 @@
         <span class="name">Widgets</span>
       </a>
 
-      <nav class="links" class:open={shown} id="site-nav" aria-label="Main" bind:this={panel}>
-        {#each links as l (l.label)}
-          <a href={l.href} onclick={() => menuOpen && setMenu(false)}>{l.label}</a>
-        {/each}
+      <!-- A dropdown on phones (the animated element), plain layout from 760 px up. -->
+      <div class="panel" class:open={shown} id="site-menu" bind:this={panel}>
+        <nav class="links" aria-label="Main">
+          {#each links as l (l.label)}
+            <a href={l.href} onclick={() => menuOpen && setMenu(false)}>{l.label}</a>
+          {/each}
+        </nav>
         <div class="extra">
           <a class="btn small" href={GITHUB} rel="noopener noreferrer">GitHub</a>
           <a class="btn-primary small" href={docsUrl('/docs')}>Install</a>
         </div>
-      </nav>
+      </div>
 
       <button
         class="btn icon theme-btn"
@@ -105,7 +108,7 @@
         class="btn small menu-btn"
         type="button"
         aria-expanded={menuOpen}
-        aria-controls="site-nav"
+        aria-controls="site-menu"
         onclick={() => setMenu(!menuOpen)}>Menu</button
       >
     </div>
@@ -180,7 +183,7 @@
   }
 
   /* Phone: a dropdown under the bar (animated by GSAP, see setMenu). */
-  .links {
+  .panel {
     display: none;
     position: absolute;
     left: 0;
@@ -191,8 +194,12 @@
     background: var(--bg);
     border-bottom: 1px solid var(--border);
   }
-  .links.open {
+  .panel.open {
     display: flex;
+  }
+  .links {
+    display: flex;
+    flex-direction: column;
   }
   .links > a {
     display: flex;
@@ -211,16 +218,14 @@
     .brand {
       margin-right: 16px;
     }
-    .links,
-    .links.open {
-      display: flex;
-      position: static;
+    .panel,
+    .panel.open {
+      display: contents;
+    }
+    .links {
       flex-direction: row;
       flex: 1;
       gap: 4px;
-      padding: 0;
-      background: none;
-      border: 0;
     }
     .links > a {
       min-height: var(--ctl);

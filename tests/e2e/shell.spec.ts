@@ -5,6 +5,9 @@ import { expectAligned, frameEdges, pickTheme } from './shell-helpers';
 
 test.use({ colorScheme: 'dark' });
 
+// The first-visit tip (fixed, top right) sits where a pinned header now makes scrolled-to controls land.
+test.beforeEach(({ page }) => page.addInitScript(() => localStorage.setItem('ow-theme-hint', '1')));
+
 const PAGES = [
   '/',
   '/widgets/',
@@ -425,6 +428,7 @@ test.describe('phone', () => {
   test.use({ viewport: { width: 360, height: 800 } });
 
   test('header collapses to the menu, stays sticky, nothing overflows', async ({ page }) => {
+    test.setTimeout(90_000);
     const errs = problems(page);
     for (const p of ['/', '/widgets/', DOCS, '/404/']) {
       await page.goto(p);

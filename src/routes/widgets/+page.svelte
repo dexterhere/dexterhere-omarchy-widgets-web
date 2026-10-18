@@ -549,6 +549,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
+    min-height: var(--ctl); /* "Clear all" appears while typing: no shift */
     justify-content: space-between;
     gap: 12px;
   }
