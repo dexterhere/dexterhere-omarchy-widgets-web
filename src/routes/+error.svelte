@@ -1,19 +1,10 @@
 <script lang="ts">
-  import { page } from '$app/state';
-  import ErrorPage from '../lib/components/ErrorPage.svelte';
-  import { copyFor } from '../lib/errors';
-
-  // The status comes from SvelteKit (400, 404, 500 or any other). The error message is shown as
-  // plain text and only below 500: a server error never echoes anything from the request.
-  const status = $derived(page.status);
-  const copy = $derived(copyFor(status));
-  const message = $derived(page.error?.message ?? '');
-  const detail = $derived(status < 500 && message ? message : undefined);
+  // SvelteKit loads this file for every page (the error boundary), so it stays a thin shell: the
+  // error UI is a separate module, fetched only when an error is shown.
+  const ErrorRoute = import('../lib/components/ErrorRoute.svelte');
 </script>
 
-<svelte:head>
-  <title>{status} {copy.title} - Omarchy Widgets</title>
-  <meta name="robots" content="noindex" />
-</svelte:head>
-
-<ErrorPage {status} path={status < 500 ? page.url.pathname : undefined} {detail} />
+{#await ErrorRoute then view}
+  {@const Route = view.default}
+  <Route />
+{/await}

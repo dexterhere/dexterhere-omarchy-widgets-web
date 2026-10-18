@@ -45,7 +45,8 @@ export function footerColumns(
   l: Pick<Links, 'docsUrl' | 'sitePath'>,
   docsVersion: string
 ): FooterColumn[] {
-  const d = (slug: string) => l.docsUrl(`/docs/${docsVersion}/${slug}`);
+  // No build info (an error page reached by client navigation has no layout data): the docs root.
+  const d = (slug: string) => l.docsUrl(docsVersion ? `/docs/${docsVersion}/${slug}` : '/docs/');
   const ext = (label: string, href: string): FooterLink => ({ label, href, external: true });
   return [
     {
@@ -105,4 +106,4 @@ export function footerColumns(
 }
 
 export const statusHref = (l: Pick<Links, 'docsUrl'>, docsVersion: string) =>
-  l.docsUrl(`/docs/${docsVersion}/start/what-it-is/`);
+  l.docsUrl(docsVersion ? `/docs/${docsVersion}/start/what-it-is/` : '/docs/');

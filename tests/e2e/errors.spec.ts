@@ -70,6 +70,7 @@ for (const p of PAGES) {
     );
     await expect(page.getByText(p.sentence, { exact: true })).toBeVisible();
     await expect(page).toHaveTitle(p.title);
+    await expect(page.getByRole('navigation', { name: 'Footer' })).toBeVisible();
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', 'noindex');
     expect(errs).toEqual([]);
     expect(remote).toEqual([]);

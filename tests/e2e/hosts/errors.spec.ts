@@ -78,6 +78,7 @@ test('an unknown docs page on the docs host renders the 404 with a working home 
   const res = await page.goto(`${DOCS}/next/does-not-exist/`);
   expect(res?.status()).toBe(404);
   await expect(pixel(page, '404')).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Footer' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Go to the home page' })).toHaveAttribute(
     'href',
     `${SITE}/`
