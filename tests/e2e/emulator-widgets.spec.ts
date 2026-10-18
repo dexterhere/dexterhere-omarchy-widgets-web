@@ -299,7 +299,7 @@ test('widget detail page: Try it on a desktop preloads the widget, Expand works'
   await expect(w).toHaveAttribute('data-selected', 'true');
   await expect(section.locator('[data-widget]')).toHaveCount(1);
   await expect(live(page)).toContainText('Docker');
-  await section.getByRole('button', { name: 'Expand' }).click();
+  await section.getByRole('button', { name: 'Open full view' }).click();
   const full = page.getByRole('dialog', { name: 'Emulated Omarchy desktop, full view' });
   await expect(full).toBeVisible();
   await expect(full.locator(`[data-widget][data-reg="${DOCKER}"]`)).toBeVisible();
@@ -381,15 +381,13 @@ test('only same-origin requests while using the widget experience', async ({ pag
   expect([...hosts]).toEqual([`localhost:${process.env.PW_PORT ?? 4173}`]);
 });
 
-test('the widget layer lives in the lazy chunk: the detail page loads it only near the viewport', async ({
-  page
-}) => {
+test('the widget layer lives in the lazy chunk: the gallery never loads it', async ({ page }) => {
   const marker = 'Layout snapshot saved (sample)';
   const loaded: Promise<string>[] = [];
   page.on('response', (r) => {
     if (r.url().endsWith('.js')) loaded.push(r.text().catch(() => ''));
   });
-  await page.goto('/');
+  await page.goto('/widgets/');
   await page.waitForLoadState('networkidle');
   expect((await Promise.all(loaded)).some((b) => b.includes(marker))).toBe(false);
 });

@@ -203,7 +203,7 @@ test('a theme change restyles the wallpaper and the bar', async ({ page }) => {
 
 test('Expand opens the full view; Esc closes it and restores focus', async ({ page }) => {
   await ready(page);
-  const expand = page.getByRole('button', { name: 'Expand' });
+  const expand = page.getByRole('button', { name: 'Open full view' });
   await expand.click();
   const full = page.getByRole('dialog', { name: 'Emulated Omarchy desktop, full view' });
   await expect(full).toBeVisible();
@@ -220,7 +220,7 @@ test('Expand opens the full view; Esc closes it and restores focus', async ({ pa
     true
   );
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('button', { name: 'Expand' })).toBeFocused();
+  await expect(page.getByRole('button', { name: 'Open full view' })).toBeFocused();
   await expect(emu(page)).not.toHaveClass(/full/);
   await expect(page.locator('html')).not.toHaveClass(/ow-emu-full/);
 });
@@ -303,7 +303,7 @@ test('360 px: no horizontal overflow and a static desktop with the needs-a-large
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(360);
   await expect(page.getByText('needs a larger screen')).toBeVisible();
   await expect(page.locator('.keys button')).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Expand' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Open full view' })).toBeVisible();
 });
 
 test('only same-origin requests', async ({ page }) => {
@@ -313,7 +313,7 @@ test('only same-origin requests', async ({ page }) => {
   });
   await ready(page);
   await chord(page, ['super'], 'Space');
-  await page.getByRole('button', { name: 'Expand' }).click();
+  await page.getByRole('button', { name: 'Open full view' }).click();
   expect([...hosts]).toEqual([`localhost:${process.env.PW_PORT ?? 4173}`]);
 });
 
@@ -334,13 +334,13 @@ test('the emulator chunk loads only when it nears the viewport', async ({ page }
   expect((await Promise.all(loaded)).some((b) => b.includes(marker))).toBe(true);
 });
 
-test('the home page does not load the emulator', async ({ page }) => {
+test('pages without a desktop (the gallery) do not load the emulator', async ({ page }) => {
   const marker = 'Hyprland and Omarchy 4 are not running here';
   const loaded: Promise<string>[] = [];
   page.on('response', (r) => {
     if (r.url().endsWith('.js')) loaded.push(r.text().catch(() => ''));
   });
-  await page.goto('/');
+  await page.goto('/widgets/');
   await page.waitForLoadState('networkidle');
   expect((await Promise.all(loaded)).some((b) => b.includes(marker))).toBe(false);
 });

@@ -14,7 +14,7 @@ export const previewType = (id: string): WidgetType | null =>
 /** Default preview size per type, inside the widget type's size classes. */
 export const CARD_SIZE: Record<WidgetType, { w: number; h: number }> = {
   clock: { w: 224, h: 104 },
-  system: { w: 208, h: 152 },
+  system: { w: 264, h: 192 },
   battery: { w: 144, h: 112 },
-  github: { w: 240, h: 136 }
+  github: { w: 264, h: 128 }
 };

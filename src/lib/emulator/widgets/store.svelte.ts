@@ -1,6 +1,7 @@
 // State of the emulated widget layer: instances, installed set, edit mode, layouts. In memory
 // only (never stored). The geometry and the rules are in model.ts; this class wires them to
 // runes, announcements and the pointer.
+import type { SpecDoc } from '../../builder/spec';
 import * as L from '../../desktop/layout';
 import { getById } from '../../registry';
 import type { EmulatorApi, InitialWidget } from '../api';
@@ -13,7 +14,10 @@ export const MAX_LAYOUTS = 20;
 export const SNAPSHOT_NOTE = 'Layout snapshot saved (sample)';
 
 /** Name for lists and announcements: the registry name without the "(concept)" suffix. */
-export const labelOf = (reg: string) => (getById(reg)?.name ?? reg).replace(/\s*\(concept\)$/i, '');
+export const labelOf = (reg: string) =>
+  reg === M.SPEC_REG
+    ? 'Custom widget'
+    : (getById(reg)?.name ?? reg).replace(/\s*\(concept\)$/i, '');
 export const isConcept = (reg: string) => getById(reg)?.installable === false;
 
 const uniq = <T>(a: T[]) => a.filter((v, i) => a.indexOf(v) === i);
@@ -216,6 +220,21 @@ export class WidgetLayerState {
     }
     this.place(reg, `${labelOf(reg)} added to the desktop`);
   }
+  /** Place a draft spec widget from the builder. In memory only, never installed or stored. */
+  placeSpec(spec: SpecDoc, size: { w: number; h: number; type: L.WidgetType }) {
+    if (!this.ready) return false;
+    const inst = M.makeInst(
+      { id: this.newId(), reg: M.SPEC_REG, spec, type: size.type, w: size.w, h: size.h },
+      this.st.items,
+      this.bounds
+    );
+    this.st = M.addInst(this.st, inst, this.bounds);
+    this.selected = inst.id;
+    this.say(
+      `Custom widget (draft) added to the emulated desktop at ${inst.x}, ${inst.y}, ${inst.w} by ${inst.h}.${this.touch()}`
+    );
+    return true;
+  }
   /** One more instance of an installed widget. */
   addAnother(reg: string) {
     this.place(reg, `Another ${labelOf(reg)} added to the desktop`);
@@ -333,7 +352,9 @@ export class WidgetLayerState {
     const l = this.layouts.find((o) => o.id === id);
     if (!l) return;
     const items = M.instantiate(l.items, this.newId);
-    const fresh = uniq(items.map((i) => i.reg)).filter((r) => !this.isInstalled(r));
+    const fresh = uniq(items.map((i) => i.reg)).filter(
+      (r) => r !== M.SPEC_REG && !this.isInstalled(r)
+    );
     if (fresh.length) this.installed = [...this.installed, ...fresh];
     this.st = M.replaceItems(this.st, items, this.bounds);
     this.selected = null;

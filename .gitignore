@@ -9,4 +9,5 @@ test-results
 .DS_Store
 .claude/
 build-hosts
+build-stats
 .svelte-kit-*

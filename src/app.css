@@ -5,9 +5,9 @@
   --font-sans: 'Geist Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --container: 904px;
   /* Inner width of the header and footer frame; .container.wide uses it too, so they align. */
-  --frame-max: 1100px;
+  --frame-max: 1400px;
   --container-wide: var(--frame-max);
-  --gutter: 16px;
+  --gutter: clamp(16px, 3vw, 40px);
   --fs-1: 13px;
   --fs-2: 14px;
   --fs-3: 16px;
