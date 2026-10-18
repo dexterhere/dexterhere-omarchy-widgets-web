@@ -47,4 +47,6 @@ Until then, you can give an agent these pages and the draft schema from the code
 - A reverse-domain id outside `omarchy.*`.
 - A README with install and removal steps, and a license.
 
+To try the simplest path now, follow [Your first widget, end to end](/docs/next/create/your-first-widget-end-to-end/).
+
 Next: [Data and providers](/docs/next/create/data-and-providers/) and [Check and preview](/docs/next/create/check-and-preview/).

@@ -9,13 +9,13 @@ A listing points at one commit. A new version of your widget does not reach user
 
 1. Push your changes to your widget repository and tag a release if you use tags.
 2. Run your checks again. See [Check and preview](/docs/next/create/check-and-preview/).
-3. Open a pull request to the website repository that changes `commit` in `registry/widgets/<id>.json` to the new full 40-character SHA. Update `status` or `summary` if they changed.
+3. Merge to your default branch; the commit must be on it. Open a pull request from the same GitHub account to the website repository that changes `commit` in `registry/widgets/<id>.json` to the new full 40-character SHA. Update `status` or `summary` if they changed.
 4. CI repeats the registry build for the new commit and posts the access summary.
 5. Reviewers see the difference in declared capabilities between the old and new commits. A widening change, such as a new network host, a new program or an extra field, gets extra attention.
 
 ## Tiers after an update
 
-`spec` and `community` are recomputed from the new commit. A `verified` review applies to the commit that was reviewed. A new commit is not reviewed until a maintainer records it, so the widget shows the default tier meanwhile.
+A review applies only to the commit that was reviewed. A new commit is not reviewed until a maintainer records it, so the widget shows `community` meanwhile. Say in your pull request that you want it reviewed again.
 
 ## Status values
 

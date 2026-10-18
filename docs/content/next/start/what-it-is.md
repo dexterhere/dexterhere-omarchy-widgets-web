@@ -64,6 +64,13 @@ The roadmap and open questions live in the code repository: `README.md` and `doc
 
 The full picture is in the [threat model](/docs/next/reference/threat-model/).
 
+## Where to go next
+
+- [How it works](/docs/next/start/how-it-works/): the parts and what data goes where.
+- [Browse and install](/docs/next/start/browse-and-install/): find and install a widget.
+- [Create](/docs/next/create/choose-a-path/): make your own.
+- [FAQ](/docs/next/project/faq/): short answers.
+
 ## Independence
 
 This project is not affiliated with or endorsed by Omarchy, 37signals or the Omarchy maintainers. It builds on Omarchy's public plugin system.

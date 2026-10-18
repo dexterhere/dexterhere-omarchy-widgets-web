@@ -1,1 +1,5 @@
-{ "title": "Start", "order": 1, "pages": ["what-it-is", "install", "first-widget"] }
+{
+  "title": "Start",
+  "order": 1,
+  "pages": ["what-it-is", "how-it-works", "install", "browse-and-install", "first-widget"]
+}

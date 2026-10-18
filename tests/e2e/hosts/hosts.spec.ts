@@ -64,11 +64,15 @@ test('every header and footer link on the site is absolute and on the right host
   expect(await hrefs('Main')).toEqual([
     `${SITE}/widgets/`,
     `${DOCS}/`,
-    `${DOCS}/`,
+    `${DOCS}/next/create/`,
+    `${DOCS}/next/ai/`,
     `${SITE}/contribute/`
   ]);
   expect(await hrefs('Footer')).toContain(`${SITE}/security/`);
-  await expect(page.getByRole('link', { name: 'Install' })).toHaveAttribute('href', `${DOCS}/`);
+  await expect(page.getByRole('link', { name: 'Install' })).toHaveAttribute(
+    'href',
+    `${DOCS}/next/start/install/`
+  );
   await expect(
     page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Widgets' })
   ).toHaveAttribute('href', `${SITE}/widgets/`);

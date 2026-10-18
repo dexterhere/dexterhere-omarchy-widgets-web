@@ -36,7 +36,11 @@ cargo run -p ow  -- --config-dir "$D" status
 cargo run -p ow  -- --config-dir "$D" vault init
 ```
 
+Expected: the build and tests finish with no failures, the daemon prints `owd <version> listening` on standard error, and `ow status` prints one line of JSON such as `{"v":0,"id":1,"ok":true,"daemonVersion":"...","protocol":0}`. `vault init` prompts twice for a passphrase of at least 12 bytes. If `ow status` says `daemon not reachable`, see [Troubleshooting](/docs/next/use/troubleshooting/).
+
 `--config-dir` puts every path (config, data, state and the socket) under that one directory. See [Configuration](/docs/next/reference/configuration/) for the layout.
+
+Next: [Set up a widget](/docs/next/use/set-up-a-widget/) shows grants and the vault in use.
 
 When you are done, stop the daemon (`kill %1`, or Ctrl-C if it runs in the foreground) and delete the directory. To remove a vault explicitly, use `ow vault wipe --yes`.
 

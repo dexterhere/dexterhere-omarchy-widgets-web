@@ -33,11 +33,12 @@ async function withTheme(page: Page, id: string) {
 // The first-visit tip (fixed, top right) would cover the Search and Docs menu buttons below the header.
 test.beforeEach(({ page }) => page.addInitScript(() => localStorage.setItem('ow-theme-hint', '1')));
 
-test('/docs/ lands on the start page of the latest version', async ({ page, request }) => {
-  const html = await (await request.get('/docs/')).text();
-  expect(html).toContain(`<meta http-equiv="refresh" content="0;url=${START}"`);
-  expect(html).toMatch(/<a href="[^"]*what-it-is\/">start page of the docs/);
+test('/docs/ is a hub with a card per section that links into the docs', async ({ page }) => {
   await page.goto('/docs/');
+  await expect(page.getByRole('heading', { level: 1, name: 'Documentation' })).toBeVisible();
+  for (const t of ['Start', 'Use', 'Create', 'Publish', 'Reference'])
+    await expect(page.getByRole('heading', { level: 2, name: t, exact: true })).toBeVisible();
+  await page.getByRole('link', { name: 'What it is' }).click();
   await page.waitForURL('**' + START);
   await expect(page.getByRole('heading', { level: 1, name: 'What it is' })).toBeVisible();
 });
@@ -136,10 +137,10 @@ test('edit link points at the file in the repo, prev/next work', async ({ page }
     'https://github.com/dexterhere/omarchy-widgets-web/edit/develop/docs/content/next/start/install.md'
   );
   await page
-    .getByRole('link', { name: /Your first widget/ })
+    .getByRole('link', { name: /Browse and install/ })
     .last()
     .click();
-  await page.waitForURL('**/start/first-widget/');
+  await page.waitForURL('**/start/browse-and-install/');
 });
 
 test('search: loads lazily, finds a term, scopes to the version, Esc closes', async ({ page }) => {
@@ -298,7 +299,10 @@ test.describe('360px', () => {
   test('menu closes after choosing a page', async ({ page }) => {
     await page.goto(START);
     await page.getByRole('button', { name: 'Docs menu' }).click();
-    await page.locator('nav[aria-label="Docs"]').getByRole('link', { name: 'Install' }).click();
+    await page
+      .locator('nav[aria-label="Docs"]')
+      .getByRole('link', { name: 'Install', exact: true })
+      .click();
     await page.waitForURL('**/start/install/');
     await expect(page.locator('nav[aria-label="Docs"]')).toBeHidden();
   });

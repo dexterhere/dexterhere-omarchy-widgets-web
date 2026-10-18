@@ -40,7 +40,7 @@ A grant says that one widget may read some fields of one or more topics. Everyth
 - Reads are rate limited per widget and topic.
 - Every decision is written to the audit log, without any data values.
 
-Today you edit `grants.toml` by hand and send the daemon a reload signal. See [Configuration](/docs/next/reference/configuration/) for the file and [Data and providers](/docs/next/create/data-and-providers/) for the details.
+Today you edit `grants.toml` by hand and send the daemon a reload signal. A walk-through is in [Set up a widget](/docs/next/use/set-up-a-widget/). See [Configuration](/docs/next/reference/configuration/) for the file and [Data and providers](/docs/next/create/data-and-providers/) for the details.
 
 <Callout type="planned">
 
