@@ -40,7 +40,7 @@
 
 <!-- Not indexed by the search: an error page is not content. -->
 <section class="error" data-pagefind-ignore="all">
-  <div class="container">
+  <div class="site-frame">
     <h1 class="num">
       <PixelNumber value={status} />
       <span class="sr-only">{heading}</span>

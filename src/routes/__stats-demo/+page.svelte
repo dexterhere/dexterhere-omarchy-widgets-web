@@ -9,7 +9,7 @@
   <meta name="robots" content="noindex" />
 </svelte:head>
 
-<div class="container stack page" data-pagefind-ignore>
+<div class="site-frame stack page" data-pagefind-ignore>
   <h1>Stats demo</h1>
   <StatsRow
     id="io.github.dexterhere.clock"

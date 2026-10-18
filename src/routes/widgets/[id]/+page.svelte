@@ -77,7 +77,7 @@
   <meta name="description" content={w.summary} />
 </svelte:head>
 
-<div class="container wide page">
+<div class="site-frame page">
   <header class="head">
     <h1>{w.name}</h1>
     <p class="text-2">{w.summary}</p>

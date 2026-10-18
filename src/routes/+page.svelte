@@ -16,6 +16,22 @@
   let host: HTMLElement;
   onMount(() => (stage.host = host));
 
+  // The emulator's toolbar (its first child; Keys, Reset, Open full view) stays under the header
+  // while the stage is in view. `data-stuck` only styles it; the stickiness itself is CSS below.
+  // Observes the toolbar's own position (threshold 1 inside a root shrunk by the header height).
+  $effect(() => {
+    if (!stage.api) return;
+    const bar = host.querySelector<HTMLElement>('[data-emulator] > :first-child');
+    if (!bar) return;
+    const io = new IntersectionObserver(
+      ([e]) =>
+        (bar.dataset.stuck = String(e.intersectionRatio < 1 && e.boundingClientRect.top < 60)),
+      { rootMargin: '-53px 0px 0px 0px', threshold: [1] }
+    );
+    io.observe(bar);
+    return () => io.disconnect();
+  });
+
   // Four widgets on an empty workspace: the wallpaper shows and the widgets are the point.
   const start: InitialWidget[] = [
     { id: 'github', anchor: 'tl', ox: 48, oy: 72 },
@@ -54,7 +70,7 @@
   />
 </svelte:head>
 
-<div class="container wide home">
+<div class="site-frame home">
   <section class="hero" aria-labelledby="hero-h">
     <h1 id="hero-h">Desktop widgets that follow your theme.</h1>
     <div class="cols">
@@ -132,9 +148,6 @@
 </div>
 
 <style>
-  .home {
-    --container-wide: 1600px;
-  }
   .hero {
     display: flex;
     flex-direction: column;
@@ -178,6 +191,20 @@
     flex-direction: column;
     gap: 16px;
     padding-bottom: 64px;
+  }
+  /* Sticky stage toolbar: opaque, directly under the header, only while the stage is on screen
+     (its containing block is the emulator section). The full view is a fixed overlay: not sticky. */
+  .stage :global([data-emulator]:not(.full) > :first-child) {
+    position: sticky;
+    top: var(--header-hs);
+    z-index: 5;
+    padding-block: 4px 8px; /* paint a little around the buttons; margins give the space back */
+    margin-block: -4px -8px;
+    background: var(--bg);
+    border-bottom: 1px solid transparent;
+  }
+  .stage :global([data-emulator]:not(.full) > :first-child[data-stuck='true']) {
+    border-bottom-color: var(--border);
   }
   .more {
     max-width: none;

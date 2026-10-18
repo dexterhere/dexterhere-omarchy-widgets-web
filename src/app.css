@@ -3,11 +3,14 @@
 :root {
   --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SFMono-Regular', Menlo, monospace;
   --font-sans: 'Geist Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --container: 904px;
-  /* Inner width of the header and footer frame; .container.wide uses it too, so they align. */
-  --frame-max: 1400px;
-  --container-wide: var(--frame-max);
+  /* THE page frame: header, every page's content and the footer use `.site-frame`, nothing else sets
+     a page width. Outer width including the gutters; the inner width is 1400px at wide screens. */
+  --frame-max: 1480px;
   --gutter: clamp(16px, 3vw, 40px);
+  /* Sticky header: 64px at the top of the page, 52px once scrolled (see Header.svelte). */
+  --header-h: 64px;
+  --header-hs: 52px;
+  --ctl: 36px;
   --fs-1: 13px;
   --fs-2: 14px;
   --fs-3: 16px;
@@ -25,6 +28,11 @@
 html {
   -webkit-text-size-adjust: 100%;
   background: var(--bg);
+  /* Anchors, the skip link target and keyboard focus never end up under the sticky header. */
+  scroll-padding-top: calc(var(--header-hs) + 16px);
+}
+:target {
+  scroll-margin-top: 8px;
 }
 
 body {
@@ -149,15 +157,12 @@ pre code {
   border: 0;
 }
 
-/* Layout */
-.container {
+/* Layout: one frame. Text blocks limit their own measure (p, .prose); the frame never narrows. */
+.site-frame {
   width: 100%;
-  max-width: var(--container);
+  max-width: var(--frame-max);
   margin-inline: auto;
   padding-inline: var(--gutter);
-}
-.container.wide {
-  max-width: var(--container-wide);
 }
 .section {
   padding-block: 48px;
@@ -185,8 +190,9 @@ hr {
   justify-content: center;
   white-space: nowrap;
   gap: 8px;
-  min-height: 40px;
+  min-height: var(--ctl);
   padding: 0 16px;
+  transition: transform 90ms ease-out;
   font: 700 var(--fs-2) / 20px var(--font-mono);
   text-decoration: none;
   cursor: pointer;
@@ -206,13 +212,16 @@ hr {
 .btn-primary:hover {
   filter: brightness(1.08);
 }
+.btn:active,
+.btn-primary:active {
+  transform: translateY(1px);
+}
 .btn.icon {
   padding: 0;
-  width: 40px;
+  width: var(--ctl);
 }
 .btn.small,
 .btn-primary.small {
-  min-height: 32px;
   padding: 0 12px;
 }
 
@@ -262,6 +271,17 @@ hr {
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+/* Theme change: colours ease for a moment (class set by themes/store.svelte.ts, removed after). */
+html.theme-fade,
+html.theme-fade *,
+html.theme-fade *::before,
+html.theme-fade *::after {
+  transition:
+    background-color 160ms ease-out,
+    border-color 160ms ease-out,
+    color 160ms ease-out !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

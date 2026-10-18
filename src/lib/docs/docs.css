@@ -1,10 +1,6 @@
 /* Docs-only global styles: markdown output (article.docs) and shiki's CSS-variable theme.
    Colours are theme tokens or mixes of them, so every one of the 22 themes restyles code. */
 
-.docs-wide {
-  max-width: var(--container-wide);
-}
-
 /* shiki "css-variables" theme: build-time classes are inline var() references to these.
    Brand mixes are capped at 35% so every theme keeps 4.5:1 on --bg-deep (unit test). */
 :root {
@@ -29,7 +25,6 @@ article.docs > * + * {
 }
 article.docs :is(h2, h3, h4) {
   margin-top: 2em;
-  scroll-margin-top: 16px;
 }
 article.docs :is(h2, h3, h4) + * {
   margin-top: 0.5em;

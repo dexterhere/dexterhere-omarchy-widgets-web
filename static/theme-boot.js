@@ -37,4 +37,28 @@
     }
     document.documentElement.setAttribute('data-theme', t);
   } catch (e) {}
+  try {
+    var pal = {"tokyo-night":["#1a1b26","#1f2230","#c0caf5","#9ece6a"],"white":["#ffffff","#ffffff","#000000","#6e6e6e"],"catppuccin":["#1e1e2e","#282839","#cdd6f4","#89b4fa"],"gruvbox":["#282828","#32302f","#d4be98","#7daea3"],"matte-black":["#121212","#181818","#eaeaea","#e68e0d"],"rose-pine":["#faf4ed","#fffaf3","#544f73","#4b7e89"],"catppuccin-latte":["#eff1f5","#f8f9fb","#4c4f69","#1e66f5"],"ethereal":["#060b1e","#0c122c","#ffcead","#7d82d9"],"everforest":["#2d353b","#303a40","#d3c6aa","#7fbbb3"],"flexoki-light":["#fffcf0","#f9f6ea","#100f0f","#205ea6"],"hackerman":["#0b0c16","#10121f","#ddf7ff","#82fb9c"],"kanagawa":["#1f1f28","#202838","#dcd7ba","#dcd7ba"],"last-horizon":["#0c0b0c","#0c0b0c","#fafcfb","#b59790"],"lumon":["#16242d","#182836","#f2fcff","#8bc9eb"],"lupine":["#fafafa","#ffffff","#000000","#3264eb"],"miasma":["#222222","#272727","#c2c2b0","#78824b"],"nord":["#2e3440","#343b49","#d8dee9","#81a1c1"],"osaka-jade":["#111c18","#1a2a22","#f7e8b2","#509475"],"retro-82":["#05182e","#081e37","#f6dcac","#faa968"],"ristretto":["#2c2525","#342a28","#e6d9db","#f38d70"],"solitude":["#101315","#101315","#cacccc","#798186"],"vantablack":["#000000","#0d0d0d","#ffffff","#8d8d8d"]};
+    // Tab icon and mobile browser chrome follow the theme (the same builder as src/lib/themes/favicon.ts).
+    window.__owIcon = function (id) {
+      var c = pal[id];
+      if (!c) return;
+      var at = [[0, 0], [6, 0], [0, 6], [6, 6]];
+      var svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 11 11'>";
+      for (var i = 0; i < 4; i++) {
+        svg += "<rect x='" + at[i][0] + "' y='" + at[i][1] + "' width='5' height='5' fill='" + c[i] + "' stroke='" + c[2] + "' stroke-opacity='.35' stroke-width='.5'/>";
+      }
+      svg += '</svg>';
+      var old = document.querySelector('link[rel="icon"]');
+      var link = document.createElement('link');
+      link.rel = 'icon';
+      link.type = 'image/svg+xml';
+      link.href = 'data:image/svg+xml,' + encodeURIComponent(svg);
+      if (old) old.replaceWith(link);
+      else document.head.appendChild(link);
+      var m = document.querySelector('meta[name="theme-color"]');
+      if (m) m.setAttribute('content', c[0]);
+    };
+    window.__owIcon(document.documentElement.getAttribute('data-theme'));
+  } catch (e) {}
 })();

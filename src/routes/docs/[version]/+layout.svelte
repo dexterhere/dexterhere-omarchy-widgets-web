@@ -16,7 +16,7 @@
 </script>
 
 <div class="bar">
-  <div class="container docs-wide row">
+  <div class="site-frame row">
     <button
       class="btn small menu"
       type="button"
@@ -36,7 +36,7 @@
   </div>
 </div>
 
-<div class="container docs-wide shell">
+<div class="site-frame shell">
   <div
     id="docs-side"
     class="side"
@@ -106,9 +106,9 @@
     .side {
       display: block;
       position: sticky;
-      top: 16px;
+      top: calc(var(--header-hs) + 16px);
       align-self: start;
-      max-height: calc(100dvh - 32px);
+      max-height: calc(100dvh - var(--header-hs) - 32px);
       overflow-y: auto;
     }
   }

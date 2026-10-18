@@ -25,7 +25,7 @@
   <title>Publish a widget - Omarchy Widgets</title>
 </svelte:head>
 
-<div class="container stack page">
+<div class="site-frame stack page">
   <h1>Publish a widget</h1>
   <p class="prose text-2">
     This page takes you from an empty folder to a listed widget. Listing a widget does not install
