@@ -34,7 +34,7 @@
   // Same pattern as Header.svelte: the links are data built by the site helpers (path or host mode).
   const actions = [
     { href: sitePath('/'), label: 'Go to the home page', primary: true },
-    { href: sitePath('/widgets'), label: 'Browse widgets', primary: false }
+    { href: sitePath('/widgets/'), label: 'Browse widgets', primary: false }
   ];
 </script>
 

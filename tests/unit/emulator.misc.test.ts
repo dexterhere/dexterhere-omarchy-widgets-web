@@ -111,3 +111,42 @@ describe('apps and terminal', () => {
     expect((runCommand('rm -rf /') as string[])[0]).toContain('not found');
   });
 });
+
+describe('caps and expiring modifiers (second security review)', () => {
+  it('caps windows at 24, says so, and ignores auto-repeat of an opener chord', async () => {
+    const { MAX_WINDOWS } = await import('../../src/lib/emulator/state.svelte');
+    const e = new EmulatorState();
+    const key = {
+      key: 'Enter',
+      code: 'Enter',
+      metaKey: true,
+      ctrlKey: false,
+      altKey: false,
+      shiftKey: false
+    };
+    const before = Object.keys(e.windows).length;
+    e.keydown({ ...key, repeat: false });
+    for (let i = 0; i < 200; i++) e.keydown({ ...key, repeat: true }); // a held key
+    expect(Object.keys(e.windows).length).toBe(before + 1);
+    for (let i = 0; i < 100; i++) e.keydown(key);
+    expect(Object.keys(e.windows).length).toBe(MAX_WINDOWS);
+    expect(e.live).toContain('Window limit reached');
+  });
+  it('latched modifiers are cleared by release, reset and the timeout', async () => {
+    const { vi } = await import('vitest');
+    const { STICKY_MS } = await import('../../src/lib/emulator/state.svelte');
+    vi.useFakeTimers();
+    const e = new EmulatorState();
+    e.toggleMod('super');
+    expect(e.sticky).toEqual(['super']);
+    vi.advanceTimersByTime(STICKY_MS + 1);
+    expect(e.sticky).toEqual([]);
+    e.toggleMod('super');
+    e.release();
+    expect(e.sticky).toEqual([]);
+    e.toggleMod('ctrl');
+    e.reset();
+    expect(e.sticky).toEqual([]);
+    vi.useRealTimers();
+  });
+});

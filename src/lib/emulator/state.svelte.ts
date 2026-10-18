@@ -1,7 +1,15 @@
 // Emulator state: workspaces, windows, panels, bar, keys. One instance per emulator. The geometry
 // is pure (tiling.ts) and the chords are pure (keys.ts); this class only wires them to state.
 import type { WinKind } from './apps';
-import { BINDING_DEFS, Registry, toggleSticky, type Binding, type KeyLike, type Mod } from './keys';
+import {
+  BINDING_DEFS,
+  Registry,
+  chordFromEvent,
+  toggleSticky,
+  type Binding,
+  type KeyLike,
+  type Mod
+} from './keys';
 import {
   computeRects,
   emptyLayout,
@@ -21,6 +29,12 @@ import {
 } from './tiling';
 
 export const WS_COUNT = 4;
+/** Hard cap on open windows (a held Super+Return must not grow the DOM without bound). */
+export const MAX_WINDOWS = 24;
+/** Chords that open a window: auto-repeat of a held key is ignored for these. */
+const OPENERS = new Set(['terminal', 'files']);
+/** How long a latched virtual modifier waits for its key. */
+export const STICKY_MS = 10_000;
 export type PanelId =
   'audio' | 'network' | 'bluetooth' | 'display' | 'power' | 'calendar' | 'tray' | 'widgets';
 export type ModalId = 'menu' | 'apps' | 'keys';
@@ -162,10 +176,15 @@ export class EmulatorState {
     }
     this.peek = false;
     this.peekHeld = false;
+    this.release();
     this.resetHook();
   }
 
-  private add(kind: WinKind, ws: number, quiet = false): string {
+  private add(kind: WinKind, ws: number, quiet = false): string | null {
+    if (Object.keys(this.windows).length >= MAX_WINDOWS) {
+      this.announce(`Window limit reached: at most ${MAX_WINDOWS} windows. Close one first.`);
+      return null;
+    }
     const id = `w${++this.seq}`;
     this.windows[id] = { id, kind, title: TITLES[kind] };
     const l = this.layouts[ws];
@@ -335,13 +354,45 @@ export class EmulatorState {
   // Keys --------------------------------------------------------------------------------------
   toggleMod(m: Mod) {
     this.sticky = toggleSticky(this.sticky, m);
+    this.armSticky();
+  }
+  private stickyTimer: ReturnType<typeof setTimeout> | undefined;
+  /** Latched modifiers expire: after STICKY_MS, on Esc, Reset, release and focus loss. */
+  private armSticky() {
+    clearTimeout(this.stickyTimer);
+    if (this.sticky.length) this.stickyTimer = setTimeout(() => this.clearSticky(), STICKY_MS);
+  }
+  private clearStickyQuiet() {
+    clearTimeout(this.stickyTimer);
+    this.sticky = [];
+  }
+  clearSticky() {
+    clearTimeout(this.stickyTimer);
+    if (!this.sticky.length) return;
+    this.sticky = [];
+    this.announce('Latched modifiers released');
+  }
+  /** Leave keyboard capture (and drop latched modifiers). */
+  release(msg = 'Keyboard released') {
+    const was = this.captured;
+    this.captured = false;
+    if (was) this.announce(msg);
+    this.clearSticky();
+  }
+  dispose() {
+    clearTimeout(this.stickyTimer);
   }
   /** Feed a key event (real or from the virtual strip). Returns the binding it ran, if any. */
   keydown(e: KeyLike): Binding | undefined {
     const sticky = this.sticky;
+    if (e.repeat) {
+      const c = chordFromEvent(e, sticky);
+      const held = c && this.registry.find(c);
+      if (held && OPENERS.has(held.id)) return held; // swallowed, but not run again
+    }
     const b = this.registry.dispatch(e, sticky);
     // Sticky modifiers last for one keystroke; a bare modifier press does not use them up.
-    if (!['Meta', 'Control', 'Alt', 'Shift'].includes(e.key)) this.sticky = [];
+    if (!['Meta', 'Control', 'Alt', 'Shift'].includes(e.key)) this.clearStickyQuiet();
     return b;
   }
   /** Virtual key strip: press a key with whatever modifiers are latched. */
@@ -358,7 +409,7 @@ export class EmulatorState {
   /** Run a binding by id (legend clicks). */
   run(id: string) {
     this.registry.get(id)?.handler();
-    this.sticky = [];
+    this.clearStickyQuiet();
   }
   /** P3 hook: add a binding (throws when the chord is taken). Returns an unregister function. */
   addBinding(b: Binding) {

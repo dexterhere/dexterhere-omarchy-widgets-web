@@ -243,7 +243,7 @@ test('peek lifts the widgets above the windows (toggle on the strip)', async ({ 
 
 test('a held physical Super+Alt+P peeks and releasing lets go', async ({ page }) => {
   await ready(page);
-  await page.locator('[data-emulator] .desk').click({ position: { x: 300, y: 12 } });
+  await page.getByRole('button', { name: 'Capture keyboard' }).click();
   await expect(emu(page)).toHaveAttribute('data-captured', 'true');
   await page.keyboard.down('Meta');
   await page.keyboard.down('Alt');

@@ -35,18 +35,35 @@
     { id: 'power', icon: () => 'power', label: () => `Power, battery ${emu.battery} percent` }
   ];
 
-  function wheel(node: HTMLElement, cb: (dir: number) => void) {
+  // Wheel adjusts volume and brightness. The page must keep scrolling everywhere else: the listener
+  // exists only on the two controls that use it, ignores zoom (Ctrl) and sideways wheels, and calls
+  // preventDefault only when the value really changed (at 0 or 100 the wheel scrolls the page).
+  function wheel(node: HTMLElement, cb: ((dir: number) => boolean) | undefined) {
+    if (!cb) return;
     const on = (e: WheelEvent) => {
-      e.preventDefault();
-      cb(e.deltaY < 0 ? 1 : -1);
+      if (e.ctrlKey || Math.abs(e.deltaX) > Math.abs(e.deltaY) || e.deltaY === 0) return;
+      if (cb(e.deltaY < 0 ? 1 : -1)) e.preventDefault();
     };
     node.addEventListener('wheel', on, { passive: false });
     return { destroy: () => node.removeEventListener('wheel', on) };
   }
   const clamp = (n: number) => Math.max(0, Math.min(100, n));
-  const onWheel = (id: PanelId) => (dir: number) => {
-    if (id === 'audio') emu.volume = clamp(emu.volume + 5 * dir);
-    if (id === 'display') emu.brightness = clamp(emu.brightness + 5 * dir);
+  const onWheel = (id: PanelId) => {
+    if (id === 'audio')
+      return (dir: number) => {
+        const v = clamp(emu.volume + 5 * dir);
+        const changed = v !== emu.volume;
+        emu.volume = v;
+        return changed;
+      };
+    if (id === 'display')
+      return (dir: number) => {
+        const v = clamp(emu.brightness + 5 * dir);
+        const changed = v !== emu.brightness;
+        emu.brightness = v;
+        return changed;
+      };
+    return undefined;
   };
 
   function emptyDouble(e: MouseEvent) {

@@ -36,6 +36,10 @@ export function copyFor(status: number): ErrorCopy {
 
 /** A path to show back to the reader: printable only, short. Never HTML; the caller escapes it. */
 export function safePathForDisplay(pathname: string): string {
-  const clean = pathname.replace(/[\u0000-\u001f\u007f-\u009f]/g, '?');
+  // controls, zero-width, bidi embeddings/overrides/isolates, BOM, line/paragraph separators
+  const clean = pathname.replace(
+    /[\u0000-\u001f\u007f-\u009f\u00ad\u061c\u180e\u200b-\u200f\u2028-\u202e\u2060-\u206f\ufeff]/g,
+    '?'
+  );
   return clean.length > 200 ? `${clean.slice(0, 199)}…` : clean;
 }

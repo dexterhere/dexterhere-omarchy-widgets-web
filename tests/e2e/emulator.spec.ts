@@ -35,9 +35,7 @@ test('the bar has every item', async ({ page }) => {
   ])
     await expect(bar.getByRole('button', { name })).toBeVisible();
   await expect(page.getByText('Emulated desktop, sample data.')).toBeVisible();
-  await expect(
-    page.getByText('Click the desktop to capture the keyboard. Esc releases it.')
-  ).toBeVisible();
+  await expect(page.getByText('Keyboard not captured: browser shortcuts work.')).toBeVisible();
 });
 
 test('workspaces: click and Super+2 on the virtual strip', async ({ page }) => {
@@ -210,9 +208,7 @@ test('Expand opens the full view; Esc closes it and restores focus', async ({ pa
   const full = page.getByRole('dialog', { name: 'Emulated Omarchy desktop, full view' });
   await expect(full).toBeVisible();
   await expect(full).toHaveAttribute('aria-modal', 'true');
-  await expect
-    .poll(() => page.evaluate(() => document.documentElement.style.overflow))
-    .toBe('hidden');
+  await expect(page.locator('html')).toHaveClass(/ow-emu-full/);
   const box = (await emu(page).boundingBox())!;
   await expect
     .poll(async () => (await emu(page).boundingBox())!.width)
@@ -226,7 +222,7 @@ test('Expand opens the full view; Esc closes it and restores focus', async ({ pa
   await page.keyboard.press('Escape');
   await expect(page.getByRole('button', { name: 'Open full view' })).toBeFocused();
   await expect(emu(page)).not.toHaveClass(/full/);
-  await expect.poll(() => page.evaluate(() => document.documentElement.style.overflow)).toBe('');
+  await expect(page.locator('html')).not.toHaveClass(/ow-emu-full/);
 });
 
 test('reduced motion: the workspace switch is instant', async ({ page }) => {
@@ -252,14 +248,17 @@ test('motion: the switch slides (a transform is applied during the animation)', 
   await expect(page.locator('[data-sliding]')).toHaveAttribute('data-sliding', 'false');
 });
 
-test('the keyboard is not captured until the desktop is clicked; Esc releases it', async ({
-  page
-}) => {
+test('the keyboard is captured only on an explicit action; Esc releases it', async ({ page }) => {
   await ready(page);
   await page.locator('h1').click();
   await page.keyboard.press('Meta+2');
   await expect(wsBtn(page, 1)).toHaveAttribute('aria-current', 'true');
+  // clicking the desktop does NOT capture
   await desk(page).click({ position: { x: 300, y: 12 } });
+  await expect(emu(page)).toHaveAttribute('data-captured', 'false');
+  await page.keyboard.press('Meta+2');
+  await expect(wsBtn(page, 1)).toHaveAttribute('aria-current', 'true');
+  await page.getByRole('button', { name: 'Capture keyboard' }).click();
   await expect(emu(page)).toHaveAttribute('data-captured', 'true');
   await page.keyboard.press('Meta+2');
   await expect(wsBtn(page, 2)).toHaveAttribute('aria-current', 'true');

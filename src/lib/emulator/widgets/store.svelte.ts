@@ -8,6 +8,9 @@ import type { EmulatorApi, InitialWidget } from '../api';
 import * as M from './model';
 
 export type TabId = 'installed' | 'discover' | 'layouts' | 'create';
+/** Hard caps so a long session cannot grow without bound. */
+export const MAX_INSTANCES = 50;
+export const MAX_LAYOUTS = 20;
 export const SNAPSHOT_NOTE = 'Layout snapshot saved (sample)';
 
 /** Name for lists and announcements: the registry name without the "(concept)" suffix. */
@@ -237,6 +240,8 @@ export class WidgetLayerState {
     this.place(reg, `Another ${labelOf(reg)} added to the desktop`);
   }
   private place(reg: string, msg: string) {
+    if (this.st.items.length + this.st.tray.length >= MAX_INSTANCES)
+      return this.say(`Widget limit reached: at most ${MAX_INSTANCES} widgets in this emulator.`);
     const inst = M.makeInst({ id: this.newId(), reg }, this.st.items, this.bounds);
     this.st = M.addInst(this.st, inst, this.bounds);
     this.selected = inst.id;
@@ -331,6 +336,10 @@ export class WidgetLayerState {
 
   /* ---------------------------------- layouts ------------------------------------- */
   saveLayout(name: string) {
+    if (this.layouts.length >= MAX_LAYOUTS) {
+      this.say(`Layout limit reached: at most ${MAX_LAYOUTS} saved layouts. Delete one first.`);
+      return '';
+    }
     const n = name.trim().slice(0, 40) || `Layout ${this.layouts.length + 1}`;
     this.layouts = [
       ...this.layouts,

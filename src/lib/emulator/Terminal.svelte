@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import { FASTFETCH, runCommand } from './terminal';
+  import { FASTFETCH, MAX_INPUT, runCommand } from './terminal';
 
   let { label = 'Terminal' }: { label?: string } = $props();
 
@@ -10,8 +10,9 @@
 
   async function submit(e: SubmitEvent) {
     e.preventDefault();
-    const out = runCommand(value);
-    const echo = `user@omarchy:~$ ${value}`;
+    const typed = value.slice(0, MAX_INPUT); // a long paste is cut, also in the echo
+    const out = runCommand(typed);
+    const echo = `user@omarchy:~$ ${typed}`;
     value = '';
     if (out === 'clear') lines = [];
     else lines = [...lines, echo, ...out].slice(-200);
@@ -29,6 +30,7 @@
     <input
       type="text"
       bind:value
+      maxlength={MAX_INPUT}
       aria-label="{label} command (emulated). Try help"
       autocomplete="off"
       autocapitalize="off"

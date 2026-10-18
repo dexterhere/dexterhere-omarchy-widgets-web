@@ -8,6 +8,8 @@ import { defineConfig, devices } from '@playwright/test';
 // the hosts server uses PW_HOSTS_PORT, default PW_PORT + 1.
 const PORT = Number(process.env.PW_PORT ?? 4173);
 const HOSTS_PORT = Number(process.env.PW_HOSTS_PORT ?? PORT + 1);
+const FALLBACK_PORT = PORT + 4; // build/ behind scripts/serve-fallback.ts
+const FALLBACK_HOSTS_PORT = PORT + 5; // build-hosts/ behind the same server
 // Remote-stats project: a build with PUBLIC_STATS_URL pointing at the local dev stats backend
 // (services/stats, in-memory), served from its own build dir so the other builds are untouched.
 const STATS_SITE_PORT = PORT + 2;
@@ -24,8 +26,20 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      testIgnore: ['**/hosts/**', '**/stats-remote/**'],
+      testIgnore: ['**/hosts/**', '**/errorpages/**', '**/stats-remote/**'],
       use: { ...devices['Desktop Chrome'] }
+    },
+    // The static error pages behind a try_files-style fallback server (scripts/serve-fallback.ts),
+    // not `vite preview`: path mode (build/) and host mode (build-hosts/, docs.localhost).
+    {
+      name: 'errorpages',
+      testMatch: '**/errorpages/**/*.spec.ts',
+      use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${FALLBACK_PORT}` }
+    },
+    {
+      name: 'errorpages-hosts',
+      testMatch: '**/errorpages/**/*.spec.ts',
+      use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${FALLBACK_HOSTS_PORT}` }
     },
     {
       name: 'hosts',
@@ -40,6 +54,17 @@ export default defineConfig({
     }
   ],
   webServer: [
+    {
+      command: `bun scripts/serve-fallback.ts build ${FALLBACK_PORT}`,
+      port: FALLBACK_PORT,
+      reuseExistingServer: !process.env.CI
+    },
+    {
+      command: `bun scripts/serve-fallback.ts build-hosts ${FALLBACK_HOSTS_PORT}`,
+      port: FALLBACK_HOSTS_PORT,
+      timeout: 300_000,
+      reuseExistingServer: !process.env.CI
+    },
     {
       command: `bun run preview -- --port ${PORT}`,
       port: PORT,

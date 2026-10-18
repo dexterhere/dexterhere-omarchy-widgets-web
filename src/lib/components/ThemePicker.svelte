@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { shortcuts } from '../shortcuts.svelte';
   import { onMount, tick, untrack } from 'svelte';
   import ThemePreview from './ThemePreview.svelte';
   import { theme } from '../themes/store.svelte';
@@ -105,7 +106,7 @@
   function onkeydown(e: KeyboardEvent) {
     if (e.ctrlKey || e.metaKey || e.altKey || typing(e.target)) return;
     if (!theme.open) {
-      if (e.key === 't' || e.key === 'T') {
+      if ((e.key === 't' || e.key === 'T') && shortcuts.on) {
         e.preventDefault();
         theme.openPicker();
       }
