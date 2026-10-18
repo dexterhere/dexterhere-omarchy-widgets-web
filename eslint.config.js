@@ -15,6 +15,7 @@ export default ts.config(
     files: [
       'src/lib/components/Header.svelte',
       'src/lib/components/Footer.svelte',
+      'src/lib/components/ErrorPage.svelte',
       'src/lib/docs/{PrevNext,SearchDialog,Sidebar,VersionBanner,VersionSwitcher,WidgetCatalog}.svelte',
       'src/routes/+page.svelte',
       'src/routes/contribute/+page.svelte',
