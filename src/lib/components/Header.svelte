@@ -68,7 +68,6 @@
     { href: sitePath('/widgets/'), label: 'Widgets' },
     { href: docsUrl('/docs/'), label: 'Docs' },
     { href: doc('create/'), label: 'Create' },
-    { href: doc('ai/'), label: 'Build with AI' },
     { href: sitePath('/contribute/'), label: 'Contribute' }
   ]);
   const install = $derived(doc('start/install/'));
