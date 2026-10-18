@@ -124,6 +124,20 @@ anything security-relevant (ranking trust, tiers, review status). A site without
 service shows "Like (saved on this device)" and no numbers, and must never show invented ones.
 Raise `createHandler({ powBits })` or add a Cloudflare rate-limiting rule if abuse shows up.
 
+## Run it locally
+
+```sh
+bun run registry      # once, for registry/dist/index.json (the widget ids)
+bun run stats:dev     # http://127.0.0.1:8787, in-memory store (counts reset on restart)
+PUBLIC_STATS_URL=http://localhost:8787 bun run build   # a site build that talks to it
+```
+
+Defaults are for development only: public throwaway secrets, allowed origins
+`http://localhost:4300` and `http://docs.localhost:4300`, ids from the registry build. Override with
+`SECRET`, `ID_SECRET`, `ALLOWED_ORIGINS`, `WIDGET_IDS`, `PORT`, `POW_BITS` (lower it to make token
+requests instant). It listens on 127.0.0.1 only. Without `STATS_DEV=1` (which `stats:dev` sets) it
+refuses to start unless real secrets (32+ characters) and exact origins are given.
+
 ## Deploy (maintainer task)
 
 1. `wrangler d1 create omarchy-widgets-stats`, put the id in `wrangler.toml` (placeholders only in

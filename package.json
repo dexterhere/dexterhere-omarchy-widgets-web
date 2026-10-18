@@ -12,6 +12,7 @@
     "serve:local": "bun scripts/serve-local.ts",
     "emit:host-config": "bun scripts/emit-host-config.ts",
     "registry": "bun scripts/build-registry.ts",
+    "stats:dev": "STATS_DEV=1 bun services/stats/scripts/dev-server.ts",
     "docs:sync": "bun scripts/sync-reference-docs.ts",
     "docs:snapshot": "bun scripts/docs-snapshot.ts",
     "search-index": "bunx pagefind --site build",
