@@ -1,16 +1,16 @@
 <script lang="ts">
   import type { Component } from 'svelte';
   import { onMount } from 'svelte';
-  import type { EmulatorProps } from './api';
+  import type { WidgetEmulatorProps } from './api';
 
   // Loads the emulator chunk only when this box nears the viewport, so pages that embed it keep
   // their initial JavaScript. The placeholder has the same size as the desktop.
-  let props: EmulatorProps = $props();
+  let props: WidgetEmulatorProps = $props();
   let host: HTMLElement;
-  let Loaded = $state<Component<EmulatorProps> | null>(null);
+  let Loaded = $state<Component<WidgetEmulatorProps> | null>(null);
 
   onMount(() => {
-    const load = () => import('./Emulator.svelte').then((m) => (Loaded = m.default));
+    const load = () => import('./widgets/WidgetEmulator.svelte').then((m) => (Loaded = m.default));
     if (typeof IntersectionObserver === 'undefined') {
       void load();
       return;
@@ -33,7 +33,7 @@
   {#if Loaded}
     <Loaded {...props} />
   {:else}
-    <div class="ph" role="img" aria-label="Emulated desktop, loading">
+    <div class="ph" class:compact={props.compact} role="img" aria-label="Emulated desktop, loading">
       <span>Emulated desktop</span>
     </div>
   {/if}
@@ -55,6 +55,10 @@
     border: 1px solid var(--border-strong);
     color: var(--muted);
     font: 400 12px / 18px var(--font-mono);
+  }
+  .ph.compact {
+    aspect-ratio: 3 / 1;
+    min-height: 320px;
   }
   @media (max-width: 719px) {
     .ph {

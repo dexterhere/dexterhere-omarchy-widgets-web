@@ -37,11 +37,44 @@ export interface EmulatorProps {
    * Layer "Bottom": drawn between the wallpaper and the windows (pointer-events none by default).
    */
   widgetLayer?: Snippet<[EmulatorApi]>;
-  /** Drawn above the windows and panels (edit mode, sheets). */
+  /**
+   * Layer "Top": drawn above the windows and below the bar and panels (peek, edit mode, widgets
+   * on the Top layer). Pointer events are off by default.
+   */
+  liftedLayer?: Snippet<[EmulatorApi]>;
+  /** Drawn above the windows and panels (edit toolbar, inspector). */
   overlayLayer?: Snippet<[EmulatorApi]>;
   /** Replaces the "coming in the next step" placeholder in the Widget Center panel. */
   widgetCenter?: Snippet<[EmulatorApi]>;
   barItems?: ExtraBarItem[];
   menuRows?: ExtraMenuRow[];
   onapi?: (api: EmulatorApi) => void;
+  /** Compact inline size: a wide, short desktop (used on widget detail pages). */
+  compact?: boolean;
+  /** Start on this workspace (1 to 4). Workspace 3 is empty, so widgets show on the wallpaper. */
+  workspace?: number;
+}
+
+/** A widget to place at start: a registry id or a type name, with an optional position. */
+export type InitialWidget =
+  | string
+  | {
+      id: string;
+      /** Model pixels on the 1280 by 720 reference desktop; omitted = first free slot. */
+      x?: number;
+      y?: number;
+      w?: number;
+      h?: number;
+      variant?: string;
+      layer?: 'background' | 'bottom' | 'top';
+    };
+
+/** Props of the widget-enabled emulator (what pages embed through LazyEmulator). */
+export interface WidgetEmulatorProps extends EmulatorProps {
+  /** Widgets on the desktop at start. Omitted = the starter layout. */
+  initialWidgets?: InitialWidget[];
+  /** Open the Widget Center (and edit mode) at start. */
+  openCenter?: boolean;
+  /** Registry id (or instance id) of the widget to select at start. */
+  selectedWidgetId?: string;
 }
