@@ -110,7 +110,7 @@
   $effect(() => {
     if (!stuck && toolsH) fullH = toolsH;
   });
-  onMount(() => watchStuck(sentinel, (s) => (stuck = s), 52));
+  onMount(() => watchStuck(sentinel, (s) => (stuck = s), 56));
 
   const save = (q: string) => (recent = addRecent(q, recent));
   const onpick = (s: Suggestion) => (query.cat = toggleCategory(query.cat, s.value as Category));

@@ -8,8 +8,8 @@
   --frame-max: 1480px;
   --gutter: clamp(16px, 3vw, 40px);
   /* Sticky header: 64px at the top of the page, 52px once scrolled (see Header.svelte). */
-  --header-h: 64px;
-  --header-hs: 52px;
+  --header-h: 56px;
+  --header-hs: 56px;
   --ctl: 36px;
   --fs-1: 13px;
   --fs-2: 14px;

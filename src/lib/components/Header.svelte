@@ -18,7 +18,7 @@
 
   const themeName = $derived(THEMES.find((t) => t.id === theme.current)?.name ?? theme.current);
 
-  // The border and the 64 -> 52 px shrink follow a 24 px sentinel; transitions are in CSS and are
+  // The bottom border follows a 24 px sentinel; transitions are in CSS and are
   // switched on after the first observation so a page restored mid-scroll does not animate.
   onMount(() => {
     const stop = watchStuck(sentinel, (s) => {
@@ -125,8 +125,7 @@
     height: 24px;
     pointer-events: none;
   }
-  /* Reserves the full 64 px in the flow, so shrinking the bar never moves the page. Clicks go
-     through the transparent strip left below the 52 px bar. */
+  /* Same height as the bar, so nothing is transparent and the page never shifts. */
   .site-header {
     position: sticky;
     top: 0;
@@ -142,12 +141,9 @@
     border-bottom: 1px solid transparent;
   }
   .ready .shell {
-    transition:
-      height 180ms ease-out,
-      border-color 180ms ease-out;
+    transition: border-color 180ms ease-out;
   }
   .stuck .shell {
-    height: var(--header-hs);
     border-bottom-color: var(--border);
   }
   .bar {

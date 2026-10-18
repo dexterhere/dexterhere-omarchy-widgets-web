@@ -47,8 +47,8 @@ describe('one page frame', () => {
   });
 
   it('sticky offsets use the header height token', () => {
-    expect(css).toMatch(/--header-hs:\s*52px/);
-    expect(css).toMatch(/--header-h:\s*64px/);
+    expect(css).toMatch(/--header-hs:\s*56px/);
+    expect(css).toMatch(/--header-h:\s*56px/);
     expect(text('src/lib/components/Header.svelte')).toMatch(/top:\s*0/);
     for (const f of [
       'src/routes/docs/[version]/+layout.svelte',
@@ -77,8 +77,8 @@ describe('watchStuck', () => {
       disconnect = disconnect;
     } as unknown as typeof IntersectionObserver;
     const seen: boolean[] = [];
-    const stop = watchStuck({} as Element, (s) => seen.push(s), 52);
-    expect(opts?.rootMargin).toBe('-52px 0px 0px 0px');
+    const stop = watchStuck({} as Element, (s) => seen.push(s), 56);
+    expect(opts?.rootMargin).toBe('-56px 0px 0px 0px');
     cb([{ isIntersecting: false, boundingClientRect: { top: -10 } }]); // scrolled past
     cb([{ isIntersecting: true, boundingClientRect: { top: 80 } }]); // back
     cb([{ isIntersecting: false, boundingClientRect: { top: 900 } }]); // below the fold: not stuck

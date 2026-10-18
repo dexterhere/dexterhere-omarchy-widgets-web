@@ -25,8 +25,8 @@
     if (!bar) return;
     const io = new IntersectionObserver(
       ([e]) =>
-        (bar.dataset.stuck = String(e.intersectionRatio < 1 && e.boundingClientRect.top < 60)),
-      { rootMargin: '-53px 0px 0px 0px', threshold: [1] }
+        (bar.dataset.stuck = String(e.intersectionRatio < 1 && e.boundingClientRect.top < 64)),
+      { rootMargin: '-57px 0px 0px 0px', threshold: [1] }
     );
     io.observe(bar);
     return () => io.disconnect();
