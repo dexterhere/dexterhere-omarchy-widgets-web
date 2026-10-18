@@ -2,6 +2,8 @@
 import type { Snippet } from 'svelte';
 import type { EmulatorState } from './state.svelte';
 import type { Binding } from './keys';
+import type { SpecDoc } from '../builder/spec';
+import type { WidgetType } from '../desktop/layout';
 
 export interface ExtraBarItem {
   id: string;
@@ -53,6 +55,12 @@ export interface EmulatorProps {
   compact?: boolean;
   /** Start on this workspace (1 to 4). Workspace 3 is empty, so widgets show on the wallpaper. */
   workspace?: number;
+  /** Large stage on the home page: fills a tall frame, legend closed. */
+  stage?: boolean;
+  /** False starts with no windows open (the wallpaper and widgets show; Reset keeps it so). */
+  windows?: boolean;
+  /** Show a one-time hint on the Widgets bar item until the first interaction (memory only). */
+  coach?: boolean;
 }
 
 /** A widget to place at start: a registry id or a type name, with an optional position. */
@@ -67,7 +75,21 @@ export type InitialWidget =
       h?: number;
       variant?: string;
       layer?: 'background' | 'bottom' | 'top';
+      /** Corner and offsets (model pixels) instead of x and y: survives a wider desktop. */
+      anchor?: 'tl' | 'tr' | 'bl' | 'br';
+      ox?: number;
+      oy?: number;
     };
+
+/** What a host page can do with the widget layer once the emulator is ready. */
+export interface WidgetsApi {
+  /** Install (a preview, for concepts) a registry widget and place it at the first free slot. */
+  install: (reg: string) => void;
+  /** Place a draft spec widget from the builder. In memory only. Returns false when not ready. */
+  /** Enter or leave edit mode (selects the first widget so it can be dragged). */
+  edit: (on: boolean) => void;
+  placeSpec: (spec: SpecDoc, size: { w: number; h: number; type: WidgetType }) => boolean;
+}
 
 /** Props of the widget-enabled emulator (what pages embed through LazyEmulator). */
 export interface WidgetEmulatorProps extends EmulatorProps {
@@ -77,4 +99,6 @@ export interface WidgetEmulatorProps extends EmulatorProps {
   openCenter?: boolean;
   /** Registry id (or instance id) of the widget to select at start. */
   selectedWidgetId?: string;
+  /** Called once the widget layer is ready (after the desktop has a size). */
+  onwidgets?: (w: WidgetsApi) => void;
 }

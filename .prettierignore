@@ -11,6 +11,7 @@ docs/content/*/reference/protocol.md
 docs/content/*/reference/vault-format.md
 docs/content/*/reference/threat-model.md
 build-hosts
+build-stats
 .svelte-kit-*
 deploy/Caddyfile
 deploy/nginx.conf

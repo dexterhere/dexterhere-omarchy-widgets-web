@@ -2,6 +2,7 @@
 // layout model (`src/lib/desktop/layout.ts`: 8 px grid, size classes, clamp-not-reject, history,
 // tray) and adds what the emulator needs: registry-backed instances, layers, accent roles and
 // corner anchors so a layout survives the desktop changing size.
+import type { SpecDoc } from '../../builder/spec';
 import * as L from '../../desktop/layout';
 import { previewType } from '../../registry/preview';
 
@@ -46,6 +47,8 @@ export interface WInst extends L.Instance {
   reg: string;
   /** True when no dedicated component exists: drawn by the generic sample renderer. */
   sample: boolean;
+  /** A draft spec widget from the home page builder: drawn by SpecWidget, in memory only. */
+  spec?: SpecDoc;
   layer: Layer;
   role: Role;
   /** Corner the offset is measured from. x and y are a cache derived from these. */
@@ -173,11 +176,17 @@ export interface Spec {
   variant?: string;
   layer?: Layer;
   role?: Role;
+  /** Draws through SpecWidget. `type` gives its size classes. */
+  spec?: SpecDoc;
+  type?: L.WidgetType;
 }
+
+/** Registry id used for spec widgets placed from the builder (never a registry entry). */
+export const SPEC_REG = 'spec:custom';
 
 /** Build an instance: explicit anchor, explicit position, or the first free slot. */
 export function makeInst(s: Spec, items: WInst[], b: L.Bounds): WInst {
-  const { type, sample } = kindOf(s.reg);
+  const { type, sample } = s.spec ? { type: s.type ?? 'github', sample: false } : kindOf(s.reg);
   const d = sample ? SAMPLE_SIZE : DEFAULT_SIZE[type];
   const size = L.clampSize(type, s.w ?? d.w, s.h ?? d.h);
   const z = Math.max(0, ...items.map((i) => i.z)) + 1;
@@ -186,6 +195,7 @@ export function makeInst(s: Spec, items: WInst[], b: L.Bounds): WInst {
     reg: s.reg,
     type,
     sample,
+    ...(s.spec ? { spec: s.spec } : {}),
     w: size.w,
     h: size.h,
     z,

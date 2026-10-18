@@ -26,10 +26,20 @@
     menuRows = [],
     onapi,
     compact = false,
-    workspace
+    workspace,
+    stage = false,
+    windows = true,
+    coach = false
   }: EmulatorProps = $props();
 
   const emu = new EmulatorState();
+  // svelte-ignore state_referenced_locally
+  if (!windows) {
+    emu.emptyStart = true;
+    emu.reset();
+  }
+  // svelte-ignore state_referenced_locally
+  emu.coach = coach;
   // svelte-ignore state_referenced_locally
   if (workspace) emu.ws = Math.max(0, Math.min(WS_COUNT - 1, Math.round(workspace) - 1));
   $effect(() => {
@@ -57,7 +67,7 @@
   let full = $state(false);
   let holdH = $state(0);
   // svelte-ignore state_referenced_locally
-  let legendOpen = $state(!compact);
+  let legendOpen = $state(!compact && !stage);
   let panelLeft = $state(4);
 
   const barH = $derived(emu.barVisible ? 28 : 0);
@@ -100,6 +110,20 @@
     const center = id === 'calendar';
     const x = center ? r.left - dr.left + r.width / 2 - w / 2 : r.left - dr.left + r.width - w;
     panelLeft = Math.max(4, Math.min(dr.width - w - 4, Math.round(x)));
+  });
+
+  // The coach hint sits under the Widgets bar item until the first interaction.
+  let coachLeft = $state(8);
+  $effect(() => {
+    if (!emu.coach || !desk) return;
+    const el = desk.querySelector<HTMLElement>('[data-bar="widgets"]');
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const dr = desk.getBoundingClientRect();
+    coachLeft = Math.max(4, Math.round(r.right - dr.left - 232));
+  });
+  $effect(() => {
+    if (emu.panel) emu.coach = false;
   });
 
   // Focus: into a panel or dialog when it opens, back to where it came from when it closes.
@@ -158,6 +182,7 @@
   }
 
   function onKey(e: KeyboardEvent) {
+    emu.coach = false;
     if (e.key === 'Escape') {
       if (emu.closeOverlays()) {
         e.preventDefault();
@@ -209,6 +234,7 @@
   }
 
   function capture() {
+    emu.coach = false;
     if (!interactive || emu.captured) return;
     emu.captured = true;
     emu.announce('Keyboard captured. Escape releases it.');
@@ -253,15 +279,18 @@
 <svelte:window onpointerdown={onWindowPointer} />
 
 <div class="hold" style:min-height={full ? `${holdH}px` : undefined}>
+  <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
   <section
     class="emu"
     class:full
     class:compact
+    class:stage
     bind:this={root}
     role={full ? 'dialog' : 'region'}
     aria-modal={full ? 'true' : undefined}
     aria-label={full ? 'Emulated Omarchy desktop, full view' : 'Emulated Omarchy desktop'}
     data-emulator
+    tabindex={interactive ? undefined : -1}
     data-ready={emu.settled}
     data-captured={emu.captured}
     data-narrow={narrow.current}
@@ -273,6 +302,12 @@
         Emulated desktop, sample data. Hyprland and Omarchy 4 are not running here.
       </p>
       <div class="tools">
+        <button
+          type="button"
+          class="tool"
+          aria-expanded={legendOpen}
+          onclick={() => (legendOpen = !legendOpen)}>Keys</button
+        >
         <button type="button" class="tool" onclick={() => emu.reset()}>Reset</button>
         <button
           type="button"
@@ -282,7 +317,7 @@
           onclick={() => void setFull(!full)}
         >
           <Icon name={full ? 'collapse' : 'expand'} size={12} />
-          {full ? 'Close full view' : 'Expand'}
+          {full ? 'Close full view' : 'Open full view'}
         </button>
       </div>
     </div>
@@ -350,6 +385,11 @@
           {/each}
         </div>
       </div>
+      {#if emu.coach && interactive && !emu.panel}
+        <p class="coach" style:left="{coachLeft}px" data-coach>
+          Click Widgets, or press Super + Alt + W
+        </p>
+      {/if}
       <Panel {emu} left={panelLeft} {api} {widgetCenter} />
       <Menus {emu} rows={menuRows} />
       {#if overlayLayer}
@@ -461,6 +501,25 @@
     max-height: none;
     min-height: 320px;
   }
+  .emu.stage:not(.full) .desk {
+    aspect-ratio: 16 / 10;
+    min-height: 560px;
+    max-height: clamp(560px, 76vh, 880px);
+  }
+  .coach {
+    position: absolute;
+    top: calc(var(--bar-h) + 8px);
+    z-index: 30;
+    margin: 0;
+    max-width: 232px;
+    padding: 6px 10px;
+    text-align: left;
+    font: 700 12px / 18px var(--font-mono);
+    color: var(--brand-ink);
+    background: var(--brand);
+    border: 1px solid var(--bg-deep);
+    pointer-events: none;
+  }
   .emu[data-captured='true'] .desk {
     outline: 2px solid var(--brand);
     outline-offset: 2px;
@@ -555,8 +614,11 @@
     white-space: nowrap;
   }
   @media (max-width: 719px) {
-    .desk {
+    .desk,
+    .emu.stage:not(.full) .desk {
       aspect-ratio: 4 / 3;
+      min-height: 0;
+      max-height: none;
     }
   }
 </style>

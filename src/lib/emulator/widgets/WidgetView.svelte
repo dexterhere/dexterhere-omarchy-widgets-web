@@ -3,6 +3,7 @@
   import Battery from '../../components/widgets/Battery.svelte';
   import Clock from '../../components/widgets/Clock.svelte';
   import GithubActivity from '../../components/widgets/GithubActivity.svelte';
+  import SpecWidget from '../../components/widgets/SpecWidget.svelte';
   import System from '../../components/widgets/System.svelte';
   import WidgetFrame from '../../components/widgets/WidgetFrame.svelte';
   import { ROLE_VAR, type WInst } from './model';
@@ -18,7 +19,9 @@
 
 <div class="role" style:--brand={ROLE_VAR[inst.role]} data-role={inst.role}>
   <svelte:boundary>
-    {#if inst.sample}
+    {#if inst.spec}
+      <SpecWidget spec={inst.spec} {w} {h} sizeClass={cls} {editing} />
+    {:else if inst.sample}
       <SampleWidget reg={inst.reg} {w} {h} sizeClass={cls} variant={inst.variant} {editing} />
     {:else if inst.type === 'clock'}
       <Clock {w} {h} sizeClass={cls} variant={inst.variant} {editing} />

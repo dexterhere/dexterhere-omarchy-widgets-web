@@ -16,6 +16,7 @@
     initialWidgets,
     openCenter = false,
     selectedWidgetId,
+    onwidgets,
     onapi,
     ...rest
   }: WidgetEmulatorProps = $props();
@@ -36,6 +37,22 @@
     onapi?.(a);
     if (openCenter && !narrow.current) a.openWidgetCenter();
   }
+
+  // Hand the host page its handle once the widget layer has measured the desktop.
+  $effect(() => {
+    if (wl.ready)
+      untrack(() =>
+        onwidgets?.({
+          install: (reg) => wl.install(reg),
+          placeSpec: (s, z) => wl.placeSpec(s, z),
+          edit: (on) => {
+            if (api?.state.panel === 'widgets') api.closeWidgetCenter();
+            wl.setEditing(on);
+            if (on && !wl.selected && wl.items[0]) wl.select(wl.items[0].id, true);
+          }
+        })
+      );
+  });
 
   // Opening the Widget Center, by any route, enters edit mode.
   $effect(() => {
