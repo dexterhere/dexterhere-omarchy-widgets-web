@@ -36,5 +36,12 @@
       t = matchMedia('(prefers-color-scheme: light)').matches ? 'catppuccin-latte' : 'tokyo-night';
     }
     document.documentElement.setAttribute('data-theme', t);
+    // The first-visit tip is pending until it is dismissed: reserve its row from the first frame.
+    try {
+      if (localStorage.getItem('ow-theme-hint') !== '1')
+        document.documentElement.setAttribute('data-hint', '1');
+    } catch (e) {
+      document.documentElement.setAttribute('data-hint', '1');
+    }
   } catch (e) {}
 })();

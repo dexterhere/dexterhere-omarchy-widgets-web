@@ -84,6 +84,77 @@ test('the coach hint shows until the first interaction', async ({ page }) => {
   await expect(hint).toHaveCount(0);
 });
 
+test('the coach hint never overlaps a widget, at several widths', async ({ page }) => {
+  for (const w of [1440, 1100, 800]) {
+    await page.setViewportSize({ width: w, height: 900 });
+    await ready(page);
+    const c = (await page.locator('[data-coach]').boundingBox())!;
+    const bar = (await page.locator('[data-home-stage] [data-bar="widgets"]').boundingBox())!;
+    const desk = (await page.locator('[data-home-stage] .desk').boundingBox())!;
+    expect(c.y).toBeGreaterThanOrEqual(bar.y + bar.height - 1);
+    expect(c.x).toBeGreaterThanOrEqual(desk.x);
+    expect(c.x + c.width).toBeLessThanOrEqual(desk.x + desk.width + 1);
+    for (const el of await page.locator('[data-home-stage] [data-widget]').all()) {
+      const b = (await el.boundingBox())!;
+      const apart =
+        c.y + c.height <= b.y ||
+        b.y + b.height <= c.y ||
+        c.x + c.width <= b.x ||
+        b.x + b.width <= c.x;
+      expect(apart, `coach overlaps a widget at ${w}px`).toBe(true);
+    }
+  }
+});
+
+test('stage widgets are drawn larger and sit in two tidy columns', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await ready(page);
+  const get = async (reg: string) =>
+    (await page.locator(`[data-home-stage] [data-widget][data-reg$="${reg}"]`).boundingBox())!;
+  const gh = await get('github-activity');
+  const bat = await get('battery');
+  const clock = await get('clock');
+  const sys = await get('system-monitor');
+  // 288 model px at zoom 1.3 is about 374 px on screen.
+  expect(gh.width).toBeGreaterThan(340);
+  expect(Math.abs(gh.x - bat.x)).toBeLessThan(2);
+  expect(Math.abs(gh.width - bat.width)).toBeLessThan(2);
+  expect(Math.abs(clock.x - sys.x)).toBeLessThan(2);
+  expect(bat.y).toBeGreaterThan(gh.y + gh.height);
+  expect(sys.y).toBeGreaterThan(clock.y + clock.height);
+});
+
+test('the first-visit tip reserves its row from the first frame and collapses on dismiss', async ({
+  page
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.addInitScript(() => {
+    if (!sessionStorage.getItem('seeded')) {
+      sessionStorage.setItem('seeded', '1');
+      localStorage.removeItem('ow-theme-hint');
+      localStorage.setItem('ow-theme', 'tokyo-night');
+    }
+  });
+  await page.goto('/');
+  const h1 = page.getByRole('heading', { level: 1 });
+  // Reserved by the boot script before anything renders.
+  await expect(page.locator('html')).toHaveAttribute('data-hint', '1');
+  const tip = page.getByRole('complementary', { name: 'Tip' });
+  await expect(tip).toBeVisible();
+  const y1 = (await h1.boundingBox())!.y;
+  await page.waitForTimeout(400);
+  expect(Math.abs((await h1.boundingBox())!.y - y1)).toBeLessThan(1);
+  // It does not cover the headline.
+  const t = (await tip.boundingBox())!;
+  expect(t.y + t.height).toBeLessThanOrEqual(y1 + 1);
+  await page.getByRole('button', { name: 'Dismiss tip' }).click();
+  await expect(tip).toHaveCount(0);
+  await expect(page.locator('html')).not.toHaveAttribute('data-hint', /.*/);
+  await expect.poll(async () => (await h1.boundingBox())!.y).toBeLessThan(y1 - 30);
+  await page.reload();
+  await expect(page.locator('html')).not.toHaveAttribute('data-hint', /.*/);
+});
+
 test('the virtual key strip opens the Widget Center on the home emulator', async ({ page }) => {
   await ready(page);
   await page.locator('[data-mod="super"]').click();

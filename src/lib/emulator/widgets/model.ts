@@ -97,9 +97,15 @@ const SAMPLE_SIZE = { w: 240, h: 144 };
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 /** Scale and model bounds for a real desktop area of `w` by `h` pixels. */
-export function computeView(w: number, h: number, narrow = false) {
+export function computeView(w: number, h: number, narrow = false, zoom = 1) {
   const ref = narrow ? REF_NARROW : REF;
-  const scale = clamp(Math.min(w / ref.w, h / ref.h), narrow ? MIN_SCALE_NARROW : MIN_SCALE, 1);
+  // `zoom` (stage only, never when narrow) draws every widget that much larger.
+  const z = narrow ? 1 : zoom;
+  const scale = clamp(
+    Math.min(w / ref.w, h / ref.h) * z,
+    (narrow ? MIN_SCALE_NARROW : MIN_SCALE) * z,
+    z
+  );
   return {
     scale,
     bounds: {

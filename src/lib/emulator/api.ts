@@ -99,6 +99,8 @@ export interface WidgetEmulatorProps extends EmulatorProps {
   openCenter?: boolean;
   /** Registry id (or instance id) of the widget to select at start. */
   selectedWidgetId?: string;
+  /** Draw widgets this much larger (1 to 1.5; ignored below 720 px). The home stage uses it. */
+  zoom?: number;
   /** Called once the widget layer is ready (after the desktop has a size). */
   onwidgets?: (w: WidgetsApi) => void;
 }

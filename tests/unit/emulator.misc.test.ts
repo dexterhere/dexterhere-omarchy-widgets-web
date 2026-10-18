@@ -7,12 +7,25 @@ import { fuzzy, APPS } from '../../src/lib/emulator/apps';
 import { EmulatorState } from '../../src/lib/emulator/state.svelte';
 import { runCommand } from '../../src/lib/emulator/terminal';
 import { wallpaper } from '../../src/lib/emulator/wallpaper';
+import { widgetFailures } from '../../src/lib/emulator/wallpaper-contrast';
+import { RESOLVED } from '../../src/lib/themes/css';
 
 describe('wallpaper', () => {
   it('is deterministic and differs between themes', () => {
     expect(wallpaper('nord')).toEqual(wallpaper('nord'));
     const sigs = new Set(THEME_IDS.map((id) => JSON.stringify(wallpaper(id))));
     expect(sigs.size).toBe(THEME_IDS.length);
+    expect(wallpaper('nord', { thumb: true })).toEqual(wallpaper('nord', { thumb: true }));
+  });
+  it('stays calm: allowed tokens only, brand and text kept faint', () => {
+    const calm = new Set(['--bg-deep', '--bg', '--surface', '--border', '--brand', '--text']);
+    for (const id of THEME_IDS)
+      for (const thumb of [false, true])
+        for (const p of wallpaper(id, { thumb })) {
+          expect(calm.has(p.token)).toBe(true);
+          if (p.token === '--brand') expect(p.opacity).toBeLessThanOrEqual(0.3);
+          if (p.token === '--text') expect(p.opacity).toBeLessThanOrEqual(0.25);
+        }
   });
   it('uses theme tokens only', () => {
     const tokens = new Set(TOKEN_NAMES as readonly string[]);
@@ -24,6 +37,10 @@ describe('wallpaper', () => {
         expect(p.d).toMatch(/^[Mhvz0-9 .-]+$/);
       }
   });
+});
+
+describe('widgets read over the wallpaper', () => {
+  for (const r of RESOLVED) it(r.id, () => expect(widgetFailures(r)).toEqual([]));
 });
 
 describe('no colour literals in emulator source', () => {

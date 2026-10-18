@@ -28,18 +28,17 @@ function prng(seed: number) {
 }
 
 type Cell = [token: string, opacity: number];
-const BAYER = [
-  [0, 8, 2, 10],
-  [12, 4, 14, 6],
-  [3, 11, 1, 9],
-  [15, 7, 13, 5]
-];
-const dither = (x: number, y: number) => (BAYER[y & 3][x & 3] + 0.5) / 16;
-
-export const WALLPAPER_VARIANTS = ['dunes', 'city', 'ridge', 'ripples'] as const;
+export const WALLPAPER_VARIANTS = ['dunes', 'city', 'ridge', 'lake'] as const;
 export const variantOf = (id: string) => WALLPAPER_VARIANTS[hash(id) % WALLPAPER_VARIANTS.length];
 
-export function wallpaper(themeId: string): WpPath[] {
+/**
+ * A quiet horizon: a sky that eases from --bg-deep to --bg, a soft sun and two
+ * low-contrast layers of land. Everything stays between --bg-deep, --bg, --surface and --border,
+ * with a trace of --brand, so widgets and windows (which have their own surface) always stand out.
+ * `thumb` raises the horizon for the small 4:3 card stage.
+ */
+export function wallpaper(themeId: string, opts: { thumb?: boolean } = {}): WpPath[] {
+  const thumb = !!opts.thumb;
   const seed = hash(themeId);
   const rnd = prng(seed ^ 0x9e3779b9);
   const grid: (Cell | null)[] = new Array(WP_W * WP_H).fill(null);
@@ -47,69 +46,75 @@ export function wallpaper(themeId: string): WpPath[] {
     if (x >= 0 && x < WP_W && y >= 0 && y < WP_H) grid[y * WP_W + x] = [token, opacity];
   };
   const variant = variantOf(themeId);
+  const lift = thumb ? 3 : 0;
 
-  // Sky: horizontal bands that fade from the deepest background, dithered at the seams.
-  const bands = ['--bg-deep', '--surface', '--surface-2'];
+  // Sky: --bg-deep at the top easing into --bg in flat bands (no dither, so it stays calm).
   for (let y = 0; y < WP_H; y++) {
-    const f = (y / WP_H) * (bands.length - 0.4);
-    const i = Math.min(bands.length - 1, Math.floor(f));
-    const next = Math.min(bands.length - 1, i + 1);
-    for (let x = 0; x < WP_W; x++) put(x, y, f - i > dither(x, y) ? bands[next] : bands[i]);
+    const step = Math.min(5, Math.floor((y / (WP_H * 0.75)) * 6)) / 5;
+    for (let x = 0; x < WP_W; x++) {
+      if (step > 0) put(x, y, '--bg', step);
+    }
   }
-  // Stars.
-  for (let n = 0; n < 60; n++) {
-    put(Math.floor(rnd() * WP_W), Math.floor(rnd() * WP_H * 0.5), '--text', 0.3 + rnd() * 0.4);
-  }
-  // A sun or moon disc in the accent.
-  const sx = 8 + Math.floor(rnd() * (WP_W - 16));
-  const sy = 6 + Math.floor(rnd() * 8);
-  for (let y = -4; y <= 4; y++)
-    for (let x = -4; x <= 4; x++)
-      if (x * x + y * y <= 14) put(sx + x, sy + y, '--brand', 0.55 + 0.25 * (y < 0 ? 1 : 0));
+  // A soft sun or moon: a dim disc with a fainter halo.
+  const sx = 10 + Math.floor(rnd() * (WP_W - 20));
+  const sy = 8 + Math.floor(rnd() * 6);
+  for (let y = -6; y <= 6; y++)
+    for (let x = -6; x <= 6; x++) {
+      const d = x * x + y * y;
+      if (d <= 12) put(sx + x, sy + y, '--brand', 0.12);
+    }
+
+  const far = (x: number, y: number) => put(x, y, '--bg-deep', 0.3);
+  const near = (x: number, y: number, edge: boolean) =>
+    edge ? put(x, y, '--border', 0.2) : put(x, y, '--bg-deep', 0.55);
 
   if (variant === 'dunes') {
     const p1 = rnd() * 6;
     const p2 = rnd() * 6;
     for (let x = 0; x < WP_W; x++) {
-      const far = 22 + Math.sin(x / 6 + p1) * 2.2 + Math.sin(x / 2.3 + p2) * 0.8;
-      const near = 28 + Math.sin(x / 8 + p2) * 2.6 + Math.sin(x / 3.1 + p1) * 0.9;
-      for (let y = Math.round(far); y < WP_H; y++) put(x, y, '--border');
-      for (let y = Math.round(near); y < WP_H; y++)
-        put(x, y, y === Math.round(near) ? '--text-2' : '--border-strong');
+      const f = 23 - lift + Math.sin(x / 7 + p1) * 2 + Math.sin(x / 2.5 + p2) * 0.5;
+      const n = 29 - lift + Math.sin(x / 9 + p2) * 2.4 + Math.sin(x / 3.3 + p1) * 0.6;
+      for (let y = Math.round(f); y < WP_H; y++) far(x, y);
+      for (let y = Math.round(n); y < WP_H; y++) near(x, y, y === Math.round(n));
     }
   } else if (variant === 'city') {
     let x = 0;
     while (x < WP_W) {
-      const w = 2 + Math.floor(rnd() * 4);
-      const h = 6 + Math.floor(rnd() * 16);
+      const w = 3 + Math.floor(rnd() * 4);
+      const h = 5 + Math.floor(rnd() * 8) + lift;
       for (let bx = x; bx < Math.min(WP_W, x + w); bx++)
-        for (let y = WP_H - h; y < WP_H; y++) put(bx, y, y === WP_H - h ? '--text-2' : '--border');
+        for (let y = WP_H - h - 5; y < WP_H; y++) far(bx, y);
+      x += w;
+    }
+    x = 0;
+    while (x < WP_W) {
+      const w = 3 + Math.floor(rnd() * 5);
+      const h = 3 + Math.floor(rnd() * 5) + lift;
+      for (let bx = x; bx < Math.min(WP_W, x + w); bx++)
+        for (let y = WP_H - h; y < WP_H; y++) near(bx, y, y === WP_H - h);
       for (let wy = WP_H - h + 2; wy < WP_H - 1; wy += 2)
-        for (let bx = x + 1; bx < Math.min(WP_W, x + w) - 0; bx += 2)
-          if (rnd() > 0.55) put(bx, wy, '--brand', 0.5 + rnd() * 0.4);
-      x += w + (rnd() > 0.6 ? 1 : 0);
+        for (let bx = x + 1; bx < Math.min(WP_W, x + w); bx += 2)
+          if (rnd() > 0.8) put(bx, wy, '--brand', 0.1);
+      x += w + (rnd() > 0.7 ? 1 : 0);
     }
   } else if (variant === 'ridge') {
-    let a = 20;
-    let b = 26;
+    let a = 22 - lift;
+    let b = 28 - lift;
     for (let x = 0; x < WP_W; x++) {
-      a = Math.min(26, Math.max(12, a + Math.round((rnd() - 0.5) * 3)));
-      b = Math.min(31, Math.max(22, b + Math.round((rnd() - 0.5) * 3)));
-      for (let y = a; y < WP_H; y++)
-        put(x, y, y - a < 2 ? '--text-2' : '--border', y - a < 2 ? 0.7 : 1);
-      for (let y = b; y < WP_H; y++) put(x, y, y === b ? '--text-2' : '--border-strong');
+      a = Math.min(27 - lift, Math.max(15, a + Math.round((rnd() - 0.5) * 2)));
+      b = Math.min(32 - lift, Math.max(25 - lift, b + Math.round((rnd() - 0.5) * 2)));
+      for (let y = a; y < WP_H; y++) far(x, y);
+      for (let y = b; y < WP_H; y++) near(x, y, y === b);
     }
   } else {
-    const cx = 10 + Math.floor(rnd() * (WP_W - 20));
-    const cy = 22 + Math.floor(rnd() * 8);
-    const rings = ['--border', '--surface-2', '--selection', '--brand-soft'];
-    for (let y = 18; y < WP_H; y++)
-      for (let x = 0; x < WP_W; x++) {
-        const r = Math.hypot((x - cx) / 2, y - cy);
-        if (r < 3) continue;
-        const ring = Math.floor(r / 2.5);
-        if (ring % 2 === 0 && r > dither(x, y) * 2) put(x, y, rings[ring % rings.length]);
-      }
+    // Lake: a flat horizon with the sun's reflection broken into short dashes.
+    const hy = 24 - lift;
+    for (let y = hy; y < WP_H; y++)
+      for (let x = 0; x < WP_W; x++)
+        if (y === hy) put(x, y, '--border', 0.2);
+        else put(x, y, '--bg-deep', y % 3 === 0 ? 0.3 : 0.5);
+    for (let y = hy + 2; y < WP_H; y += 2)
+      for (let x = sx - 3; x <= sx + 3; x++) if (rnd() > 0.4) put(x, y, '--brand', 0.08);
   }
 
   // Merge into runs, grouped by (token, opacity) so the SVG has a handful of paths.

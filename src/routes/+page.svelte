@@ -17,11 +17,12 @@
   onMount(() => (stage.host = host));
 
   // Four widgets on an empty workspace: the wallpaper shows and the widgets are the point.
+  // Two tidy columns of one width (288) with 24 px gaps, drawn 1.3 times larger by `zoom`.
   const start: InitialWidget[] = [
-    { id: 'github', anchor: 'tl', ox: 48, oy: 72 },
-    { id: 'battery', anchor: 'tl', ox: 48, oy: 272 },
-    { id: 'clock', anchor: 'tr', ox: 48, oy: 72, variant: 'digital' },
-    { id: 'system', anchor: 'tr', ox: 48, oy: 200 }
+    { id: 'github', anchor: 'tl', ox: 32, oy: 32, w: 288, h: 176 },
+    { id: 'battery', anchor: 'tl', ox: 32, oy: 232, w: 288, h: 112 },
+    { id: 'clock', anchor: 'tr', ox: 32, oy: 56, w: 288, h: 120, variant: 'digital' },
+    { id: 'system', anchor: 'tr', ox: 32, oy: 200, w: 288, h: 168 }
   ];
 
   const paths = [
@@ -84,6 +85,7 @@
     <LazyEmulator
       stage
       coach
+      zoom={1.3}
       windows={false}
       initialWidgets={start}
       loadNow={stage.loadNow}
@@ -139,7 +141,7 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
-    padding-block: 32px 24px;
+    padding-block: 24px 16px;
   }
   .hero h1 {
     max-width: none;
@@ -177,7 +179,7 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
-    padding-bottom: 64px;
+    padding-bottom: 48px;
   }
   .more {
     max-width: none;
