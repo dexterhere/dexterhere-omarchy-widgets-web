@@ -25,6 +25,8 @@ jobs:
         run: bun scripts/check-review-changes.ts
       - run: bunx vitest run --passWithNoTests
       - run: bun run build
+        env:
+          STATS_DEMO: '1' # keeps the unlinked test route for e2e; production builds prune it
       - name: build the host-mode site (localhost + docs.localhost) for the hosts e2e project
         run: bun run build:hosts
         env:
