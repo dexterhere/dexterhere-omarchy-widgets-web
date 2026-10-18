@@ -1,12 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { replaceState } from '$app/navigation';
-  import { resolve } from '$app/paths';
-  import Badges from '../../lib/components/Badges.svelte';
-  import WidgetPreview from '../../lib/components/WidgetPreview.svelte';
-  import Highlight from '../../lib/components/gallery/Highlight.svelte';
   import SearchBar from '../../lib/components/gallery/SearchBar.svelte';
-  import { categoryLabels, declaredTierNote, statusLabels, tierLabels } from '../../lib/registry';
+  import WidgetCard from '../../lib/components/gallery/WidgetCard.svelte';
+  import { categoryLabels, statusLabels, tierLabels } from '../../lib/registry';
   import {
     DEFAULT_QUERY,
     categoryCounts,
@@ -22,7 +19,7 @@
     type Query,
     type Suggestion
   } from '../../lib/registry/filter';
-  import { CARD_SIZE, previewType } from '../../lib/registry/preview';
+  import { getStatsProvider, type Stats } from '../../lib/stats';
   import type { Category } from '../../lib/registry/types';
   import { addRecent, clearRecent, loadRecent } from '../../lib/registry/recent';
 
@@ -33,11 +30,17 @@
   let ready = $state(false);
   let search = $state<HTMLInputElement>();
   let recent = $state<string[]>([]);
+  let stats = $state<Record<string, Stats | null>>({});
 
   onMount(() => {
     query = parseQuery(new URLSearchParams(location.search));
     recent = loadRecent();
     ready = true;
+    // One batched call for the whole page (the provider chunks to 20 ids). Never blocks rendering.
+    getStatsProvider()
+      .getStats(data.widgets.map((w) => w.id))
+      .then((r) => (stats = r))
+      .catch(() => {});
   });
 
   $effect(() => {
@@ -316,61 +319,28 @@
   {:else if query.view === 'list'}
     <ul class="list" data-testid="list">
       {#each results as w (w.id)}
-        <li data-status={w.status}>
-          <div class="main">
-            <h2>
-              <a href={resolve('/widgets/[id]', { id: w.id })} onclick={() => save(query.q)}
-                ><Highlight text={w.name} {tokens} /></a
-              >
-            </h2>
-            <p class="small text-2"><Highlight text={w.summary} {tokens} /></p>
-          </div>
-          <dl class="facts small">
-            <div>
-              <dt>Categories</dt>
-              <dd>{w.categories.map((c) => categoryLabels[c]).join(', ')}</dd>
-            </div>
-            <div>
-              <dt>Status</dt>
-              <dd>{statusLabels[w.status]}</dd>
-            </div>
-            <div>
-              <dt>Tier</dt>
-              <dd>{tierLabels[w.tier].label}</dd>
-            </div>
-          </dl>
+        <li>
+          <WidgetCard
+            widget={w}
+            variant="list"
+            {tokens}
+            stats={stats[w.id] ?? null}
+            onOpen={() => save(query.q)}
+          />
         </li>
       {/each}
     </ul>
   {:else}
     <ul class="cards" data-testid="cards">
       {#each results as w (w.id)}
-        {@const type = previewType(w.id)}
-        {@const note = declaredTierNote(w)}
-        <li class="card" data-status={w.status}>
-          <div class="preview" class:none={!type}>
-            {#if type}
-              <WidgetPreview {type} {...CARD_SIZE[type]} />
-            {:else}
-              <p class="small muted">No preview yet</p>
-            {/if}
-          </div>
-          <div class="body">
-            <h2>
-              <a href={resolve('/widgets/[id]', { id: w.id })} onclick={() => save(query.q)}
-                ><Highlight text={w.name} {tokens} /></a
-              >
-            </h2>
-            <p class="small text-2"><Highlight text={w.summary} {tokens} /></p>
-            <Badges {w} />
-            <p class="tiny muted">{tierLabels[w.tier].text}{note ? ` ${note}.` : ''}</p>
-            <dl class="facts small">
-              <div>
-                <dt>Categories</dt>
-                <dd>{w.categories.map((c) => categoryLabels[c]).join(', ')}</dd>
-              </div>
-            </dl>
-          </div>
+        <li>
+          <WidgetCard
+            widget={w}
+            variant="grid"
+            {tokens}
+            stats={stats[w.id] ?? null}
+            onOpen={() => save(query.q)}
+          />
         </li>
       {/each}
     </ul>
@@ -569,88 +539,21 @@
     margin: 0;
     padding: 0;
   }
+  .page {
+    --container-wide: 1600px;
+  }
   .cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
     gap: 16px;
-    align-items: start;
+    align-items: stretch;
   }
-  .card {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-    background: var(--surface);
-    border: 1px solid var(--border-strong);
-  }
-  .card[data-status='planned'] {
-    border-style: dashed;
-  }
-  .card[data-status='stable'] {
-    border-color: var(--brand);
-  }
-  .preview {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 168px;
-    overflow: hidden;
-    background: var(--bg-deep);
-    border-bottom: 1px solid var(--border);
-  }
-  .preview.none {
-    justify-content: flex-start;
-    align-items: flex-start;
-    padding: 12px;
-    background: var(--surface-2);
-  }
-  .body {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 16px;
-  }
-  .card h2,
-  .list h2 {
-    font-size: 16px;
-    line-height: 24px;
-  }
-  .facts {
-    margin: 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 24px;
-  }
-  .facts div {
-    display: flex;
-    gap: 8px;
-  }
-  dt {
-    color: var(--muted);
-  }
-  dd {
-    margin: 0;
-  }
-  .list li {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    gap: 8px 32px;
-    padding-block: 16px;
-    border-top: 1px solid var(--border);
-  }
-  .list li:last-child {
-    border-bottom: 1px solid var(--border);
-  }
-  .list li[data-status='planned'] {
-    border-top-style: dashed;
-  }
-  .list .main {
-    flex: 1 1 320px;
+  .cards > li {
     min-width: 0;
   }
-  .list .facts {
+  .list {
+    display: flex;
     flex-direction: column;
-    gap: 0;
+    gap: 16px;
   }
 </style>

@@ -6,6 +6,9 @@ import { describe, expect, it } from 'vitest';
 const root = join(__dirname, '../../src/lib/components');
 const files = [
   join(root, 'Desktop.svelte'),
+  ...readdirSync(join(root, 'gallery'))
+    .filter((f) => f.endsWith('.svelte'))
+    .map((f) => join(root, 'gallery', f)),
   ...readdirSync(join(root, 'widgets'))
     .filter((f) => f.endsWith('.svelte'))
     .map((f) => join(root, 'widgets', f))
