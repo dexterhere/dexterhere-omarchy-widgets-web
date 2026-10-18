@@ -426,6 +426,7 @@
   }
   .tools.stuck .chip {
     flex: none;
+    white-space: nowrap;
   }
   @media (max-width: 719px) {
     .tools.stuck {

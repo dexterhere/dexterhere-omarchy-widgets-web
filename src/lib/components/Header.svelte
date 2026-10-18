@@ -140,7 +140,7 @@
   }
   @supports (background: color-mix(in srgb, red 50%, transparent)) {
     .shell {
-      background: color-mix(in srgb, var(--bg) 92%, transparent);
+      background: color-mix(in srgb, var(--bg) 95%, transparent);
     }
   }
   .ready .shell {
