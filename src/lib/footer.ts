@@ -6,8 +6,6 @@ export interface FooterLink {
   href: string;
   /** Leaves this site (https, another origin): gets "external" in its accessible name. */
   external?: boolean;
-  /** Indented under the link above it. */
-  sub?: boolean;
 }
 export interface FooterColumn {
   id: string;
@@ -26,14 +24,6 @@ export interface BuildInfo {
 
 export const CODE_REPO = 'https://github.com/dexterhere/omarchy-widgets';
 export const SITE_REPO = 'https://github.com/dexterhere/dexterhere-omarchy-widgets-web';
-
-/** Footer categories: a fixed few, chosen from the gallery's category slugs. */
-export const FOOTER_CATEGORIES: [slug: string, label: string][] = [
-  ['system', 'System'],
-  ['dev-git', 'Dev and Git'],
-  ['ai-agents', 'AI and Agents'],
-  ['productivity', 'Productivity']
-];
 
 /** Accepts a full or short hash (7 to 40 hex digits); returns the first 7, else ''. */
 export function shortCommit(v: string | undefined): string {
@@ -54,13 +44,7 @@ export function footerColumns(
       title: 'Explore',
       links: [
         { label: 'Widgets', href: l.sitePath('/widgets/') },
-        ...FOOTER_CATEGORIES.map(([slug, label]): FooterLink => ({
-          label,
-          href: l.sitePath(`/widgets/?cat=${slug}`),
-          sub: true
-        })),
         { label: 'Docs', href: l.docsUrl('/docs') },
-        { label: 'Create a widget', href: d('create/choose-a-path/') },
         { label: 'Contribute', href: l.sitePath('/contribute/') },
         { label: 'RSS feed', href: l.sitePath('/rss.xml') },
         { label: 'registry.json', href: l.sitePath('/registry.json') }
@@ -70,7 +54,6 @@ export function footerColumns(
       id: 'docs',
       title: 'Docs',
       links: [
-        { label: 'Docs home', href: d('') },
         { label: 'Start', href: d('start/') },
         { label: 'Create', href: d('create/') },
         { label: 'Publish', href: d('publish/') },
@@ -97,7 +80,6 @@ export function footerColumns(
       links: [
         ext('Report a problem', `${CODE_REPO}/issues/new?template=bug_report.yml`),
         ext('Request a feature', `${CODE_REPO}/issues/new?template=feature_request.yml`),
-        { label: 'How to contribute', href: d('project/contributing/') },
         { label: 'Submit a widget', href: d('publish/submit-a-widget/') },
         { label: 'Governance', href: d('project/governance/') }
       ]

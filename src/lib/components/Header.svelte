@@ -1,8 +1,63 @@
 <script lang="ts">
+  import { onMount, tick } from 'svelte';
   import { theme } from '../themes/store.svelte';
+  import { THEMES } from '../themes/themes';
   import { docsUrl, sitePath } from '../site';
+  import { whenMotionOk, motion } from '../motion';
+  import { watchStuck } from '../sticky';
+  import LogoMark from './LogoMark.svelte';
 
   let menuOpen = $state(false);
+  // `shown` outlives `menuOpen` by the length of the close animation.
+  let shown = $state(false);
+  let stuck = $state(false);
+  let ready = $state(false);
+  let sentinel: HTMLElement;
+  let panel = $state<HTMLElement>();
+  let revert: (() => void) | undefined;
+
+  const themeName = $derived(THEMES.find((t) => t.id === theme.current)?.name ?? theme.current);
+
+  // The border and the 64 -> 52 px shrink follow a 24 px sentinel; transitions are in CSS and are
+  // switched on after the first observation so a page restored mid-scroll does not animate.
+  onMount(() => {
+    const stop = watchStuck(sentinel, (s) => {
+      stuck = s;
+      requestAnimationFrame(() => (ready = true));
+    });
+    return () => {
+      stop();
+      revert?.();
+    };
+  });
+
+  async function setMenu(next: boolean) {
+    menuOpen = next;
+    revert?.();
+    if (next) shown = true;
+    await tick();
+    const el = panel;
+    if (!el) return;
+    revert = await whenMotionOk(
+      (g) =>
+        g.fromTo(
+          el,
+          { opacity: next ? 0 : 1, y: next ? -8 : 0 },
+          {
+            opacity: next ? 1 : 0,
+            y: next ? 0 : -8,
+            duration: next ? motion.base : motion.fast,
+            ease: motion.easeOut,
+            onComplete: () => {
+              if (!next) shown = false;
+              g.set(el, { clearProps: 'opacity,transform' });
+            }
+          }
+        ),
+      () => (shown = next)
+    );
+  }
+
   // In host mode the docs live on their own host: these are absolute links (see lib/links.ts).
   const links = [
     { href: sitePath('/widgets'), label: 'Widgets' },
@@ -10,79 +65,101 @@
     { href: docsUrl('/docs'), label: 'Create' },
     { href: sitePath('/contribute'), label: 'Contribute' }
   ];
+  const GITHUB = 'https://github.com/dexterhere/omarchy-widgets';
 </script>
 
-<header class="site-header">
-  <div class="container wide bar">
-    <a class="brand" href={sitePath('/')} aria-label="Omarchy Widgets, home">
-      <span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
-      <span class="name">Widgets</span>
-    </a>
+<svelte:window onkeydown={(e) => e.key === 'Escape' && menuOpen && setMenu(false)} />
 
-    <nav class="links" class:open={menuOpen} id="site-nav" aria-label="Main">
-      {#each links as l (l.label)}
-        <a href={l.href} onclick={() => (menuOpen = false)}>{l.label}</a>
-      {/each}
-    </nav>
+<div class="sentinel" aria-hidden="true" bind:this={sentinel}></div>
+<header class="site-header" class:stuck class:ready>
+  <div class="shell">
+    <div class="site-frame bar">
+      <a class="brand" href={sitePath('/')} aria-label="Omarchy Widgets, home">
+        <LogoMark />
+        <span class="name">Widgets</span>
+      </a>
 
-    <button
-      class="btn icon theme-btn"
-      type="button"
-      data-theme-trigger
-      onclick={() => theme.openPicker()}
-    >
-      <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">
-        <rect x="1" y="1" width="6" height="6" fill="currentColor" />
-        <rect
-          x="9"
-          y="1"
-          width="6"
-          height="6"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.5"
-        />
-        <rect
-          x="1"
-          y="9"
-          width="6"
-          height="6"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="1.5"
-        />
-        <rect x="9" y="9" width="6" height="6" fill="currentColor" />
-      </svg>
-      <span class="sr-only">Change theme</span>
-    </button>
-    <a
-      class="btn small gh"
-      href="https://github.com/dexterhere/omarchy-widgets"
-      rel="noopener noreferrer">GitHub</a
-    >
-    <a class="btn-primary small install" href={docsUrl('/docs')}>Install</a>
+      <!-- A dropdown on phones (the animated element), plain layout from 760 px up. -->
+      <div class="dropdown" class:open={shown} id="site-menu" bind:this={panel}>
+        <nav class="links" aria-label="Main">
+          {#each links as l (l.label)}
+            <a href={l.href} onclick={() => menuOpen && setMenu(false)}>{l.label}</a>
+          {/each}
+        </nav>
+        <div class="extra">
+          <a class="btn small" href={GITHUB} rel="noopener noreferrer">GitHub</a>
+          <a class="btn-primary small" href={docsUrl('/docs')}>Install</a>
+        </div>
+      </div>
 
-    <button
-      class="btn small menu-btn"
-      type="button"
-      aria-expanded={menuOpen}
-      aria-controls="site-nav"
-      onclick={() => (menuOpen = !menuOpen)}>Menu</button
-    >
+      <button
+        class="btn icon theme-btn"
+        type="button"
+        data-theme-trigger
+        aria-label="Theme: {themeName}, open the theme picker"
+        onclick={() => theme.openPicker()}
+      >
+        <LogoMark mode="swatch" size={7} />
+      </button>
+      <a class="btn small gh" href={GITHUB} rel="noopener noreferrer">GitHub</a>
+      <a class="btn-primary small install" href={docsUrl('/docs')}>Install</a>
+
+      <button
+        class="btn small menu-btn"
+        type="button"
+        aria-expanded={menuOpen}
+        aria-controls="site-menu"
+        onclick={() => setMenu(!menuOpen)}>Menu</button
+      >
+    </div>
   </div>
 </header>
 
 <style>
+  /* The sentinel sits at the very top of the page, 24 px tall: once it is gone the page has scrolled. */
+  .sentinel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1px;
+    height: 24px;
+    pointer-events: none;
+  }
+  /* Reserves the full 64 px in the flow, so shrinking the bar never moves the page. Clicks go
+     through the transparent strip left below the 52 px bar. */
   .site-header {
-    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 10; /* below the theme tip (20), dialogs and the skip link */
+    height: var(--header-h);
+    pointer-events: none;
+  }
+  .shell {
+    position: relative;
+    height: var(--header-h);
+    pointer-events: auto;
+    background: var(--bg);
+    border-bottom: 1px solid transparent;
+  }
+  @supports (background: color-mix(in srgb, red 50%, transparent)) {
+    .shell {
+      background: color-mix(in srgb, var(--bg) 95%, transparent);
+    }
+  }
+  .ready .shell {
+    transition:
+      height 180ms ease-out,
+      border-color 180ms ease-out;
+  }
+  .stuck .shell {
+    height: var(--header-hs);
+    border-bottom-color: var(--border);
   }
   .bar {
     display: flex;
     align-items: center;
     gap: 8px;
-    min-height: 64px;
-    flex-wrap: wrap;
-    padding-block: 12px;
+    height: 100%;
   }
   .brand {
     display: inline-flex;
@@ -92,73 +169,70 @@
     text-decoration: none;
     font-weight: 700;
     font-size: var(--fs-3);
-    min-height: 40px;
+    min-height: var(--ctl);
   }
-  .mark {
-    display: grid;
-    grid-template-columns: 8px 8px;
-    gap: 2px;
+  .theme-btn {
+    order: 1;
   }
-  .mark i {
-    width: 8px;
-    height: 8px;
-    background: var(--text);
-  }
-  .mark i:nth-child(1),
-  .mark i:nth-child(4) {
-    background: var(--brand);
-  }
-  .links {
-    display: none;
-    flex-basis: 100%;
-    order: 10;
-    flex-direction: column;
-    padding-block: 8px;
-    border-top: 1px solid var(--border);
-  }
-  .links.open {
-    display: flex;
-  }
-  .links a {
-    padding: 10px 0;
-    font-size: var(--fs-2);
-    text-decoration: none;
+  .menu-btn {
+    order: 2;
   }
   .gh,
   .install {
     display: none;
   }
-  .menu-btn {
-    order: 2;
+
+  /* Phone: a dropdown under the bar (animated by GSAP, see setMenu). */
+  .dropdown {
+    display: none;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    flex-direction: column;
+    padding: 8px var(--gutter) 16px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
   }
-  .theme-btn {
-    order: 1;
+  .dropdown.open {
+    display: flex;
   }
-  .links.open ~ .gh,
-  .links.open ~ .install {
-    display: inline-flex;
-    order: 11;
+  .links {
+    display: flex;
+    flex-direction: column;
   }
-  .links.open ~ .install {
-    margin-right: auto;
+  .links > a {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+    font-size: var(--fs-2);
+    text-decoration: none;
+  }
+  .extra {
+    display: flex;
+    gap: 8px;
+    padding-top: 8px;
   }
 
   @media (min-width: 760px) {
     .brand {
-      margin-right: 24px;
+      margin-right: 16px;
+    }
+    .dropdown,
+    .dropdown.open {
+      display: contents;
     }
     .links {
-      display: flex;
       flex-direction: row;
-      flex-basis: auto;
-      order: 0;
+      flex: 1;
       gap: 4px;
-      padding: 0;
-      border: 0;
-      margin-right: auto;
     }
-    .links a {
-      padding: 8px 12px;
+    .links > a {
+      min-height: var(--ctl);
+      padding: 0 12px;
+    }
+    .extra {
+      display: none;
     }
     .gh,
     .install {

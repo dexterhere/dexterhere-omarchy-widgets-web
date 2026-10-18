@@ -18,6 +18,16 @@ function write(key: string, value: string) {
   }
 }
 
+/** Colours (only) ease for a moment while the theme changes; the class is removed right after. */
+function crossfade() {
+  const root = document.documentElement;
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  root.classList.add('theme-fade');
+  clearTimeout(fadeTimer);
+  fadeTimer = setTimeout(() => root.classList.remove('theme-fade'), 200);
+}
+let fadeTimer: ReturnType<typeof setTimeout>;
+
 class ThemeState {
   /** The theme currently applied to the page. */
   current = $state(DEFAULT_DARK);
@@ -35,7 +45,10 @@ class ThemeState {
   apply(id: string) {
     if (!THEME_IDS.includes(id)) return;
     this.current = id;
+    crossfade();
     document.documentElement.dataset.theme = id;
+    // Tab icon and theme-color (defined by static/theme-boot.js; absent in tests that skip it).
+    (window as { __owIcon?: (id: string) => void }).__owIcon?.(id);
   }
 
   /** Apply and remember. */

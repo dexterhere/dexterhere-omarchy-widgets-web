@@ -5,12 +5,16 @@ import type gsapType from 'gsap';
 export type Gsap = typeof gsapType;
 
 let cached: Promise<Gsap> | undefined;
+let loaded: Gsap | undefined;
 
 /** Lazy-load GSAP once. Browser only. */
 export function loadGsap(): Promise<Gsap> {
-  cached ??= import('gsap').then((m) => m.gsap);
+  cached ??= import('gsap').then((m) => (loaded = m.gsap));
   return cached;
 }
+
+/** GSAP if it has already been loaded, else undefined: for animations that must never wait. */
+export const loadedGsap = (): Gsap | undefined => loaded;
 
 export function prefersReducedMotion(): boolean {
   return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;

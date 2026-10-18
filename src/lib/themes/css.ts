@@ -111,6 +111,18 @@ export function themesCss(): string {
   return `${HEADER}\n${blocks.join('\n\n')}\n`;
 }
 
+/** id -> [bg, surface, text, brand] for the tab icon; generated here so it cannot drift. */
+export function paletteJson(): string {
+  return JSON.stringify(
+    Object.fromEntries(
+      RESOLVED.map((r) => [
+        r.id,
+        [r.tokens['--bg'], r.tokens['--surface'], r.tokens['--text'], r.tokens['--brand']]
+      ])
+    )
+  );
+}
+
 export function bootScript(): string {
   return `${HEADER}
 (function () {
@@ -157,6 +169,30 @@ export function bootScript(): string {
     } catch (e) {
       document.documentElement.setAttribute('data-hint', '1');
     }
+  } catch (e) {}
+  try {
+    var pal = ${paletteJson()};
+    // Tab icon and mobile browser chrome follow the theme (the same builder as src/lib/themes/favicon.ts).
+    window.__owIcon = function (id) {
+      var c = pal[id];
+      if (!c) return;
+      var at = [[0, 0], [6, 0], [0, 6], [6, 6]];
+      var svg = "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 11 11'>";
+      for (var i = 0; i < 4; i++) {
+        svg += "<rect x='" + at[i][0] + "' y='" + at[i][1] + "' width='5' height='5' fill='" + c[i] + "' stroke='" + c[2] + "' stroke-opacity='.35' stroke-width='.5'/>";
+      }
+      svg += '</svg>';
+      var old = document.querySelector('link[rel="icon"]');
+      var link = document.createElement('link');
+      link.rel = 'icon';
+      link.type = 'image/svg+xml';
+      link.href = 'data:image/svg+xml,' + encodeURIComponent(svg);
+      if (old) old.replaceWith(link);
+      else document.head.appendChild(link);
+      var m = document.querySelector('meta[name="theme-color"]');
+      if (m) m.setAttribute('content', c[0]);
+    };
+    window.__owIcon(document.documentElement.getAttribute('data-theme'));
   } catch (e) {}
 })();
 `;

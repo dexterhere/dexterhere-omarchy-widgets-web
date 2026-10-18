@@ -5,6 +5,7 @@
   import { theme } from '../themes/store.svelte';
   import { links } from '../site';
   import { onMount } from 'svelte';
+  import LogoMark from './LogoMark.svelte';
   import { shortcuts } from '../shortcuts.svelte';
 
   // `info` is missing when SvelteKit renders an error page after a client navigation: the footer
@@ -34,10 +35,10 @@
 <svelte:window onkeydowncapture={shortcuts.guard} />
 
 <footer class="site-footer" class:hinted={theme.hintVisible} aria-label="Site">
-  <div class="frame">
+  <div class="site-frame inner">
     <div class="intro">
       <a class="brand" href={links.sitePath('/')}>
-        <span class="mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <LogoMark />
         <span class="name">Widgets</span>
       </a>
       <p class="small text-2">
@@ -57,7 +58,7 @@
           <h2 class="col-title">{col.title}</h2>
           <ul>
             {#each col.links as l, i (`${i}:${l.href}`)}
-              <li class:sub={l.sub}>
+              <li>
                 <a href={l.href} rel={l.external ? 'noopener noreferrer' : undefined}
                   >{l.label}{#if l.external}<span class="sr-only"> (external site)</span>{/if}</a
                 >
@@ -90,9 +91,9 @@
       {/if}
       <div class="tools">
         <button class="btn small theme" type="button" onclick={() => theme.openPicker()}>
-          <span>{themeName}</span><span class="sr-only">, open the theme picker</span><kbd
-            aria-hidden="true">T</kbd
-          >
+          <LogoMark mode="swatch" size={6} /><span>{themeName}</span><span class="sr-only"
+            >, open the theme picker</span
+          ><kbd aria-hidden="true">T</kbd>
         </button>
         <button
           class="btn small"
@@ -121,11 +122,8 @@
   .hinted {
     padding-bottom: 72px;
   }
-  .frame {
-    width: 100%;
-    max-width: var(--frame-max);
-    margin-inline: auto;
-    padding: 40px var(--gutter) 24px;
+  .inner {
+    padding-block: 40px 24px;
     display: grid;
     gap: 40px;
   }
@@ -143,20 +141,6 @@
     text-decoration: none;
     font-weight: 700;
     font-size: var(--fs-3);
-  }
-  .mark {
-    display: grid;
-    grid-template-columns: 8px 8px;
-    gap: 2px;
-  }
-  .mark i {
-    width: 8px;
-    height: 8px;
-    background: var(--text);
-  }
-  .mark i:nth-child(1),
-  .mark i:nth-child(4) {
-    background: var(--brand);
   }
   .status {
     padding-left: 12px;
@@ -202,11 +186,6 @@
     text-decoration-color: var(--brand);
     text-decoration-thickness: 2px;
     text-underline-offset: 3px;
-  }
-  li.sub a {
-    margin-left: 4px;
-    padding-left: 12px;
-    border-left: 1px solid var(--border);
   }
 
   .base {

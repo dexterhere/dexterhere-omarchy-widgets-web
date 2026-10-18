@@ -245,6 +245,10 @@ test.describe('sticky modifiers', () => {
 });
 
 test.describe('caps', () => {
+  // The first-visit tip (fixed, top right) sits where a pinned header now makes scrolled-to controls land.
+  test.beforeEach(({ page }) =>
+    page.addInitScript(() => localStorage.setItem('ow-theme-hint', '1'))
+  );
   test('a held Super+Return opens one window; rapid presses stop at 24 and say so', async ({
     page
   }) => {

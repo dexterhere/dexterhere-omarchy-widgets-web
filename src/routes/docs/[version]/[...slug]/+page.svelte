@@ -76,9 +76,9 @@
     .toc {
       display: block;
       position: sticky;
-      top: 16px;
+      top: calc(var(--header-hs) + 16px);
       align-self: start;
-      max-height: calc(100dvh - 32px);
+      max-height: calc(100dvh - var(--header-hs) - 32px);
       overflow-y: auto;
     }
   }

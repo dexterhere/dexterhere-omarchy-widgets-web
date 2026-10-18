@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { replaceState } from '$app/navigation';
+  import { watchStuck } from '../../lib/sticky';
   import SearchBar from '../../lib/components/gallery/SearchBar.svelte';
   import WidgetCard from '../../lib/components/gallery/WidgetCard.svelte';
   import { categoryLabels, statusLabels, tierLabels } from '../../lib/registry';
@@ -100,6 +101,17 @@
     return out;
   });
 
+  // Sticky toolbar: compact once it is pinned under the header. The height it gives up is handed
+  // back as margin so the results below do not jump.
+  let sentinel: HTMLElement;
+  let stuck = $state(false);
+  let toolsH = $state(0);
+  let fullH = $state(0);
+  $effect(() => {
+    if (!stuck && toolsH) fullH = toolsH;
+  });
+  onMount(() => watchStuck(sentinel, (s) => (stuck = s), 52));
+
   const save = (q: string) => (recent = addRecent(q, recent));
   const onpick = (s: Suggestion) => (query.cat = toggleCategory(query.cat, s.value as Category));
   const reset = () => (query = clearFilters(query));
@@ -127,7 +139,7 @@
 
 <svelte:window onkeydown={onWindowKey} />
 
-<div class="container wide page">
+<div class="site-frame page gal">
   <header class="head">
     <h1>Widgets</h1>
     <p class="text-2">
@@ -136,8 +148,12 @@
     </p>
   </header>
 
+  <div class="sentinel" aria-hidden="true" bind:this={sentinel}></div>
   <form
     class="tools"
+    class:stuck
+    style:margin-bottom={stuck ? `${Math.max(0, fullH - toolsH)}px` : undefined}
+    bind:clientHeight={toolsH}
     role="search"
     aria-label="Search widgets"
     onsubmit={(e) => e.preventDefault()}
@@ -169,7 +185,7 @@
       </div>
     {/if}
 
-    <div role="group" aria-label="Categories">
+    <div role="group" aria-label="Categories" class="cats">
       <ul class="chiprow">
         {#each options.categories as c (c)}
           <li>
@@ -186,48 +202,48 @@
         {/each}
       </ul>
     </div>
-
-    <details class="more" open={moreOpen}>
-      <summary>More filters</summary>
-      <div class="selects">
-        <div class="field">
-          <label for="status">Status</label>
-          <select id="status" bind:value={query.status}>
-            <option value="">All</option>
-            {#each options.statuses as s (s)}<option value={s}>{statusLabels[s]}</option>{/each}
-          </select>
-        </div>
-        <div class="field">
-          <label for="tier">Tier</label>
-          <select id="tier" bind:value={query.tier}>
-            <option value="">All</option>
-            {#each options.tiers as t (t)}<option value={t}>{tierLabels[t].label}</option>{/each}
-          </select>
-        </div>
-        <div class="field">
-          <label for="surface">Surface</label>
-          <select id="surface" bind:value={query.surface}>
-            <option value="">All</option>
-            {#each options.surfaces as s (s)}<option value={s}>{s}</option>{/each}
-          </select>
-        </div>
-        <div class="field">
-          <label for="provider">Data provider</label>
-          <select id="provider" bind:value={query.provider}>
-            <option value="">All</option>
-            {#each options.providers as p (p)}<option value={p}>{p}</option>{/each}
-          </select>
-        </div>
-        <div class="field">
-          <label for="size">Size class</label>
-          <select id="size" bind:value={query.size}>
-            <option value="">All</option>
-            {#each options.sizes as s (s)}<option value={s}>{s}</option>{/each}
-          </select>
-        </div>
-      </div>
-    </details>
   </form>
+
+  <details class="more" open={moreOpen}>
+    <summary>More filters</summary>
+    <div class="selects">
+      <div class="field">
+        <label for="status">Status</label>
+        <select id="status" bind:value={query.status}>
+          <option value="">All</option>
+          {#each options.statuses as s (s)}<option value={s}>{statusLabels[s]}</option>{/each}
+        </select>
+      </div>
+      <div class="field">
+        <label for="tier">Tier</label>
+        <select id="tier" bind:value={query.tier}>
+          <option value="">All</option>
+          {#each options.tiers as t (t)}<option value={t}>{tierLabels[t].label}</option>{/each}
+        </select>
+      </div>
+      <div class="field">
+        <label for="surface">Surface</label>
+        <select id="surface" bind:value={query.surface}>
+          <option value="">All</option>
+          {#each options.surfaces as s (s)}<option value={s}>{s}</option>{/each}
+        </select>
+      </div>
+      <div class="field">
+        <label for="provider">Data provider</label>
+        <select id="provider" bind:value={query.provider}>
+          <option value="">All</option>
+          {#each options.providers as p (p)}<option value={p}>{p}</option>{/each}
+        </select>
+      </div>
+      <div class="field">
+        <label for="size">Size class</label>
+        <select id="size" bind:value={query.size}>
+          <option value="">All</option>
+          {#each options.sizes as s (s)}<option value={s}>{s}</option>{/each}
+        </select>
+      </div>
+    </div>
+  </details>
 
   {#if chips.length}
     <ul class="chiprow" aria-label="Active filters" data-testid="active">
@@ -359,12 +375,68 @@
     flex-direction: column;
     gap: 12px;
   }
+  /* Keyboard focus and anchors keep clear of the header and the pinned toolbar. */
+  :global(html:has(.gal)) {
+    scroll-padding-top: calc(var(--header-hs) + 80px);
+  }
+  @media (max-width: 719px) {
+    :global(html:has(.gal)) {
+      scroll-padding-top: calc(var(--header-hs) + 124px);
+    }
+  }
+  .sentinel {
+    height: 0;
+    margin-top: -24px; /* cancels the page gap above: the sentinel adds no space */
+  }
   .tools {
+    position: sticky;
+    top: var(--header-hs);
+    z-index: 8; /* under the header (10); the search suggestions open inside it */
     display: flex;
     flex-direction: column;
     gap: 16px;
     padding-block: 16px;
+    background: var(--bg);
     border-block: 1px solid var(--border);
+  }
+  .tools.stuck {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding-block: 8px;
+    border-top-color: transparent; /* the header's hairline is the only one */
+  }
+  .tools.stuck .recent {
+    display: none;
+  }
+  .tools.stuck > :global(:first-child) {
+    flex: 0 1 380px;
+    min-width: 0;
+  }
+  .tools.stuck .cats {
+    flex: 1;
+    min-width: 0;
+  }
+  .tools.stuck .chiprow {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 4px;
+    margin: -4px;
+    scrollbar-width: thin;
+  }
+  .tools.stuck .chip {
+    flex: none;
+    white-space: nowrap;
+  }
+  @media (max-width: 719px) {
+    .tools.stuck {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
+    .tools.stuck > :global(:first-child) {
+      flex: none;
+    }
   }
   .recent {
     display: flex;
@@ -477,6 +549,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
+    min-height: var(--ctl); /* "Clear all" appears while typing: no shift */
     justify-content: space-between;
     gap: 12px;
   }
@@ -538,9 +611,6 @@
     list-style: none;
     margin: 0;
     padding: 0;
-  }
-  .page {
-    --container-wide: 1600px;
   }
   .cards {
     display: grid;

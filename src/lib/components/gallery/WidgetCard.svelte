@@ -90,6 +90,12 @@
     min-width: 0;
     background: var(--surface);
     border: 1px solid var(--border-strong);
+    transition: transform 140ms ease-out;
+  }
+  @media (hover: hover) {
+    .card:hover {
+      transform: translateY(-2px);
+    }
   }
   .card[data-status='planned'] {
     border-style: dashed;

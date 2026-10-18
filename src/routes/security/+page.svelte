@@ -2,7 +2,7 @@
   <title>Security - Omarchy Widgets</title>
 </svelte:head>
 
-<div class="container stack page">
+<div class="site-frame stack page">
   <h1>Security</h1>
   <p class="prose text-2">
     Some widgets show private data such as mail and calendar, and code widgets run as you. This page

@@ -1,7 +1,6 @@
 import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { FOOTER_CATEGORIES, footerColumns, shortCommit, statusHref } from '../../src/lib/footer';
-import { categoryLabels } from '../../src/lib/registry';
+import { footerColumns, shortCommit, statusHref } from '../../src/lib/footer';
 import { makeLinks } from '../../src/lib/links';
 import { localOrigins, PATH_MODE } from '../../src/lib/origins';
 
@@ -47,10 +46,6 @@ describe.each(Object.entries(modes))('footer links (%s mode)', (_name, l) => {
 });
 
 describe('footer data', () => {
-  it('categories are real gallery categories', () => {
-    for (const [slug, label] of FOOTER_CATEGORIES)
-      expect(categoryLabels[slug as keyof typeof categoryLabels]).toBe(label);
-  });
   it('docs links point at pages that exist in the docs content', () => {
     const l = modes.path;
     for (const c of footerColumns(l, 'next'))

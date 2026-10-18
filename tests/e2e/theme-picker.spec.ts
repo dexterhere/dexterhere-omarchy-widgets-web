@@ -5,7 +5,8 @@ test.use({ colorScheme: 'dark' });
 
 const theme = (page: Page) => page.locator('html').getAttribute('data-theme');
 const dialog = (page: Page) => page.locator('dialog.picker');
-const trigger = (page: Page) => page.getByRole('button', { name: 'Change theme' });
+const trigger = (page: Page) =>
+  page.getByRole('button', { name: /^Theme: .*open the theme picker/ }).first();
 const name = (page: Page) => page.locator('.picker .theme-name');
 const centre = (page: Page) => page.locator('.picker .card[data-o="0"]');
 const hint = (page: Page) => page.getByText('Press T, or tap here', { exact: false });
