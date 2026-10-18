@@ -21,8 +21,8 @@
   const start: InitialWidget[] = [
     { id: 'github', anchor: 'tl', ox: 32, oy: 32, w: 288, h: 176 },
     { id: 'battery', anchor: 'tl', ox: 32, oy: 232, w: 288, h: 112 },
-    { id: 'clock', anchor: 'tr', ox: 32, oy: 40, w: 288, h: 120, variant: 'digital' },
-    { id: 'system', anchor: 'tr', ox: 32, oy: 184, w: 288, h: 168 }
+    { id: 'clock', anchor: 'tr', ox: 32, oy: 56, w: 288, h: 120, variant: 'digital' },
+    { id: 'system', anchor: 'tr', ox: 32, oy: 200, w: 288, h: 168 }
   ];
 
   const paths = [
