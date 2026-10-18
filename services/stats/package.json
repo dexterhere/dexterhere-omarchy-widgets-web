@@ -1,0 +1,9 @@
+{
+  "name": "omarchy-widgets-stats",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "Anonymous view and like counters for omarchy-widgets-web. No runtime dependencies.",
+  "main": "src/index.ts"
+}

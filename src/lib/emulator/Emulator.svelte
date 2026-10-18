@@ -19,14 +19,19 @@
     onPickTheme,
     themeId,
     widgetLayer,
+    liftedLayer,
     overlayLayer,
     widgetCenter,
     barItems = [],
     menuRows = [],
-    onapi
+    onapi,
+    compact = false,
+    workspace
   }: EmulatorProps = $props();
 
   const emu = new EmulatorState();
+  // svelte-ignore state_referenced_locally
+  if (workspace) emu.ws = Math.max(0, Math.min(WS_COUNT - 1, Math.round(workspace) - 1));
   $effect(() => {
     emu.pickTheme = () => onPickTheme?.();
   });
@@ -51,7 +56,8 @@
   let areaH = $state(0);
   let full = $state(false);
   let holdH = $state(0);
-  let legendOpen = $state(true);
+  // svelte-ignore state_referenced_locally
+  let legendOpen = $state(!compact);
   let panelLeft = $state(4);
 
   const barH = $derived(emu.barVisible ? 28 : 0);
@@ -62,7 +68,7 @@
   });
 
   // Workspace slide (reduced motion: nothing runs, the CSS already shows the final state).
-  let prevWs = 0;
+  let prevWs = emu.ws;
   $effect(() => {
     const to = emu.ws;
     if (strip && to !== prevWs) {
@@ -155,6 +161,8 @@
     if (e.key === 'Escape') {
       if (emu.closeOverlays()) {
         e.preventDefault();
+      } else if (emu.escapeHook()) {
+        e.preventDefault(); // the widget layer left edit mode
       } else if (full) {
         e.preventDefault();
         emu.captured = false;
@@ -187,7 +195,14 @@
       return;
     }
     if ((!emu.captured && emu.sticky.length === 0) || !interactive || e.isComposing) return;
-    if (emu.keydown(e)) {
+    // A held Super+Alt+P peeks; auto-repeat must not toggle it back.
+    if (e.repeat && emu.peekHeld) {
+      e.preventDefault();
+      return;
+    }
+    const hit = emu.keydown(e);
+    if (hit) {
+      if (hit.id === 'widget-peek') emu.peekHeld = true;
       e.preventDefault();
       e.stopPropagation();
     }
@@ -208,7 +223,7 @@
     if (
       (emu.panel || emu.modal) &&
       root.contains(t) &&
-      !t.closest('.panel, .menu, .launcher, .keysbox, .bar')
+      !t.closest('.panel, .menu, .launcher, .keysbox, .bar, [data-keep-overlay]')
     ) {
       emu.closeOverlays();
     } else if ((emu.panel || emu.modal) && !root.contains(t)) {
@@ -241,6 +256,7 @@
   <section
     class="emu"
     class:full
+    class:compact
     bind:this={root}
     role={full ? 'dialog' : 'region'}
     aria-modal={full ? 'true' : undefined}
@@ -287,6 +303,9 @@
       <Wallpaper themeId={wpTheme} />
       {#if widgetLayer}
         <div class="layer bottom" data-layer="bottom">{@render widgetLayer(api)}</div>
+      {/if}
+      {#if liftedLayer}
+        <div class="layer lifted" data-layer="lifted">{@render liftedLayer(api)}</div>
       {/if}
       {#if emu.barVisible}
         <Bar {emu} extra={barItems} />
@@ -432,6 +451,10 @@
     contain: layout paint;
     container-type: inline-size;
   }
+  .emu.compact:not(.full) .desk {
+    aspect-ratio: 3 / 1;
+    min-height: 320px;
+  }
   .emu.full .desk {
     flex: 1 1 auto;
     aspect-ratio: auto;
@@ -453,6 +476,9 @@
   }
   .layer.bottom {
     z-index: 1;
+  }
+  .layer.lifted {
+    z-index: 25;
   }
   .layer.top {
     z-index: 45;

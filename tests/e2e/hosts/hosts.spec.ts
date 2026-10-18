@@ -19,7 +19,13 @@ function watch(page: Page) {
     (m) => m.type() === 'error' && problems.push(`console: ${m.text().slice(0, 300)}`)
   );
   page.on('pageerror', (e) => problems.push(`pageerror: ${String(e).slice(0, 300)}`));
-  page.on('requestfailed', (r) => problems.push(`failed: ${r.url()} ${r.failure()?.errorText}`));
+  page.on(
+    'requestfailed',
+    (r) =>
+      // a prefetch of page data that a navigation cancelled is not a failure
+      !(r.failure()?.errorText === 'net::ERR_ABORTED' && /__data\.json/.test(r.url())) &&
+      problems.push(`failed: ${r.url()} ${r.failure()?.errorText}`)
+  );
   page.on('response', (r) => r.status() >= 400 && problems.push(`${r.status()}: ${r.url()}`));
   return problems;
 }
@@ -280,4 +286,27 @@ test('no request leaves the two local hosts', async ({ page }) => {
   await page.waitForLoadState('networkidle');
   expect([...hosts].filter((h) => !LOCAL.has(h))).toEqual([]);
   expect(hosts.has('docs.localhost')).toBe(true);
+});
+
+test('footer links: Docs links on docs.localhost, Site links on localhost, both resolve', async ({
+  page,
+  request
+}) => {
+  for (const from of [`${SITE}/`, `${DOCS}${START}`]) {
+    await page.goto(from);
+    const col = (name: string) =>
+      page
+        .getByRole('navigation', { name: 'Footer' })
+        .locator('.col', { has: page.getByRole('heading', { name }) })
+        .locator('a')
+        .evaluateAll((as) => as.map((a) => a.getAttribute('href')!));
+    const docs = await col('Docs');
+    for (const h of docs) expect(h, from).toMatch(new RegExp(`^${DOCS}/next/`));
+    const explore = await col('Explore');
+    expect(explore).toContain(`${SITE}/widgets/`);
+    expect(explore).toContain(`${SITE}/rss.xml`);
+    expect(explore).toContain(`${DOCS}/`);
+    expect(await col('Project')).toContain(`${SITE}/security/`);
+    for (const h of [...explore, ...docs]) expect((await request.get(h)).status(), h).toBe(200);
+  }
 });

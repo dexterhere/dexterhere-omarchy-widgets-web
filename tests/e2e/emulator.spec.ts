@@ -136,15 +136,14 @@ test('the legend runs chords too', async ({ page }) => {
   await expect(wsBtn(page, 3)).toHaveAttribute('aria-current', 'true');
 });
 
-test('Super+Alt+W shows the Widget Center placeholder, labelled Proposed', async ({ page }) => {
+test('Super+Alt+W opens the Widget Center, labelled Proposed', async ({ page }) => {
   await ready(page);
   await chord(page, ['super', 'alt'], 'KeyW');
-  const panel = page.getByRole('dialog', { name: 'Widget Center panel' });
-  await expect(panel).toContainText('Widget Center: coming in the next step');
-  await expect(panel).toContainText('Proposed');
+  const sheet = page.getByRole('dialog', { name: 'Widget Center' });
+  await expect(sheet).toContainText('Proposed');
   await expect(page.locator('.legend [data-binding="widget-center"]')).toContainText('Proposed');
   await page.keyboard.press('Escape');
-  await expect(panel).toBeHidden();
+  await expect(sheet).toBeHidden();
 });
 
 test('panels open from the bar and close on outside click', async ({ page }) => {
