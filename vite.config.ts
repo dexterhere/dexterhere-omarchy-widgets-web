@@ -70,6 +70,9 @@ export default defineConfig(({ mode }) => {
         extensions: ['.svelte', '.md'],
         preprocess: [vitePreprocess(), mdsvex(mdsvexOptionsFor(origins))],
         adapter: adapter({ pages: out, assets: out, fallback: '404.html', strict: true }),
+        // Absolute asset and link URLs, no location-derived `base`: the 404/400/500 pages are served
+        // for ANY URL, and a relative base computed from `location` made `//evil.com/a/b` an open redirect.
+        paths: { relative: false },
         outDir: out === 'build' ? '.svelte-kit' : `.svelte-kit-${out}`,
         prerender: {
           // Host mode: docs pages link to /next/... (the docs host's URLs). The crawler cannot

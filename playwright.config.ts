@@ -8,6 +8,8 @@ import { defineConfig, devices } from '@playwright/test';
 // the hosts server uses PW_HOSTS_PORT, default PW_PORT + 1.
 const PORT = Number(process.env.PW_PORT ?? 4173);
 const HOSTS_PORT = Number(process.env.PW_HOSTS_PORT ?? PORT + 1);
+const FALLBACK_PORT = PORT + 2; // build/ behind scripts/serve-fallback.ts
+const FALLBACK_HOSTS_PORT = PORT + 3; // build-hosts/ behind the same server
 
 export default defineConfig({
   testDir: 'tests/e2e',
@@ -17,7 +19,23 @@ export default defineConfig({
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: { baseURL: `http://localhost:${PORT}`, trace: 'retain-on-failure' },
   projects: [
-    { name: 'chromium', testIgnore: '**/hosts/**', use: { ...devices['Desktop Chrome'] } },
+    {
+      name: 'chromium',
+      testIgnore: ['**/hosts/**', '**/errorpages/**'],
+      use: { ...devices['Desktop Chrome'] }
+    },
+    // The static error pages behind a try_files-style fallback server (scripts/serve-fallback.ts),
+    // not `vite preview`: path mode (build/) and host mode (build-hosts/, docs.localhost).
+    {
+      name: 'errorpages',
+      testMatch: '**/errorpages/**/*.spec.ts',
+      use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${FALLBACK_PORT}` }
+    },
+    {
+      name: 'errorpages-hosts',
+      testMatch: '**/errorpages/**/*.spec.ts',
+      use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${FALLBACK_HOSTS_PORT}` }
+    },
     {
       name: 'hosts',
       testMatch: '**/hosts/**/*.spec.ts',
@@ -26,6 +44,17 @@ export default defineConfig({
     }
   ],
   webServer: [
+    {
+      command: `bun scripts/serve-fallback.ts build ${FALLBACK_PORT}`,
+      port: FALLBACK_PORT,
+      reuseExistingServer: !process.env.CI
+    },
+    {
+      command: `bun scripts/serve-fallback.ts build-hosts ${FALLBACK_HOSTS_PORT}`,
+      port: FALLBACK_HOSTS_PORT,
+      timeout: 300_000,
+      reuseExistingServer: !process.env.CI
+    },
     {
       command: `bun run preview -- --port ${PORT}`,
       port: PORT,

@@ -135,5 +135,6 @@ describe('copy', () => {
   it('path display: printable, short, controls replaced', () => {
     expect(safePathForDisplay('/a\u0000b\u001b[31m')).toBe('/a?b?[31m');
     expect(safePathForDisplay('/' + 'x'.repeat(500)).length).toBe(200);
+    expect(safePathForDisplay('/a\u202Eb\u200Bc\u2066d\uFEFFe')).toBe('/a?b?c?d?e');
   });
 });
