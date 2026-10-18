@@ -10,6 +10,7 @@ import { loadEnv } from 'vite';
 import { defineConfig } from 'vitest/config';
 import { mdsvexOptionsFor } from './scripts/mdsvex.ts';
 import { parseOrigins } from './src/lib/origins.ts';
+import { connectSrc, statsOrigin } from './src/lib/stats/origin.ts';
 
 // `vite preview` serves SvelteKit's own output, not build/, where `pagefind --site build` writes
 // the search index. This serves build/pagefind/ under /pagefind/ so e2e tests the real index.
@@ -45,12 +46,18 @@ export default defineConfig(({ mode }) => {
   // host. Invalid values stop the build here. OW_BUILD_DIR keeps the host-mode build apart.
   const origins = parseOrigins(loadEnv(mode, process.cwd(), 'PUBLIC_'));
   const out = process.env.OW_BUILD_DIR ?? 'build';
+  // Optional stats service. Unset (the default): no remote provider, CSP unchanged.
+  const rawStatsUrl =
+    process.env.PUBLIC_STATS_URL ?? loadEnv(mode, process.cwd(), 'PUBLIC_').PUBLIC_STATS_URL;
+  if (rawStatsUrl && !statsOrigin(rawStatsUrl))
+    throw new Error('PUBLIC_STATS_URL must be an https origin (http only for localhost), no path.');
   return {
     define: {
       // PUBLIC_BUILD_COMMIT: commit hash for the footer; the app validates it, '' hides it.
       __BUILD_COMMIT__: JSON.stringify(
         loadEnv(mode, process.cwd(), 'PUBLIC_').PUBLIC_BUILD_COMMIT ?? ''
       ),
+      __STATS_URL__: JSON.stringify(statsOrigin(rawStatsUrl) ?? ''),
       ...(origins.site
         ? {
             __SITE_ORIGIN__: JSON.stringify(origins.site),
@@ -85,7 +92,8 @@ export default defineConfig(({ mode }) => {
             'style-src': ['self', 'unsafe-inline'], // Svelte scoped styles, no external sheets
             'img-src': ['self', 'data:'],
             'font-src': ['self'],
-            'connect-src': ['self'],
+            // exactly the stats origin when PUBLIC_STATS_URL is set, nothing else
+            'connect-src': connectSrc(rawStatsUrl) as ['self'],
             'object-src': ['none'],
             'base-uri': ['self'],
             'form-action': ['self']
@@ -98,6 +106,9 @@ export default defineConfig(({ mode }) => {
     build: { assetsInlineLimit: 0 },
     // Content pages import '$lib/docs/...'. SvelteKit 3 ships no $lib alias, so Vite provides one.
     resolve: { alias: { $lib: fileURLToPath(new URL('./src/lib', import.meta.url)) } },
-    test: { include: ['tests/unit/**/*.test.ts', 'src/**/*.test.ts'], environment: 'node' }
+    test: {
+      include: ['tests/unit/**/*.test.ts', 'src/**/*.test.ts', 'services/**/*.test.ts'],
+      environment: 'node'
+    }
   };
 });
