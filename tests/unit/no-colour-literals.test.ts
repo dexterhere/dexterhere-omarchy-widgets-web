@@ -5,15 +5,17 @@ import { describe, expect, it } from 'vitest';
 // Widgets never pick colours: they read theme tokens. This fails on any colour literal.
 const root = join(__dirname, '../../src/lib/components');
 const files = [
-  join(root, 'Desktop.svelte'),
-  ...readdirSync(join(root, 'widgets'))
-    .filter((f) => f.endsWith('.svelte'))
-    .map((f) => join(root, 'widgets', f))
+  ...['widgets', 'home', 'stats'].flatMap((d) =>
+    readdirSync(join(root, d))
+      .filter((f) => f.endsWith('.svelte'))
+      .map((f) => join(root, d, f))
+  ),
+  join(root, 'WidgetPreview.svelte')
 ];
 const literal = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch)\(/;
 
 describe('no colour literals in widget CSS', () => {
-  it('scans the widgets and the desktop', () => {
+  it('scans the widgets, the home page parts and the stats components', () => {
     expect(files.length).toBeGreaterThanOrEqual(6);
   });
   for (const f of files) {

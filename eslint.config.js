@@ -32,6 +32,7 @@ export default ts.config(
       'registry/dist/',
       'static/theme-boot.js', // generated
       'build-hosts/',
+      'build-stats/',
       '.svelte-kit-*/'
     ]
   }

@@ -2,6 +2,7 @@
   import { resolve } from '$app/paths';
   import Badges from '../../../lib/components/Badges.svelte';
   import CopyButton from '../../../lib/components/CopyButton.svelte';
+  import StatsRow from '../../../lib/components/stats/StatsRow.svelte';
   import WidgetPreview from '../../../lib/components/WidgetPreview.svelte';
   import { SIZE_CLASSES, fitToClass, snap, type SizeClass } from '../../../lib/desktop/layout';
   import {
@@ -84,6 +85,8 @@
     <h1>{w.name}</h1>
     <p class="text-2">{w.summary}</p>
     <Badges {w} />
+    <!-- A view is recorded once per day per browser; DNT and GPC are respected (stats provider). -->
+    {#key w.id}<StatsRow id={w.id} name={w.name} repo={w.repo} view />{/key}
   </header>
 
   <div class="top">
