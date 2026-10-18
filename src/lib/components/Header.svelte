@@ -141,11 +141,6 @@
     background: var(--bg);
     border-bottom: 1px solid transparent;
   }
-  @supports (background: color-mix(in srgb, red 50%, transparent)) {
-    .shell {
-      background: color-mix(in srgb, var(--bg) 95%, transparent);
-    }
-  }
   .ready .shell {
     transition:
       height 180ms ease-out,
