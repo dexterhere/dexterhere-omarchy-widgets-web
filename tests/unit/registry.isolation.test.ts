@@ -79,3 +79,16 @@ describe('guarded paths', () => {
     expect(checkReviewChanges({ ...base, author: 'boss', changed: [f] }).ok).toBe(true);
   });
 });
+
+describe('excluded[] text', () => {
+  it('neutralises spoofing characters and markup from author-controlled names', async () => {
+    const r = await buildRegistry({
+      listings: [{ file: 'a‮<img src=x>.json', data: { nope: 1 } }],
+      lock: {},
+      readFixture: noFixture,
+      readReview: noReview
+    });
+    const x = r.index.excluded[0];
+    expect(x.ref + x.reason).not.toMatch(/[‮<>]/);
+  });
+});

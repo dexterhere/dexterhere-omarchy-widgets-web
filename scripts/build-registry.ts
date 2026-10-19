@@ -511,6 +511,9 @@ export async function buildRegistry(inp: BuildInput): Promise<BuildResult> {
     },
     widgets,
     excluded: errors.map((e) => {
+      // Error text can echo author-controlled names (file names, paths): neutralise it before
+      // publishing. Spoofing characters and markup-looking text become '?'.
+      e = e.replace(new RegExp(SPOOF.source, 'gu'), '?').replace(/[<>]/g, '?');
       const i = e.indexOf(': ');
       return {
         ref: (i > 0 ? e.slice(0, i) : 'registry').slice(0, 120),
