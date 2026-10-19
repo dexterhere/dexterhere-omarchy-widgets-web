@@ -8,6 +8,7 @@ import {
 import {
   COMMIT,
   ID,
+  layoutJson,
   listing,
   manifestJson,
   mockFetch,
@@ -75,12 +76,13 @@ describe('buildRegistry', () => {
       expect(r.errors).toHaveLength(1);
     }
   });
-  it('fetches only the two pinned files from raw.githubusercontent.com', async () => {
+  it('fetches only the three pinned data files from raw.githubusercontent.com', async () => {
     const m = mockFetch(files());
     await run({ listings: [L()], fetch: m.fn });
     expect(m.calls).toEqual([
       `https://raw.githubusercontent.com/someone/demo/${COMMIT}/manifest.json`,
-      `https://raw.githubusercontent.com/someone/demo/${COMMIT}/widget.json`
+      `https://raw.githubusercontent.com/someone/demo/${COMMIT}/widget.json`,
+      `https://raw.githubusercontent.com/someone/demo/${COMMIT}/layout.json`
     ]);
   });
   it('sorts output by id', async () => {
@@ -89,7 +91,13 @@ describe('buildRegistry', () => {
       const id = ids.find((i) => url.includes(`/${i.split('.')[2]}/`))!;
       const name = url.split('/').pop()!;
       return new Response(
-        JSON.stringify(name === 'widget.json' ? widgetJson({ id }) : manifestJson({ id }))
+        JSON.stringify(
+          name === 'widget.json'
+            ? widgetJson({ id })
+            : name === 'layout.json'
+              ? layoutJson()
+              : manifestJson({ id })
+        )
       );
     };
     const r = await run({
@@ -141,7 +149,8 @@ describe('buildRegistry', () => {
       listings: [L(listing({ status: 'planned', source: 'fixture', commit: '0'.repeat(40) }))],
       fetch: m.fn,
       offline: true,
-      readFixture: (_id, n) => (n === 'widget' ? widgetJson() : manifestJson())
+      readFixture: (_id, n) =>
+        n === 'widget' ? widgetJson() : n === 'layout' ? layoutJson() : manifestJson()
     });
     expect(r.errors).toEqual([]);
     expect(m.calls).toEqual([]);

@@ -10,6 +10,7 @@ import { checkReviewChanges } from '../../scripts/check-review-changes';
 import {
   ID,
   json,
+  layoutJson,
   listing,
   manifestJson,
   noFixture,
@@ -32,7 +33,13 @@ const fetch: FetchFn = async (url) => {
   if (url.includes('/license')) return json({ license: { spdx_id: lic } });
   if (url.includes('/compare/')) return json({ status: 'behind' });
   if (url.startsWith('https://api.github.com')) return json(info(1));
-  return json(url.endsWith('manifest.json') ? manifestJson() : widgetJson());
+  return json(
+    url.endsWith('manifest.json')
+      ? manifestJson()
+      : url.endsWith('layout.json')
+        ? layoutJson()
+        : widgetJson()
+  );
 };
 
 const run = (lock: Record<string, { repoId: number; ownerId: number }>) =>

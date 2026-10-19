@@ -1,170 +1,174 @@
+import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { buildRegistry } from '../../scripts/build-registry';
 import {
-  SIZE_CLASSES,
-  checkpoint,
-  clampPos,
-  clampSize,
-  defaultItems,
-  fitToClass,
-  initialLayout,
-  nudge,
-  redo,
-  remove,
-  reset,
-  resizeBy,
-  restore,
-  settle,
-  sizeClassOf,
-  snap,
-  snapMove,
-  snapResize,
-  undo,
-  setRect
-} from '../../src/lib/desktop/layout';
-import { createGenerator } from '../../src/lib/desktop/sample';
+  LAYOUT_LIMITS,
+  bindsOf,
+  checkBindings,
+  validateLayout,
+  validateSampleData,
+  type LayoutNode
+} from '../../src/lib/registry/layout';
+import {
+  layoutJson,
+  listing,
+  manifestJson,
+  mockFetch,
+  noFixture,
+  noReview,
+  widgetJson
+} from './registry.helpers';
 
-const B = { w: 720, h: 448 };
-const fresh = () => initialLayout(defaultItems());
-const get = (s: ReturnType<typeof fresh>, id: string) => s.items.find((i) => i.id === id)!;
+const b = { topic: 'github.prs', field: 'open' };
+const lay = (root: unknown, extra = {}) => ({ schemaVersion: 0, root, ...extra });
+const errs = (v: unknown, variants: string[] = []) => {
+  const r = validateLayout(v, variants);
+  return r.ok ? [] : r.errors;
+};
 
-describe('snap and clamp', () => {
-  it('snaps to the 8px grid', () => {
-    expect(snap(11)).toBe(8);
-    expect(snap(12)).toBe(16);
-    expect(snap(-3)).toBe(0);
-  });
-  it('clamps position into the bounds', () => {
-    expect(clampPos({ x: -50, y: 900, w: 100, h: 100 }, B)).toEqual({ x: 0, y: 348 });
-    expect(clampPos({ x: 9999, y: 0, w: 96, h: 96 }, B)).toEqual({ x: 624, y: 0 });
-  });
-  it('snapMove pulls onto grid, neighbour edges and shows guides', () => {
-    const other = { x: 240, y: 144, w: 144, h: 112 };
-    const g = snapMove({ x: 13, y: 21, w: 96, h: 96 }, [other], B);
-    expect(g.rect.x % 8).toBe(0);
-    expect(g.rect.y % 8).toBe(0);
-    // right edge within threshold of the neighbour's left edge (240)
-    const n = snapMove({ x: 140, y: 300, w: 96, h: 96 }, [other], B);
-    expect(n.rect.x).toBe(144);
-    expect(n.guides.x).toContain(240);
-    // bounds edge
-    expect(snapMove({ x: 0, y: -3, w: 96, h: 96 }, [], B).guides.y).toContain(0);
-  });
-});
-
-describe('size classes', () => {
-  it('clamps invalid sizes instead of rejecting them', () => {
-    expect(clampSize('clock', 8, 8)).toEqual({ w: 120, h: 96 });
-    expect(clampSize('clock', 4000, 4000)).toEqual({ w: 360, h: 288 });
-    expect(clampSize('battery', 1000, 8)).toEqual({ w: 320, h: 96 });
-  });
-  it('always returns a size on the grid inside some class', () => {
-    for (const type of Object.keys(SIZE_CLASSES) as (keyof typeof SIZE_CLASSES)[]) {
-      for (let w = 0; w <= 520; w += 12) {
-        for (let h = 0; h <= 520; h += 20) {
-          const s = clampSize(type, w, h);
-          expect(s.w % 8).toBe(0);
-          expect(s.h % 8).toBe(0);
-          expect(['compact', 'wide', 'tall', 'large']).toContain(sizeClassOf(type, w, h));
-        }
-      }
+describe('validateLayout', () => {
+  it('accepts every fixture layout', () => {
+    for (const d of readdirSync('registry/fixtures')) {
+      const l = JSON.parse(readFileSync(`registry/fixtures/${d}/layout.json`, 'utf8'));
+      expect(errs(l), d).toEqual([]);
     }
   });
-  it('recomposes across classes', () => {
-    expect(sizeClassOf('system', 208, 288)).toBe('tall');
-    expect(sizeClassOf('system', 208, 160)).toBe('compact');
-    expect(sizeClassOf('system', 320, 160)).toBe('wide');
-    expect(sizeClassOf('system', 320, 320)).toBe('large');
-    expect(sizeClassOf('clock', 360, 112)).toBe('wide');
+  it.each([
+    ['unknown node', lay({ type: 'script', src: 'x' }), /not a known node/],
+    ['extra property', lay({ type: 'divider', onclick: 'x' }), /unknown property/],
+    ['raw colour', lay({ type: 'value', bind: b, color: '#ff0000' }), /never a colour/],
+    ['css colour name', lay({ type: 'value', bind: b, color: 'red' }), /role/],
+    ['url in text', lay({ type: 'text', text: '<img src=x onerror=1>' }), /plain text/],
+    ['bidi in text', lay({ type: 'text', text: 'a‮b' }), /plain text/],
+    ['text and bind', lay({ type: 'text', text: 'x', bind: b }), /exactly one/],
+    ['long text', lay({ type: 'text', text: 'x'.repeat(121) }), /plain text/],
+    ['bad bind', lay({ type: 'value', bind: { topic: 'a b', field: 'x' } }), /invalid topic/],
+    [
+      'bind extra key',
+      lay({ type: 'value', bind: { ...b, expr: '1+1' } }),
+      /must be \{topic, field\}/
+    ],
+    ['bad icon', lay({ type: 'icon', name: 'http://x' }), /icon/],
+    ['list too long', lay({ type: 'list', bind: b, max: 51 }), /max/],
+    ['empty stack', lay({ type: 'stack', children: [] }), /children/],
+    ['wrong version', { schemaVersion: 1, root: { type: 'divider' } }, /schemaVersion/],
+    [
+      'proto key',
+      JSON.parse('{"schemaVersion":0,"root":{"type":"divider"},"__proto__x":1}'),
+      /unknown property/
+    ],
+    ['not an object', [], /object/]
+  ])('rejects %s', (_n, v, re) => expect(errs(v).join()).toMatch(re));
+  it('rejects too deep and too many nodes', () => {
+    let n: unknown = { type: 'divider' };
+    for (let i = 0; i < LAYOUT_LIMITS.depth; i++) n = { type: 'stack', children: [n] };
+    expect(errs(lay(n)).join()).toMatch(/deeper/);
+    const wide = { type: 'stack', children: Array(20).fill({ type: 'divider' }) };
+    const tree = { type: 'stack', children: Array(11).fill(wide) };
+    expect(errs(lay(tree)).join()).toMatch(/more than 200 nodes/);
   });
-  it('honours an aspect lock', () => {
-    const spec = { minW: 96, maxW: 192, minH: 96, maxH: 192, aspect: 2 };
-    const f = fitToClass(spec, 160, 150);
-    expect(f.w / f.h).toBeCloseTo(2);
-    expect(f.h).toBeGreaterThanOrEqual(96);
+  it('variants must be declared', () => {
+    const v = lay({ type: 'divider' }, { variants: { digital: { type: 'divider' } } });
+    expect(errs(v, ['digital'])).toEqual([]);
+    expect(errs(v, ['analog']).join()).toMatch(/not declared/);
   });
-  it('resize by mouse respects limits and edges', () => {
-    const inst = get(fresh(), 'clock');
-    const r = snapResize(inst, 'se', 5000, 5000, [], B);
-    expect(r.rect.w).toBeLessThanOrEqual(360);
-    expect(r.rect.x + r.rect.w).toBeLessThanOrEqual(B.w);
+  it('does not treat inherited names as nodes', () =>
+    expect(errs(lay({ type: 'constructor' })).join()).toMatch(/not a known node/));
+});
+
+describe('sample data and bindings', () => {
+  const sd = { 'github.prs': { open: 3, titles: ['a', 'b'], series: [1, 2, 3] } };
+  const node = (type: string, field: string) => ({ type, bind: { topic: 'github.prs', field } });
+  const prov = [{ topics: ['github.prs'], fields: ['open', 'titles', 'series'] }];
+  it('accepts matching shapes', () => {
+    expect(validateSampleData(sd)).toEqual([]);
+    expect(
+      checkBindings(
+        [node('ring', 'open'), node('list', 'titles'), node('sparkline', 'series')],
+        prov,
+        sd
+      )
+    ).toEqual([]);
+  });
+  it('rejects undeclared, missing and wrongly shaped bindings', () => {
+    expect(checkBindings([node('ring', 'secret')], prov, sd).join()).toMatch(/not declared/);
+    expect(
+      checkBindings(
+        [node('ring', 'open')],
+        [{ topics: ['github.prs'], fields: ['open'] }],
+        {}
+      ).join()
+    ).toMatch(/no sampleData/);
+    expect(checkBindings([node('ring', 'titles')], prov, sd).join()).toMatch(/wrong shape/);
+    expect(checkBindings([node('sparkline', 'open')], prov, sd).join()).toMatch(/wrong shape/);
+  });
+  it.each([
+    [{ 'github.prs': { open: NaN } }],
+    [{ 'github.prs': { open: Infinity } }],
+    [{ 'github.prs': { open: 'x'.repeat(121) } }],
+    [{ 'github.prs': { open: '<b>x</b>' } }],
+    [{ 'github.prs': { open: [1, 'a'] } }],
+    [{ 'github.prs': { open: Array(51).fill(1) } }],
+    [{ 'bad topic': { open: 1 } }],
+    [[]]
+  ])('rejects hostile sample data %#', (v) =>
+    expect(validateSampleData(v).length).toBeGreaterThan(0)
+  );
+  it('bindsOf lists every binding', () => {
+    const n = {
+      type: 'stack',
+      children: [node('ring', 'open'), { type: 'row', children: [node('list', 'titles')] }]
+    } as LayoutNode;
+    expect(bindsOf(n).map((x) => x.type)).toEqual(['ring', 'list']);
   });
 });
 
-describe('keyboard helpers', () => {
-  it('nudges by one grid step and stays inside the bounds', () => {
-    let s = nudge(fresh(), 'clock', 1, 0, B);
-    expect(get(s, 'clock').x).toBe(24);
-    s = nudge(s, 'clock', -10, 0, B);
-    expect(get(s, 'clock').x).toBe(0);
-    const again = nudge(s, 'clock', -1, 0, B);
-    expect(again.past).toHaveLength(s.past.length); // no change, no history entry
+describe('build integration', () => {
+  const run = (widget: object, layout: unknown) =>
+    buildRegistry({
+      listings: [{ file: 'io.github.someone.demo.json', data: listing() }],
+      fetch: mockFetch({
+        'manifest.json': manifestJson(),
+        'widget.json': widget,
+        'layout.json': layout
+      }).fn,
+      skipReachability: true,
+      readFixture: noFixture,
+      readReview: noReview
+    });
+  it('carries layout and sampleData into the output', async () => {
+    const r = await run(widgetJson(), layoutJson());
+    expect(r.errors).toEqual([]);
+    expect(r.widgets[0].layout?.root.type).toBe('value');
+    expect(r.widgets[0].sampleData).toEqual({ 'github.prs': { open: 3 } });
   });
-  it('resizes by one grid step and clamps to the class limits', () => {
-    let s = fresh();
-    for (let i = 0; i < 40; i++) s = resizeBy(s, 'battery', -1, -1, B);
-    expect(get(s, 'battery')).toMatchObject({ w: 120, h: 96 });
-    for (let i = 0; i < 80; i++) s = resizeBy(s, 'battery', 1, 1, B);
-    expect(get(s, 'battery')).toMatchObject({ w: 320, h: 160 });
+  it('excludes a widget whose layout binds an undeclared field', async () => {
+    const bad = layoutJson({
+      root: { type: 'value', bind: { topic: 'github.prs', field: 'token' } }
+    });
+    const r = await run(widgetJson(), bad);
+    expect(r.widgets).toEqual([]);
+    expect(r.errors.join()).toMatch(/bindings/);
   });
-});
-
-describe('tray and history', () => {
-  it('removes to the tray and restores', () => {
-    let s = remove(fresh(), 'github');
-    expect(s.items.some((i) => i.id === 'github')).toBe(false);
-    expect(s.tray.map((i) => i.id)).toEqual(['github']);
-    s = restore(s, 'github', B);
-    expect(s.tray).toHaveLength(0);
-    expect(get(s, 'github')).toMatchObject({ x: 392, y: 16, w: 312, h: 400 });
+  it('excludes a spec widget without layout.json and one with hostile text', async () => {
+    expect((await run(widgetJson(), null)).errors.length).toBe(1);
+    const hostile = layoutJson({ root: { type: 'text', text: '<script>alert(1)</script>' } });
+    expect((await run(widgetJson(), hostile)).errors.join()).toMatch(/HTML|plain/);
   });
-  it('undo and redo walk the history; a new change clears redo', () => {
-    let s = nudge(fresh(), 'clock', 1, 0, B);
-    s = remove(s, 'clock');
-    s = undo(s);
-    expect(get(s, 'clock').x).toBe(24);
-    s = undo(s);
-    expect(get(s, 'clock').x).toBe(16);
-    s = redo(s);
-    expect(get(s, 'clock').x).toBe(24);
-    s = nudge(s, 'clock', 0, 1, B);
-    expect(s.future).toHaveLength(0);
-    expect(undo(initialLayout(defaultItems())).past).toHaveLength(0);
-  });
-  it('settle drops a checkpoint when nothing changed (a click without a drag)', () => {
-    const s = settle(checkpoint(fresh()));
-    expect(s.past).toHaveLength(0);
-    const moved = settle(
-      setRect(checkpoint(fresh()), 'clock', { x: 64, y: 16, w: 360, h: 112 }, B)
-    );
-    expect(moved.past).toHaveLength(1);
-  });
-  it('reset restores the defaults and is undoable', () => {
-    let s = remove(nudge(fresh(), 'clock', 3, 3, B), 'github');
-    s = reset(s);
-    expect(s.items).toEqual(defaultItems());
-    expect(s.tray).toEqual([]);
-    s = undo(s);
-    expect(s.tray).toHaveLength(1);
-  });
-  it('the default layout fits the smallest desktop and is already valid', () => {
-    for (const i of defaultItems()) {
-      expect(clampSize(i.type, i.w, i.h)).toEqual({ w: i.w, h: i.h });
-      expect(clampPos(i, B)).toEqual({ x: i.x, y: i.y });
-    }
-  });
-});
-
-describe('sample generator', () => {
-  it('is deterministic for a seed and stays in range', () => {
-    const a = createGenerator(3);
-    const b = createGenerator(3);
-    for (let i = 0; i < 200; i++) {
-      const x = a.next();
-      expect(x).toEqual(b.next());
-      expect(x.cpu).toBeGreaterThanOrEqual(0);
-      expect(x.cpu).toBeLessThanOrEqual(100);
-      expect(x.battery.pct).toBeLessThanOrEqual(100);
-      expect(x.history).toHaveLength(24);
-    }
+  it('code widgets get no layout and fetch no layout.json', async () => {
+    const m = mockFetch({
+      'manifest.json': manifestJson(),
+      'widget.json': widgetJson({ tier: 'code' })
+    });
+    const r = await buildRegistry({
+      listings: [{ file: 'io.github.someone.demo.json', data: listing() }],
+      fetch: m.fn,
+      skipReachability: true,
+      readFixture: noFixture,
+      readReview: noReview
+    });
+    expect(r.errors).toEqual([]);
+    expect(r.widgets[0].layout).toBeNull();
+    expect(m.calls.some((c) => c.endsWith('layout.json'))).toBe(false);
   });
 });

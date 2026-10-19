@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 0,
+  "root": {
+    "type": "stack",
+    "gap": "sm",
+    "children": [
+      {
+        "type": "row",
+        "gap": "md",
+        "children": [
+          {
+            "type": "icon",
+            "name": "check",
+            "color": "accent"
+          },
+          {
+            "type": "value",
+            "bind": {
+              "topic": "tasks.list",
+              "field": "dueToday"
+            },
+            "size": "lg",
+            "color": "accent"
+          },
+          {
+            "type": "text",
+            "text": "due today",
+            "size": "sm",
+            "color": "muted"
+          }
+        ]
+      },
+      {
+        "type": "list",
+        "bind": {
+          "topic": "tasks.list",
+          "field": "titles"
+        },
+        "max": 4,
+        "color": "foreground"
+      }
+    ]
+  }
+}

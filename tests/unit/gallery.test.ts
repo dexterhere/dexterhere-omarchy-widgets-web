@@ -48,6 +48,8 @@ const mk = (o: Partial<RegistryWidget>): RegistryWidget => ({
   settings: [],
   compat: { omarchy: '>=4', widgetsKit: '^1' },
   access: { data: [], network: ['none'], files: ['none'], programs: ['none'], secrets: ['none'] },
+  layout: null,
+  sampleData: null,
   ...o
 });
 const A = mk({});
