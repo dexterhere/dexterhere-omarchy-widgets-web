@@ -607,3 +607,26 @@ test('makes no request to any origin other than localhost', async ({ page }) => 
   await expect(page.locator('[data-preview-mount]').first()).toBeVisible();
   expect([...hosts]).toEqual([`localhost:${PORT}`]);
 });
+
+test('a spec widget detail page draws its pinned layout.json from sample data only', async ({
+  page
+}) => {
+  const outside: string[] = [];
+  page.on('request', (r) => {
+    const u = r.url();
+    if (
+      !u.startsWith('http://localhost') &&
+      !u.startsWith('http://127.0.0.1') &&
+      !u.startsWith('data:')
+    )
+      outside.push(u);
+  });
+  await page.goto('/widgets/io.github.dexterhere.concept-docker/');
+  const box = page.getByTestId('layout-render');
+  await expect(
+    page.getByRole('heading', { level: 2, name: 'Drawn from layout.json' })
+  ).toBeVisible();
+  await expect(box).toContainText('running');
+  await expect(box.locator('li')).toHaveCount(3);
+  expect(outside).toEqual([]);
+});
