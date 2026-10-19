@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 0,
+  "id": "io.github.dexterhere.concept-clock",
+  "tier": "spec",
+  "category": "time-calendar",
+  "surfaces": ["desktop", "bar"],
+  "sizeClasses": [
+    {
+      "name": "compact",
+      "min": [160, 100],
+      "max": [240, 160],
+      "aspectLock": null
+    },
+    {
+      "name": "wide",
+      "min": [280, 120],
+      "max": [480, 200],
+      "aspectLock": null
+    }
+  ],
+  "variants": ["digital", "analog", "binary", "world"],
+  "providers": [
+    {
+      "name": "system",
+      "topics": ["system.time"],
+      "fields": ["hm", "hms", "date", "tz"],
+      "auth": "none"
+    }
+  ],
+  "capabilities": {
+    "network": [],
+    "files": [],
+    "spawn": []
+  },
+  "interactiveRegions": [],
+  "settings": [
+    {
+      "key": "seconds",
+      "type": "bool",
+      "label": "Show seconds when wide enough",
+      "default": true
+    },
+    {
+      "key": "hour12",
+      "type": "bool",
+      "label": "12-hour time",
+      "default": false
+    },
+    {
+      "key": "zones",
+      "type": "string",
+      "label": "World clock zones (comma separated)",
+      "default": "UTC"
+    }
+  ],
+  "compat": {
+    "omarchy": ">=4.0",
+    "widgetsKit": "^1"
+  }
+}

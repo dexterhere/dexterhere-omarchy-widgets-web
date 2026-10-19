@@ -1,0 +1,7 @@
+{
+  "id": "io.github.dexterhere.concept-system-monitor",
+  "name": "System monitor (concept)",
+  "version": "0.0.0-concept",
+  "description": "Concept system monitor with ring and graph variants.",
+  "license": "MIT"
+}

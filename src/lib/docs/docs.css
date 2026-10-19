@@ -1,0 +1,91 @@
+/* Docs-only global styles: markdown output (article.docs) and shiki's CSS-variable theme.
+   Colours are theme tokens or mixes of them, so every one of the 22 themes restyles code. */
+
+/* shiki "css-variables" theme: build-time classes are inline var() references to these.
+   Brand mixes are capped at 35% so every theme keeps 4.5:1 on --bg-deep (unit test). */
+:root {
+  --shiki-foreground: var(--text);
+  --shiki-background: var(--bg-deep);
+  --shiki-token-comment: var(--muted);
+  --shiki-token-punctuation: var(--muted);
+  --shiki-token-keyword: color-mix(in srgb, var(--brand) 35%, var(--text));
+  --shiki-token-string: var(--text-2);
+  --shiki-token-string-expression: var(--text-2);
+  --shiki-token-constant: color-mix(in srgb, var(--brand) 20%, var(--text));
+  --shiki-token-function: var(--text);
+  --shiki-token-parameter: var(--text-2);
+  --shiki-token-link: var(--text);
+}
+
+/* The article fills the page frame like every other page; only running text keeps a readable measure. */
+article.docs {
+  max-width: none;
+}
+article.docs :is(p, li, blockquote) {
+  max-width: 92ch;
+}
+article.docs > * + * {
+  margin-top: 1em;
+}
+article.docs :is(h2, h3, h4) {
+  margin-top: 2em;
+}
+article.docs :is(h2, h3, h4) + * {
+  margin-top: 0.5em;
+}
+/* heading anchor: appended after the text, never wrapping it, so links in headings stay valid */
+article.docs a.anchor {
+  margin-left: 0.5em;
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 400;
+}
+article.docs a.anchor:hover,
+article.docs a.anchor:focus-visible {
+  color: var(--text);
+}
+article.docs :is(ul, ol) {
+  padding-left: 1.4em;
+}
+article.docs li + li {
+  margin-top: 0.35em;
+}
+article.docs :is(pre, .shiki) {
+  max-width: 100%;
+  overflow-x: auto;
+  font-size: var(--fs-2);
+}
+article.docs pre.shiki {
+  background: var(--shiki-background);
+  color: var(--shiki-foreground);
+}
+article.docs blockquote {
+  margin-inline: 0;
+  padding-left: 16px;
+  border-left: 2px solid var(--border-strong);
+  color: var(--text-2);
+}
+article.docs table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: var(--fs-2);
+  line-height: 20px;
+}
+article.docs :is(th, td) {
+  padding: 6px 12px;
+  text-align: left;
+  vertical-align: top;
+  border: 1px solid var(--border);
+}
+article.docs th {
+  background: var(--surface-2);
+}
+article.docs img {
+  max-width: 100%;
+  height: auto;
+}
+article.docs hr {
+  margin-block: 2em;
+}

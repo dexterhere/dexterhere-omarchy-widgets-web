@@ -1,0 +1,7 @@
+{
+  "id": "io.github.dexterhere.concept-tasks",
+  "name": "Tasks (concept)",
+  "version": "0.0.0-concept",
+  "description": "Concept tasks widget reading a local task file.",
+  "license": "MIT"
+}

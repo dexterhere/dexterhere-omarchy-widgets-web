@@ -1,0 +1,169 @@
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+import { describe, expect, it } from 'vitest';
+import { THEME_IDS } from '../../src/lib/themes/themes';
+import { TOKEN_NAMES } from '../../src/lib/themes/types';
+import { fuzzy, APPS } from '../../src/lib/emulator/apps';
+import { EmulatorState } from '../../src/lib/emulator/state.svelte';
+import { runCommand } from '../../src/lib/emulator/terminal';
+import { wallpaper } from '../../src/lib/emulator/wallpaper';
+import { widgetFailures } from '../../src/lib/emulator/wallpaper-contrast';
+import { RESOLVED } from '../../src/lib/themes/css';
+
+describe('wallpaper', () => {
+  it('is deterministic and differs between themes', () => {
+    expect(wallpaper('nord')).toEqual(wallpaper('nord'));
+    const sigs = new Set(THEME_IDS.map((id) => JSON.stringify(wallpaper(id))));
+    expect(sigs.size).toBe(THEME_IDS.length);
+    expect(wallpaper('nord', { thumb: true })).toEqual(wallpaper('nord', { thumb: true }));
+  });
+  it('stays calm: allowed tokens only, brand and text kept faint', () => {
+    const calm = new Set(['--bg-deep', '--bg', '--surface', '--border', '--brand', '--text']);
+    for (const id of THEME_IDS)
+      for (const thumb of [false, true])
+        for (const p of wallpaper(id, { thumb })) {
+          expect(calm.has(p.token)).toBe(true);
+          if (p.token === '--brand') expect(p.opacity).toBeLessThanOrEqual(0.3);
+          if (p.token === '--text') expect(p.opacity).toBeLessThanOrEqual(0.25);
+        }
+  });
+  it('uses theme tokens only', () => {
+    const tokens = new Set(TOKEN_NAMES as readonly string[]);
+    for (const id of THEME_IDS)
+      for (const p of wallpaper(id)) {
+        expect(tokens.has(p.token)).toBe(true);
+        expect(p.opacity).toBeGreaterThan(0);
+        expect(p.opacity).toBeLessThanOrEqual(1);
+        expect(p.d).toMatch(/^[Mhvz0-9 .-]+$/);
+      }
+  });
+});
+
+describe('widgets read over the wallpaper', () => {
+  for (const r of RESOLVED) it(r.id, () => expect(widgetFailures(r)).toEqual([]));
+});
+
+describe('no colour literals in emulator source', () => {
+  const literal = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch)\(/;
+  const files: string[] = [];
+  const walk = (d: string) => {
+    for (const f of readdirSync(d)) {
+      const p = join(d, f);
+      if (statSync(p).isDirectory()) walk(p);
+      else if (/\.(svelte|ts)$/.test(f)) files.push(p);
+    }
+  };
+  walk(join(__dirname, '../../src/lib/emulator'));
+  walk(join(__dirname, '../../src/routes/emulator'));
+  it('scans files', () => expect(files.length).toBeGreaterThan(15));
+  for (const f of files)
+    it(f.split('/src/')[1], () => {
+      const bad = readFileSync(f, 'utf8')
+        .split('\n')
+        .filter((l) => literal.test(l));
+      expect(bad).toEqual([]);
+    });
+});
+
+describe('workspace state', () => {
+  it('starts with 2 tiles on workspace 1 and 1 on workspace 2', () => {
+    const e = new EmulatorState();
+    expect([0, 1, 2, 3].map((i) => e.windowCount(i))).toEqual([2, 1, 0, 0]);
+    expect(e.ws).toBe(0);
+  });
+  it('switches, cycles with wrap, and moves windows', () => {
+    const e = new EmulatorState();
+    e.goto(2);
+    expect(e.ws).toBe(2);
+    e.cycle(1);
+    expect(e.ws).toBe(3);
+    e.cycle(1);
+    expect(e.ws).toBe(0);
+    e.cycle(-1);
+    expect(e.ws).toBe(3);
+    e.goto(0);
+    const id = e.focusedId!;
+    e.moveTo(2);
+    expect(e.ws).toBe(2);
+    expect(e.windowCount(0)).toBe(1);
+    expect(e.wsOf(id)).toBe(2);
+  });
+  it('opens and closes terminals, and leaves ghosts for the exit animation', () => {
+    const e = new EmulatorState();
+    e.open('terminal');
+    expect(e.windowCount(0)).toBe(3);
+    e.close();
+    expect(e.windowCount(0)).toBe(2);
+    expect(e.ghosts.length).toBe(1);
+  });
+  it('runs chords from the virtual keys with sticky Super', () => {
+    const e = new EmulatorState();
+    e.press('2', 'Digit2');
+    expect(e.ws).toBe(0); // no modifier: nothing happens
+    e.toggleMod('super');
+    e.press('2', 'Digit2');
+    expect(e.ws).toBe(1);
+    expect(e.sticky).toEqual([]); // used up by one keystroke
+  });
+  it('Super+Alt+W opens the placeholder panel, Super+Alt+P is registered', () => {
+    const e = new EmulatorState();
+    e.run('widget-center');
+    expect(e.panel).toBe('widgets');
+    e.run('widget-peek');
+    expect(e.peek).toBe(true);
+    expect(e.closeOverlays()).toBe(true);
+    expect(e.closeOverlays()).toBe(false);
+  });
+});
+
+describe('apps and terminal', () => {
+  it('fuzzy matches subsequences', () => {
+    expect(fuzzy('trm', APPS)[0].id).toBe('terminal');
+    expect(fuzzy('zzz', APPS)).toEqual([]);
+  });
+  it('terminal commands are labelled sample output', () => {
+    for (const c of ['help', 'ow status', 'ow vault status'])
+      expect((runCommand(c) as string[]).join('\n')).toContain('(sample output)');
+    expect(runCommand('clear')).toBe('clear');
+    expect((runCommand('rm -rf /') as string[])[0]).toContain('not found');
+  });
+});
+
+describe('caps and expiring modifiers (second security review)', () => {
+  it('caps windows at 24, says so, and ignores auto-repeat of an opener chord', async () => {
+    const { MAX_WINDOWS } = await import('../../src/lib/emulator/state.svelte');
+    const e = new EmulatorState();
+    const key = {
+      key: 'Enter',
+      code: 'Enter',
+      metaKey: true,
+      ctrlKey: false,
+      altKey: false,
+      shiftKey: false
+    };
+    const before = Object.keys(e.windows).length;
+    e.keydown({ ...key, repeat: false });
+    for (let i = 0; i < 200; i++) e.keydown({ ...key, repeat: true }); // a held key
+    expect(Object.keys(e.windows).length).toBe(before + 1);
+    for (let i = 0; i < 100; i++) e.keydown(key);
+    expect(Object.keys(e.windows).length).toBe(MAX_WINDOWS);
+    expect(e.live).toContain('Window limit reached');
+  });
+  it('latched modifiers are cleared by release, reset and the timeout', async () => {
+    const { vi } = await import('vitest');
+    const { STICKY_MS } = await import('../../src/lib/emulator/state.svelte');
+    vi.useFakeTimers();
+    const e = new EmulatorState();
+    e.toggleMod('super');
+    expect(e.sticky).toEqual(['super']);
+    vi.advanceTimersByTime(STICKY_MS + 1);
+    expect(e.sticky).toEqual([]);
+    e.toggleMod('super');
+    e.release();
+    expect(e.sticky).toEqual([]);
+    e.toggleMod('ctrl');
+    e.reset();
+    expect(e.sticky).toEqual([]);
+    vi.useRealTimers();
+  });
+});

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omarchy-widgets.invalid/schema/review.schema.json",
+  "title": "Maintainer review record",
+  "description": "registry/review/<id>.json. Written only by maintainers (CODEOWNERS). The only source of the core and verified tiers.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "tier", "reviewedCommit", "reviewer", "date", "notes"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "maxLength": 100,
+      "pattern": "^[a-z][a-z0-9-]*(\\.[a-z0-9][a-z0-9-]*)+$"
+    },
+    "tier": { "enum": ["core", "verified", "spec"] },
+    "reviewedCommit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "reviewer": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "date": { "type": "string", "format": "date" },
+    "notes": { "type": "string", "maxLength": 500 }
+  }
+}
