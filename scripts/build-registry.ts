@@ -165,7 +165,7 @@ export async function assertCommitReachable(
   repo: string,
   commit: string,
   opts: { fetch?: FetchFn; token?: string } = {}
-): Promise<void> {
+): Promise<{ repoId: unknown; ownerId: unknown }> {
   if (!OWNER_RE.test(owner) || !REPO_RE.test(repo) || !COMMIT_RE.test(commit))
     throw new Error('reachability: invalid owner, repo or commit');
   const api = `https://${API_HOST}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
@@ -183,6 +183,32 @@ export async function assertCommitReachable(
   if (status !== 'behind' && status !== 'identical')
     throw new Error(
       `commit is not reachable from the default branch ${branch} (compare status: ${typeof status === 'string' ? status.slice(0, 20) : 'unknown'})`
+    );
+  const ownerObj = own(info, 'owner');
+  return {
+    repoId: own(info, 'id'),
+    ownerId:
+      ownerObj && typeof ownerObj === 'object'
+        ? own(ownerObj as Record<string, unknown>, 'id')
+        : undefined
+  };
+}
+
+/** registry/lock.json: numeric GitHub ids a maintainer recorded when approving a listing. A
+ *  renamed or transferred repo keeps its id; a deleted and re-created one does not. */
+export type Lock = Record<string, { repoId: number; ownerId: number }>;
+export const PENDING = 'pending maintainer approval: no entry in registry/lock.json';
+
+export function checkLock(
+  id: string,
+  lock: Lock,
+  seen: { repoId: unknown; ownerId: unknown }
+): void {
+  const e = Object.hasOwn(lock, id) ? lock[id] : undefined;
+  if (!e) throw new Error(PENDING);
+  if (e.repoId !== seen.repoId || e.ownerId !== seen.ownerId)
+    throw new Error(
+      'repo or owner id differs from registry/lock.json (deleted, re-created or transferred?)'
     );
 }
 
@@ -318,6 +344,8 @@ export interface BuildInput {
   readReview: (id: string) => unknown;
   /** registry/namespaces.json: namespace prefix -> allowed GitHub repo owners. */
   namespaces?: unknown;
+  /** registry/lock.json. When set, every non-fixture listing needs a matching entry. */
+  lock?: Lock;
 }
 
 export interface BuildResult {
@@ -337,8 +365,13 @@ async function buildOne(l: Listing, inp: BuildInput): Promise<RegistryWidget> {
   } else {
     if (inp.offline) throw new Error('needs the network, but --offline was given');
     const [, owner, repo] = /^https:\/\/github\.com\/([^/]+)\/([^/]+)$/.exec(l.repo) ?? [];
-    if (!inp.skipReachability)
-      await assertCommitReachable(owner, repo, l.commit, { fetch: inp.fetch, token: inp.token });
+    if (!inp.skipReachability) {
+      const seen = await assertCommitReachable(owner, repo, l.commit, {
+        fetch: inp.fetch,
+        token: inp.token
+      });
+      if (inp.lock) checkLock(l.id, inp.lock, seen);
+    }
     const base = `https://${RAW_HOST}/${owner}/${repo}/${l.commit}`;
     manifest = await fetchJson(`${base}/manifest.json`, { fetch: inp.fetch });
     widget = await fetchJson(`${base}/widget.json`, { fetch: inp.fetch });
@@ -476,7 +509,15 @@ export async function buildRegistry(inp: BuildInput): Promise<BuildResult> {
       byTier: tally(widgets.map((w) => w.tier)),
       byCategory: tally(widgets.flatMap((w) => w.categories))
     },
-    widgets
+    widgets,
+    excluded: errors.map((e) => {
+      const i = e.indexOf(': ');
+      return {
+        ref: (i > 0 ? e.slice(0, i) : 'registry').slice(0, 120),
+        reason: (i > 0 ? e.slice(i + 2) : e).slice(0, 300),
+        pending: e.endsWith(PENDING)
+      };
+    })
   };
   return { index, widgets, errors };
 }
@@ -486,6 +527,7 @@ async function main() {
   const args = process.argv.slice(2);
   const offline = args.includes('--offline');
   const skipReachability = args.includes('--skip-reachability');
+  const strict = args.includes('--strict'); // CI on pull requests: any problem fails the run
   const oi = args.indexOf('--out');
   const out = resolve(ROOT, oi >= 0 && args[oi + 1] ? args[oi + 1] : 'registry/dist');
   const dir = join(REG, 'widgets');
@@ -509,6 +551,7 @@ async function main() {
     token: process.env.GITHUB_TOKEN || undefined,
     readFixture: (id, name) => optional(join(REG, 'fixtures', id, `${name}.json`)),
     namespaces: optional(join(REG, 'namespaces.json')),
+    lock: (optional(join(REG, 'lock.json')) as Lock | undefined) ?? {},
     readReview: (id) =>
       /^[a-z0-9.-]+$/.test(id) ? optional(join(REG, 'review', `${id}.json`)) : undefined
   });
@@ -517,11 +560,13 @@ async function main() {
     console.log(
       `${w.id.padEnd(48)} ${w.status.padEnd(8)} ${w.tier.padEnd(10)} ${w.reviewNote ?? ''}`
     );
+  // One bad listing never blocks the rest: it is excluded, listed in index.json and reported.
+  // Pending approvals are not failures. --strict (pull requests) fails on every other problem.
   if (errors.length) {
-    console.error(`\nregistry: ${errors.length} problem(s)`);
+    console.error(`\nregistry: ${errors.length} listing(s) excluded`);
     for (const e of errors) console.error(`  - ${e}`);
-    process.exit(1);
   }
+  if (strict && index.excluded.some((x) => !x.pending)) process.exit(1);
   writeDist(out, index, widgets);
   console.log(`\nregistry: ${widgets.length} widget(s) written to ${out}`);
 }

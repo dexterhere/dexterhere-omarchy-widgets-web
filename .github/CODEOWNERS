@@ -5,3 +5,7 @@
 /registry/review/        @dexterhere
 /registry/namespaces.json @dexterhere
 /registry/MAINTAINERS.json @dexterhere
+/registry/schema/      @dexterhere
+/registry/lock.json    @dexterhere
+/registry/reserved.json @dexterhere
+/registry/retired.json @dexterhere
