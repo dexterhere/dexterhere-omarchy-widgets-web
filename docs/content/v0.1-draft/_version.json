@@ -1,0 +1,7 @@
+{
+  "version": "v0.1-draft",
+  "label": "v0.1 (draft snapshot)",
+  "status": "draft",
+  "codeRepoRef": "main",
+  "note": "A pre-release snapshot of the docs. No tagged release exists yet."
+}

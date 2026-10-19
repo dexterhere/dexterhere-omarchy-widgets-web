@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://omarchy-widgets.invalid/schema/namespaces.schema.json",
+  "title": "Namespace ownership",
+  "description": "registry/namespaces.json, maintainer managed. Maps a reverse-domain prefix (not io.github.*, which is checked against the repo owner) to the GitHub owners allowed to list ids under it.",
+  "type": "object",
+  "propertyNames": { "pattern": "^(?!omarchy(\\.|$))[a-z][a-z0-9-]*(\\.[a-z0-9][a-z0-9-]*)+$" },
+  "additionalProperties": {
+    "type": "array",
+    "items": { "type": "string", "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$" },
+    "uniqueItems": true
+  }
+}

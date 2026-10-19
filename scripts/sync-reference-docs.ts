@@ -1,0 +1,169 @@
+// Writes docs/content/<version>/reference/{protocol,vault-format,threat-model}.md from the code
+// repo, so reference pages cannot drift. Usage: bun scripts/sync-reference-docs.ts [version]
+// Source: $CODE_REPO_PATH (a local checkout), else ../omarchy-widgets if present, else
+// https://raw.githubusercontent.com/dexterhere/omarchy-widgets/<ref>/docs/<file>.
+// The output is GENERATED and committed. Its text is escaped here (and again at compile time by
+// rehypeEscapeSynced) so nothing in it can become Svelte or HTML.
+import { execFileSync } from 'node:child_process';
+import { lstat, mkdir, readFile, writeFile } from 'node:fs/promises';
+import { join, resolve } from 'node:path';
+import { isVersionId } from '../src/lib/docs/content';
+import { fromMarkdown } from 'mdast-util-from-markdown';
+import { visit } from 'unist-util-visit';
+
+export const REPO = 'dexterhere/omarchy-widgets';
+export const RAW_HOST = 'raw.githubusercontent.com';
+export const LIMITS = { timeoutMs: 10_000, maxBytes: 512 * 1024 };
+
+export interface Target {
+  file: string;
+  out: string;
+  title: string;
+  description: string;
+}
+export const TARGETS: Target[] = [
+  {
+    file: 'DAEMON_SPEC.md',
+    out: 'protocol',
+    title: 'Protocol and daemon specification',
+    description: 'The owd daemon, its socket protocol, grants, audit log and providers.'
+  },
+  {
+    file: 'VAULT_FORMAT.md',
+    out: 'vault-format',
+    title: 'Vault format',
+    description: 'How the encrypted vault is laid out on disk and how it is opened.'
+  },
+  {
+    file: 'threat-model.md',
+    out: 'threat-model',
+    title: 'Threat model',
+    description: 'What the project defends against, what it does not, and why.'
+  }
+];
+
+export const validRef = (ref: string) =>
+  /^[A-Za-z0-9._/-]{1,100}$/.test(ref) && !ref.includes('..') && !ref.startsWith('/');
+
+export function rawUrl(ref: string, file: string): URL {
+  if (!validRef(ref)) throw new Error(`rejected ref: ${JSON.stringify(ref)}`);
+  const u = new URL(`https://${RAW_HOST}/${REPO}/${ref}/docs/${file}`);
+  if (u.protocol !== 'https:' || u.hostname !== RAW_HOST || u.port || u.search || u.hash)
+    throw new Error('rejected URL');
+  return u;
+}
+
+export async function fetchText(
+  url: URL,
+  opts: { fetch?: typeof fetch; timeoutMs?: number; maxBytes?: number } = {}
+): Promise<string> {
+  const { timeoutMs = LIMITS.timeoutMs, maxBytes = LIMITS.maxBytes } = opts;
+  if (url.protocol !== 'https:' || url.hostname !== RAW_HOST) throw new Error('rejected URL');
+  const res = await (opts.fetch ?? fetch)(url.href, {
+    redirect: 'error', // a redirect is an error, never followed
+    credentials: 'omit',
+    signal: AbortSignal.timeout(timeoutMs)
+  });
+  if (res.redirected || (res.status >= 300 && res.status < 400)) throw new Error('redirect');
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${url.pathname}`);
+  if (Number(res.headers.get('content-length') ?? 0) > maxBytes) throw new Error('body too large');
+  if (!res.body) throw new Error('empty body');
+  const reader = res.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > maxBytes) {
+      await reader.cancel().catch(() => {});
+      throw new Error(`body over ${maxBytes} bytes`);
+    }
+    chunks.push(value);
+  }
+  return new TextDecoder('utf-8', { fatal: true }).decode(Buffer.concat(chunks));
+}
+
+/**
+ * Escapes `{`, `}`, `<`, `>` and stray `&` as HTML entities in the TEXT and raw-HTML nodes of the
+ * document, found by a real CommonMark parse (micromark), never by regexes over the source.
+ * Code (fenced, indented, inline) is another node type and is left alone: mdsvex escapes it.
+ * Link and image attributes are not touched here: the compile-time pass (rehypeEscapeSynced)
+ * filters URLs and neutralises braces in every attribute.
+ */
+export function escapeForMdsvex(md: string): string {
+  const ent = (s: string) =>
+    s
+      .replace(/\\([{}<>])/g, '$1')
+      .replace(/&(?![a-zA-Z]+;|#\d+;|#x[0-9a-fA-F]+;)/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/\{/g, '&#123;')
+      .replace(/\}/g, '&#125;');
+  const spans: [number, number][] = [];
+  visit(fromMarkdown(md), (n) => {
+    if ((n.type === 'text' || n.type === 'html') && n.position)
+      spans.push([n.position.start.offset!, n.position.end.offset!]);
+  });
+  let out = md;
+  for (const [from, to] of spans.sort((x, y) => y[0] - x[0]))
+    out = out.slice(0, from) + ent(out.slice(from, to)) + out.slice(to);
+  return out;
+}
+
+/** `localSha` is set only when the text came from a local checkout instead of the pinned ref. */
+export function render(t: Target, ref: string, source: string, localSha?: string): string {
+  const body = escapeForMdsvex(source.replace(/^﻿/, '').replace(/^# .*\n+/, ''));
+  const url = `https://github.com/${REPO}/blob/${ref}/docs/${t.file}`;
+  return `---
+# GENERATED by scripts/sync-reference-docs.ts. Do not edit here.
+title: ${JSON.stringify(t.title)}
+description: ${JSON.stringify(t.description)}
+synced: true
+source: ${JSON.stringify(url)}
+---
+
+> Synced from ${localSha ? `a local checkout of ${REPO} at ${localSha} (not verified against ${ref})` : `${REPO}@${ref}`} (docs/${t.file}); do not edit here. Change the file in the code repository.
+
+${body.trimEnd()}
+`;
+}
+
+/** Reads docs/<file> from a local checkout; symbolic links are refused, not followed. */
+export async function readLocal(local: string, file: string): Promise<string> {
+  for (const p of [join(local, 'docs'), join(local, 'docs', file)])
+    if ((await lstat(p)).isSymbolicLink()) throw new Error(`refusing symbolic link: ${p}`);
+  return readFile(join(local, 'docs', file), 'utf8');
+}
+
+export async function sync(version = 'next', root = resolve(import.meta.dirname, '..')) {
+  if (!isVersionId(version)) throw new Error(`bad version: ${JSON.stringify(version)}`);
+  const v = JSON.parse(
+    await readFile(join(root, 'docs/content', version, '_version.json'), 'utf8')
+  );
+  const ref: string = v.codeRepoRef;
+  if (!validRef(ref)) throw new Error(`bad codeRepoRef in _version.json: ${ref}`);
+  // A local checkout is used only when CODE_REPO_PATH is set explicitly; the default is the
+  // network fetch at the pinned ref, so the generated header always tells the truth.
+  const local = process.env.CODE_REPO_PATH ? resolve(process.env.CODE_REPO_PATH) : undefined;
+  let localSha: string | undefined;
+  if (local) {
+    localSha = execFileSync('git', ['-C', local, 'rev-parse', 'HEAD'], { encoding: 'utf8' }).trim();
+    console.warn(
+      `WARNING: using local checkout ${local} at ${localSha}, NOT ${REPO}@${ref}. ` +
+        'The generated pages say so. Do not commit this unless you mean to.'
+    );
+  }
+  const dir = join(root, 'docs/content', version, 'reference');
+  await mkdir(dir, { recursive: true });
+  for (const t of TARGETS) {
+    const source = local ? await readLocal(local, t.file) : await fetchText(rawUrl(ref, t.file));
+    if (Buffer.byteLength(source) > LIMITS.maxBytes) throw new Error(`${t.file} is too large`);
+    await writeFile(join(dir, `${t.out}.md`), render(t, ref, source, localSha));
+    console.log(
+      `synced ${t.file} -> reference/${t.out}.md (${local ? `local:${localSha}` : `@${ref}`})`
+    );
+  }
+}
+
+if (import.meta.main) await sync(process.argv[2]);

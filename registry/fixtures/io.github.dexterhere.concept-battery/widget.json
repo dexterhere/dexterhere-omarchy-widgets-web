@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 0,
+  "id": "io.github.dexterhere.concept-battery",
+  "tier": "spec",
+  "category": "system",
+  "surfaces": ["desktop", "bar"],
+  "sizeClasses": [
+    {
+      "name": "compact",
+      "min": [160, 100],
+      "max": [240, 160],
+      "aspectLock": null
+    },
+    {
+      "name": "wide",
+      "min": [280, 120],
+      "max": [480, 200],
+      "aspectLock": null
+    }
+  ],
+  "variants": ["ring", "bar"],
+  "providers": [
+    {
+      "name": "battery",
+      "topics": ["battery.status"],
+      "fields": ["percent", "state", "timeLeft"],
+      "auth": "none"
+    }
+  ],
+  "capabilities": {
+    "network": [],
+    "files": [],
+    "spawn": []
+  },
+  "interactiveRegions": [],
+  "settings": [
+    {
+      "key": "warnBelow",
+      "type": "int",
+      "label": "Warn below (percent)",
+      "default": 20,
+      "min": 5,
+      "max": 50
+    }
+  ],
+  "compat": {
+    "omarchy": ">=4.0",
+    "widgetsKit": "^1"
+  }
+}

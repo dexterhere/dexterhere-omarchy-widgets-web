@@ -1,0 +1,7 @@
+{
+  "source": "https://github.com/dexterhere/omarchy-widgets",
+  "path": "spec/widget.schema.json",
+  "version": "draft-0",
+  "date": "2026-10-17",
+  "note": "Derived by hand from the illustrative widget.json in docs/PROJECT_BRIEF.md section 7. Replace with the pinned release of the code repo schema."
+}

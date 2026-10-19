@@ -1,0 +1,35 @@
+# Example only. Replace the placeholders; never commit real ids or secrets.
+name = "omarchy-widgets-stats"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+[vars]
+# Exact origins of the site (no wildcard, no trailing slash).
+ALLOWED_ORIGINS = "https://example.org"
+# REQUIRED: the widget ids that may be counted. Without it the service answers 503 and stores
+# nothing. Generate it: bun run registry && bun services/stats/scripts/emit-widget-ids.ts
+WIDGET_IDS = "io.github.example.clock"
+# Address header, only if NOT on Cloudflare: must be set by a trusted proxy that overwrites
+# anything the client sent, or per-network limits can be bypassed.
+# IP_HEADER = "x-real-ip"
+
+# D1 gives atomic counters. Create it, then apply schema.sql:
+#   wrangler d1 create omarchy-widgets-stats
+#   wrangler d1 execute omarchy-widgets-stats --remote --file=schema.sql
+[[d1_databases]]
+binding = "DB"
+database_name = "omarchy-widgets-stats"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+
+# Daily purge of expired dedupe and rate-limit rows.
+[triggers]
+crons = ["17 3 * * *"]
+
+# Secrets (not in this file):
+#   wrangler secret put STATS_SECRET
+#   wrangler secret put ID_SECRET               (set once, never change)
+#   wrangler secret put STATS_SECRET_PREVIOUS   (only while rotating)
+
+# No request logging for this Worker, so nothing about visitors is kept:
+[observability]
+enabled = false
