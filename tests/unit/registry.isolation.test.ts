@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { PENDING, buildRegistry, type FetchFn } from '../../scripts/build-registry';
+import {
+  PENDING,
+  assertAllowedUrl,
+  buildRegistry,
+  fetchTree,
+  type FetchFn
+} from '../../scripts/build-registry';
 import { checkReviewChanges } from '../../scripts/check-review-changes';
 import {
   ID,
@@ -18,9 +24,12 @@ const info = (repoId: number, ownerId = 7) => ({
   owner: { id: ownerId }
 });
 
+let lic = 'MIT';
+
 /** Repo `demo` serves a good widget; repo `other` is gone (404). */
 const fetch: FetchFn = async (url) => {
   if (url.includes('/other')) return json({ message: 'Not Found' }, { status: 404 });
+  if (url.includes('/license')) return json({ license: { spdx_id: lic } });
   if (url.includes('/compare/')) return json({ status: 'behind' });
   if (url.startsWith('https://api.github.com')) return json(info(1));
   return json(url.endsWith('manifest.json') ? manifestJson() : widgetJson());
@@ -90,5 +99,54 @@ describe('excluded[] text', () => {
     });
     const x = r.index.excluded[0];
     expect(x.ref + x.reason).not.toMatch(/[‮<>]/);
+  });
+});
+
+describe('license at the pinned commit', () => {
+  it('excludes a listing whose detected license is not allowed', async () => {
+    lic = 'NOASSERTION';
+    const r = await run({ [ID]: { repoId: 1, ownerId: 7 } });
+    lic = 'MIT';
+    expect(r.widgets).toEqual([]);
+    expect(r.index.excluded.find((x) => x.ref === ID)?.reason).toMatch(/license/);
+  });
+  it('excludes a listing whose manifest license differs from the detected one', async () => {
+    lic = 'Apache-2.0';
+    const r = await run({ [ID]: { repoId: 1, ownerId: 7 } });
+    lic = 'MIT';
+    expect(r.index.excluded.find((x) => x.ref === ID)?.reason).toMatch(/differs/);
+  });
+});
+
+describe('query allow-list and tree', () => {
+  const sha = 'a'.repeat(40);
+  const api = 'https://api.github.com/repos/o/r';
+  it('allows only the named parameter per endpoint', () => {
+    expect(() => assertAllowedUrl(`${api}/git/trees/${sha}?recursive=1`)).not.toThrow();
+    expect(() => assertAllowedUrl(`${api}/license?ref=${sha}`)).not.toThrow();
+    for (const u of [
+      `${api}/git/trees/${sha}?recursive=1&x=1`,
+      `${api}/git/trees/${sha}?recursive=0`,
+      `${api}/license?ref=main`,
+      `${api}/compare/main...${sha}?x=1`,
+      `${api}?recursive=1`
+    ])
+      expect(() => assertAllowedUrl(u)).toThrow(/rejected URL/);
+  });
+  const tree =
+    (body: unknown): FetchFn =>
+    async () =>
+      json(body);
+  it('returns entries', async () => {
+    const t = await fetchTree('o', 'r', sha, {
+      fetch: tree({
+        truncated: false,
+        tree: [{ path: 'a', mode: '100644', type: 'blob', size: 3 }]
+      })
+    });
+    expect(t).toEqual([{ path: 'a', mode: '100644', type: 'blob', size: 3 }]);
+  });
+  it.each([{ truncated: true, tree: [] }, { tree: [] }])('fails closed on %j', async (b) => {
+    await expect(fetchTree('o', 'r', sha, { fetch: tree(b) })).rejects.toThrow(/failing closed/);
   });
 });

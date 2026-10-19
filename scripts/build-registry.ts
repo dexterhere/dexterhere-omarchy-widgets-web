@@ -69,9 +69,22 @@ export function assertAllowedUrl(raw: string): URL {
   if (u.port) throw new Error('rejected URL: explicit port');
   if (u.hostname !== RAW_HOST && u.hostname !== API_HOST)
     throw new Error(`rejected URL: host ${u.hostname} not allow-listed`);
-  if (u.search || u.hash) throw new Error('rejected URL: query or fragment');
+  if (u.hash) throw new Error('rejected URL: fragment');
+  if (u.search) {
+    // Per-endpoint allow-list: exactly one named parameter with a strict value, nothing else.
+    const rule = QUERY_ALLOW.find((r) => r.path.test(u.pathname));
+    const keys = [...u.searchParams.keys()];
+    const v = u.searchParams.get(rule?.key ?? '');
+    if (!rule || keys.length !== 1 || keys[0] !== rule.key || v === null || !rule.value.test(v))
+      throw new Error('rejected URL: query not allowed for this endpoint');
+  }
   return u;
 }
+
+const QUERY_ALLOW = [
+  { path: /^\/repos\/[^/]+\/[^/]+\/git\/trees\/[0-9a-f]{40}$/, key: 'recursive', value: /^1$/ },
+  { path: /^\/repos\/[^/]+\/[^/]+\/license$/, key: 'ref', value: /^[0-9a-f]{40}$/ }
+];
 
 export async function fetchJson(
   rawUrl: string,
@@ -192,6 +205,86 @@ export async function assertCommitReachable(
         ? own(ownerObj as Record<string, unknown>, 'id')
         : undefined
   };
+}
+
+export interface TreeEntry {
+  path: string;
+  mode: string;
+  type: string;
+  size?: number;
+}
+
+/** The full file tree at a commit. Fails closed when GitHub says the list was cut short: an
+ *  incomplete tree must never pass a scan. */
+export async function fetchTree(
+  owner: string,
+  repo: string,
+  commit: string,
+  opts: { fetch?: FetchFn; token?: string } = {}
+): Promise<TreeEntry[]> {
+  if (!OWNER_RE.test(owner) || !REPO_RE.test(repo) || !COMMIT_RE.test(commit))
+    throw new Error('tree: invalid owner, repo or commit');
+  const t = await fetchJson(
+    `https://${API_HOST}/repos/${owner}/${repo}/git/trees/${commit}?recursive=1`,
+    { ...opts, maxBytes: 4 * 1024 * 1024 }
+  );
+  if (own(t, 'truncated') !== false)
+    throw new Error('tree is truncated or unreadable: failing closed');
+  const tree = own(t, 'tree');
+  if (!Array.isArray(tree)) throw new Error('tree: unexpected response');
+  return tree.map((e) => {
+    const o = e as Record<string, unknown>;
+    return {
+      path: String(own(o, 'path')),
+      mode: String(own(o, 'mode')),
+      type: String(own(o, 'type')),
+      size: typeof own(o, 'size') === 'number' ? (own(o, 'size') as number) : undefined
+    };
+  });
+}
+
+/** Licenses a listing may carry. The SPDX id comes from GitHub's detection of the LICENSE blob at
+ *  the pinned commit, never from the author's manifest. */
+export const LICENSE_ALLOW = new Set([
+  'MIT',
+  'Apache-2.0',
+  'BSD-2-Clause',
+  'BSD-3-Clause',
+  'ISC',
+  'MPL-2.0',
+  'GPL-3.0',
+  'LGPL-3.0',
+  'AGPL-3.0',
+  'Unlicense',
+  '0BSD'
+]);
+
+export async function checkLicense(
+  owner: string,
+  repo: string,
+  commit: string,
+  declared: unknown,
+  opts: { fetch?: FetchFn; token?: string } = {}
+): Promise<void> {
+  const r = await fetchJson(
+    `https://${API_HOST}/repos/${owner}/${repo}/license?ref=${commit}`,
+    opts
+  ).catch((e) => {
+    if (e instanceof Error && /HTTP 404/.test(e.message))
+      throw new Error('no LICENSE file found at the pinned commit');
+    throw e;
+  });
+  const lic = own(r, 'license');
+  const spdx =
+    lic && typeof lic === 'object' ? own(lic as Record<string, unknown>, 'spdx_id') : undefined;
+  if (typeof spdx !== 'string' || !LICENSE_ALLOW.has(spdx))
+    throw new Error(
+      `license not recognised or not allowed (detected: ${typeof spdx === 'string' ? spdx.slice(0, 30) : 'none'})`
+    );
+  if (declared !== spdx)
+    throw new Error(
+      `manifest license ${String(declared).slice(0, 30)} differs from the detected ${spdx}`
+    );
 }
 
 /** registry/lock.json: numeric GitHub ids a maintainer recorded when approving a listing. A
@@ -370,7 +463,19 @@ async function buildOne(l: Listing, inp: BuildInput): Promise<RegistryWidget> {
         fetch: inp.fetch,
         token: inp.token
       });
-      if (inp.lock) checkLock(l.id, inp.lock, seen);
+      if (inp.lock) {
+        checkLock(l.id, inp.lock, seen);
+        const m = await fetchJson(
+          `https://${RAW_HOST}/${owner}/${repo}/${l.commit}/manifest.json`,
+          {
+            fetch: inp.fetch
+          }
+        );
+        await checkLicense(owner, repo, l.commit, m.license, {
+          fetch: inp.fetch,
+          token: inp.token
+        });
+      }
     }
     const base = `https://${RAW_HOST}/${owner}/${repo}/${l.commit}`;
     manifest = await fetchJson(`${base}/manifest.json`, { fetch: inp.fetch });
