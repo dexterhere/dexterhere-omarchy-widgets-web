@@ -109,4 +109,6 @@ export interface RegistryIndex {
     byCategory: Record<string, number>;
   };
   widgets: RegistryWidget[];
+  /** Listings left out of this build, with the reason. `pending` means awaiting a maintainer. */
+  excluded: { ref: string; reason: string; pending: boolean }[];
 }

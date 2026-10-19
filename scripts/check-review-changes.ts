@@ -10,7 +10,11 @@ import { pathToFileURL } from 'node:url';
 const GUARDED = [
   /^registry\/review\//,
   /^registry\/namespaces\.json$/,
-  /^registry\/MAINTAINERS\.json$/
+  /^registry\/MAINTAINERS\.json$/,
+  /^registry\/(lock|reserved|retired)\.json$/,
+  /^registry\/schema\//,
+  /^scripts\//,
+  /^\.github\//
 ];
 
 export interface ListingChange {

@@ -34,7 +34,7 @@ const reach = (m: ReturnType<typeof api>, token?: string) =>
 
 describe('commit reachability', () => {
   it.each(['behind', 'identical'])('accepts %s', async (s) => {
-    await expect(reach(api(st(s)))).resolves.toBeUndefined();
+    await expect(reach(api(st(s)))).resolves.toHaveProperty('repoId');
   });
   it.each(['ahead', 'diverged', 'weird', 7, undefined])('rejects status %s', async (s) => {
     await expect(reach(api(st(s)))).rejects.toThrow(/not reachable/);
@@ -153,7 +153,7 @@ describe('ci config', () => {
   it('never uses --skip-reachability', () => expect(ci).not.toContain('skip-reachability'));
   it('passes GITHUB_TOKEN to the registry step only, with read-only permissions', () => {
     expect(ci).toMatch(
-      /- run: bun run registry\n\s+env:\n\s+GITHUB_TOKEN: \$\{\{ secrets\.GITHUB_TOKEN \}\}/
+      /- run: bun run registry -- .*\n\s+env:\n\s+GITHUB_TOKEN: \$\{\{ secrets\.GITHUB_TOKEN \}\}/
     );
     expect(ci.match(/GITHUB_TOKEN:/g)).toHaveLength(1);
     expect(ci).toMatch(/permissions:\n {2}contents: read/);
