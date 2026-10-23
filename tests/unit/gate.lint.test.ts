@@ -125,6 +125,47 @@ describe('scanSecrets (G7)', () => {
     ['https://user:hunter2@example.com/x', 'url-credentials'],
     ['Authorization: Bearer ' + 'a'.repeat(40), 'bearer']
   ])('finds %s', (s, id) => expect(scanSecrets('f.json', `{"a": "${s}"}`).join()).toContain(id));
+  const A = (n: number, c = 'a') => c.repeat(n);
+  it.each([
+    ['prefix glued to a word', 'x' + 'ghp_' + A(36), null],
+    ['underscore-prefixed', '_ghp_' + A(36), 'github-token'],
+    ['gitlab', 'glpat-' + A(20), 'gitlab-token'],
+    ['npm', 'npm_' + A(36), 'npm-token'],
+    ['google oauth', 'ya29.' + A(30), 'google-token'],
+    ['google api key', 'AIza' + A(35), 'google-token'],
+    ['sendgrid', 'SG.' + A(22) + '.' + A(22), 'sendgrid-key'],
+    ['slack app token', 'xapp-1-' + A(20), 'slack-token'],
+    ['slack webhook', 'https://hooks.slack.com/services/T000/B000/' + A(20), 'slack-webhook'],
+    ['discord webhook', 'https://discord.com/api/webhooks/123456789/' + A(30), 'discord-webhook'],
+    ['discord bot', 'M' + A(23) + '.' + A(6) + '.' + A(27), 'discord-token'],
+    ['jwt', 'eyJ' + A(20) + '.eyJ' + A(20) + '.' + A(20), 'jwt'],
+    ['url password with slash', 'https://user:pa/ss+w0rd!@example.com/x', 'url-credentials'],
+    ['aws secret', 'aws_secret_access_key = ' + A(40, 'A'), 'aws-secret'],
+    ['pgp block', '-----BEGIN PGP PRIVATE KEY BLOCK-----', 'private-key'],
+    ['lowercase akia', 'akia' + A(16), 'aws-key'],
+    ['sk- 20 chars', 'sk-' + A(20), 'api-key'],
+    ['generic secret', 'secret: "' + A(14) + '"', 'generic-secret'],
+    ['generic token single quotes', "const token = '" + A(16) + "'", 'generic-secret'],
+    ['api_key', 'api_key="' + A(16) + '"', 'generic-secret'],
+    ['unquoted hex blob', 'API_KEY=' + A(40, 'f'), 'key-blob'],
+    ['concatenated', 'x = "ghp_' + A(18) + '" + "' + A(18) + '"', 'github-token'],
+    ['concatenated across lines', 'x = "ghp_' + A(18) + '" +\n  "' + A(18) + '"', 'github-token'],
+    ['hex escapes', 'x = "\\x67\\x68\\x70\\x5f' + A(36) + '"', 'github-token'],
+    ['unicode escapes', 'x = "\\u0067hp_' + A(36) + '"', 'github-token']
+  ])('finds %s', (_n, s, id) => {
+    const r = scanSecrets('f.qml', s).join();
+    if (id) expect(r).toContain(id);
+    else expect(r).toBe('');
+  });
+  it('does not flag settings references or placeholders', () => {
+    expect(scanSecrets('f.json', '{"token": "secret:github_token_value"}')).toEqual([]);
+    expect(scanSecrets('f.md', 'password = "<your password here>"')).toEqual([]);
+  });
+  it('reports file and line only', () => {
+    expect(scanSecrets('f.qml', 'a\nb\n' + 'glpat-' + A(20))).toEqual([
+      'f.qml:3: looks like a gitlab-token'
+    ]);
+  });
   it('never echoes the matched value', () => {
     const tok = 'ghp_' + 'Z'.repeat(36);
     expect(scanSecrets('f', tok).join()).not.toContain('ZZZZ');
