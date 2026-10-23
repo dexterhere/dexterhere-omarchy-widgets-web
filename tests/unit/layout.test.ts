@@ -29,9 +29,9 @@ const errs = (v: unknown, variants: string[] = []) => {
 
 describe('validateLayout', () => {
   it('accepts every fixture layout', () => {
-    for (const d of readdirSync('registry/fixtures')) {
-      const l = JSON.parse(readFileSync(`registry/fixtures/${d}/layout.json`, 'utf8'));
-      const w = JSON.parse(readFileSync(`registry/fixtures/${d}/widget.json`, 'utf8'));
+    for (const d of readdirSync('tests/fixtures/widgets')) {
+      const l = JSON.parse(readFileSync(`tests/fixtures/widgets/${d}/layout.json`, 'utf8'));
+      const w = JSON.parse(readFileSync(`tests/fixtures/widgets/${d}/widget.json`, 'utf8'));
       expect(errs(l, w.variants), d).toEqual([]);
     }
   });

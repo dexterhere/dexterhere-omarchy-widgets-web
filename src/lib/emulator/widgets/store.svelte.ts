@@ -13,12 +13,10 @@ export const MAX_INSTANCES = 50;
 export const MAX_LAYOUTS = 20;
 export const SNAPSHOT_NOTE = 'Layout snapshot saved (sample)';
 
-/** Name for lists and announcements: the registry name without the "(concept)" suffix. */
+/** Name for lists and announcements. */
 export const labelOf = (reg: string) =>
-  reg === M.SPEC_REG
-    ? 'Custom widget'
-    : (getById(reg)?.name ?? reg).replace(/\s*\(concept\)$/i, '');
-export const isConcept = (reg: string) => getById(reg)?.installable === false;
+  reg === M.SPEC_REG ? 'Custom widget' : (getById(reg)?.name ?? reg);
+export const isPreviewOnly = (reg: string) => getById(reg)?.installable === false;
 
 const uniq = <T>(a: T[]) => a.filter((v, i) => a.indexOf(v) === i);
 
@@ -35,7 +33,7 @@ export class WidgetLayerState {
   api = $state.raw<EmulatorApi | null>(null);
 
   st = $state.raw<M.WState>(M.emptyState());
-  /** Registry ids installed in this emulator (concept widgets count as a preview install). */
+  /** Registry ids installed in this emulator (planned widgets count as a preview install). */
   installed = $state<string[]>([]);
   layouts = $state.raw<M.SavedLayout[]>([]);
 
@@ -159,7 +157,7 @@ export class WidgetLayerState {
     this.note = '';
     if (hit)
       this.say(
-        `${this.instLabel(hit)}${isConcept(hit.reg) ? ' (concept preview)' : ''} is on the emulated desktop. Press Super plus Alt plus W, proposed, to open the Widget Center.`
+        `${this.instLabel(hit)}${isPreviewOnly(hit.reg) ? ' (preview)' : ''} is on the emulated desktop. Press Super plus Alt plus W, proposed, to open the Widget Center.`
       );
   }
 
@@ -204,10 +202,10 @@ export class WidgetLayerState {
   isInstalled(reg: string) {
     return this.installed.includes(reg);
   }
-  /** Install (a preview, for concepts) and place at the first free slot. */
+  /** Install (a preview, for planned ones) and place at the first free slot. */
   install(reg: string) {
     if (!this.isInstalled(reg)) this.installed = [...this.installed, reg];
-    const name = `${labelOf(reg)}${isConcept(reg) ? ' (concept preview)' : ''}`;
+    const name = `${labelOf(reg)}${isPreviewOnly(reg) ? ' (preview)' : ''}`;
     this.place(reg, `${name} installed and added to the desktop`);
   }
   /** Add to the desktop: restore from the tray when it was removed, else the first free slot. */

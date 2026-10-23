@@ -29,7 +29,7 @@ export class HomeStage {
     }
   }
 
-  /** Install a registry widget (a preview, for concepts) and show it on the desktop. */
+  /** Install a registry widget (a preview, for planned ones) and show it on the desktop. */
   tryOn(reg: string) {
     this.whenReady((w) => {
       w.install(reg);

@@ -227,7 +227,7 @@ test.describe('widget cards', () => {
     await expect(shownText(page)).toHaveText(`Showing 1-${Math.min(6, n)} of ${n}`);
     const first = cards(page).first();
     await expect(first.getByRole('link', { name: '@dexterhere' })).toBeVisible();
-    await expect(first.getByText('Concept, not installable').first()).toBeVisible();
+    await expect(first.getByText('Planned, not installable yet').first()).toBeVisible();
     await expect(first.getByRole('button', { name: /^Like / })).toBeVisible();
     await expect(first.locator('a[href*="/widgets/io.github."]').first()).toHaveAttribute(
       'href',

@@ -88,7 +88,7 @@ export interface RegistryWidget {
   tier: Tier;
   /** What widget.json says about itself. Informational only, never trusted. */
   declaredTier: 'spec' | 'code';
-  /** True only for alpha/stable entries. Concept entries are not installable. */
+  /** True only for alpha/stable entries. Planned entries are not installable. */
   installable: boolean;
   /** Present only when a matching maintainer review record covers this exact commit. */
   review: ReviewInfo | null;

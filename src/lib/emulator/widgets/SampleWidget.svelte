@@ -23,11 +23,11 @@
   } = $props();
 
   const widget = $derived(getById(reg));
-  const name = $derived((widget?.name ?? reg).replace(/\s*\(concept\)$/i, ''));
+  const name = $derived(widget?.name ?? reg);
   const rows = $derived(widget ? sampleRows(widget) : []);
   const fit = $derived(Math.max(1, Math.floor((h - 26 - 24) / 22)));
   const shown = $derived(rows.slice(0, sizeClass === 'compact' ? Math.min(3, fit) : fit));
-  const concept = $derived(widget ? !widget.installable : false);
+  const preview = $derived(widget ? !widget.installable : false);
 </script>
 
 <WidgetFrame title="{name} (sample)" {editing}>
@@ -41,7 +41,7 @@
       </li>
     {/each}
   </ul>
-  {#if concept && h >= 128}<p class="foot">Concept preview, sample data</p>{/if}
+  {#if preview && h >= 128}<p class="foot">Preview, sample data</p>{/if}
 </WidgetFrame>
 
 <style>

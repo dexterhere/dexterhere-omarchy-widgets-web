@@ -1,7 +1,7 @@
 <script lang="ts">
   import Seo from '../../../lib/components/Seo.svelte';
   import { breadcrumbs } from '../../../lib/seo';
-  import { urls } from '../../../lib/site';
+  import { docsUrl, urls } from '../../../lib/site';
   import { resolve } from '$app/paths';
   import CopyButton from '../../../lib/components/CopyButton.svelte';
   import Ico from '../../../lib/components/detail/Ico.svelte';
@@ -60,8 +60,12 @@
 
   // The only documented install path. It takes the latest commit, not the listed one.
   const manualCmd = $derived(repo ? `omarchy plugin add ${repo}` : '');
-  // A real commit page exists only for installable listings (concept commits are all zeros).
-  const commitUrl = $derived(repo && short && w.installable ? `${repo}/tree/${w.commit}` : '');
+  const commitUrl = $derived(repo && short ? `${repo}/tree/${w.commit}` : '');
+  // Per-widget setup notes. Nothing here is a command: the install path does not exist yet.
+  const setupNote: Record<string, string> = {
+    'io.github.dexterhere.github-activity':
+      'It will need a GitHub token kept in the vault. The widget never sees the token.'
+  };
 
   const accessRows = $derived([
     { label: 'Data', icon: 'database', items: w.access.data },
@@ -215,10 +219,21 @@
         {#if !w.installable || !manualCmd}
           <p><strong>Not installable yet.</strong></p>
           <p class="small text-2">
-            This is a {w.status === 'planned' ? 'concept' : 'listing'} with status &ldquo;{statusLabels[
-              w.status
-            ]}&rdquo;. {tierLabels[w.tier].text}
+            Status: {statusLabels[w.status]}. You can try a preview in the web emulator below. There
+            is no install command yet, because the desktop layer and <code>ow install</code> are not
+            built. {setupNote[w.id] ?? ''}
+            {#if setupNote[w.id]}<!-- eslint-disable-next-line svelte/no-navigation-without-resolve --><a
+                href={docsUrl('/docs/next/project/security/')}>Security docs</a
+              >.{/if}
           </p>
+          {#if repo}
+            <p class="small">
+              <!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+              <a href={repo} rel="noopener noreferrer"
+                >Read the code on GitHub <Ico name="external" size={12} /></a
+              >
+            </p>
+          {/if}
         {:else}
           <p class="small text-2">
             Documented way to add it. This installs the latest commit of the repository, not the
@@ -286,8 +301,10 @@
   <section class="block" aria-labelledby="h-try" id="try" data-try-desktop>
     <h2 id="h-try"><Ico name="play" size={16} />Try it on a desktop</h2>
     <p class="small text-2">
-      Emulated desktop, sample data. {w.installable ? '' : 'This is a concept preview. '}Press Super
-      + Alt + W (proposed) or click Widgets in the bar to open the Widget Center.
+      Emulated desktop, sample data. {w.installable
+        ? ''
+        : 'This is a preview of a planned widget. '}Press Super + Alt + W (proposed) or click
+      Widgets in the bar to open the Widget Center.
     </p>
     <div class="try">
       {#key w.id}
@@ -363,7 +380,6 @@
                 ><code title={w.commit}>{short}</code><Ico name="external" size={12} /></a
               >
             {:else if short}<code title={w.commit}>{short}</code>
-              <span class="muted">(placeholder, concept)</span>
             {:else}<span class="muted">none</span>{/if}
           </dd>
         </div>
