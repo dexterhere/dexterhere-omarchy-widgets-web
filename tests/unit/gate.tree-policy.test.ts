@@ -223,23 +223,63 @@ describe('safe()', () => {
   });
 });
 
-describe('scanSvg', () => {
-  it('accepts a plain svg', () =>
+describe('scanSvg (allow-list)', () => {
+  const NS = 'xmlns="http://www.w3.org/2000/svg"';
+  const svg = (inner: string, attrs = '') => `<svg ${NS} viewBox="0 0 8 8"${attrs}>${inner}</svg>`;
+  it('accepts a plain svg', () => {
+    expect(scanSvg('a.svg', svg('<path d="M0 0L8 8" fill="none" stroke="#fff"/>'))).toEqual([]);
     expect(
-      scanSvg('a.svg', '<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0"/></svg>')
-    ).toEqual([]));
+      scanSvg(
+        'a.svg',
+        '<?xml version="1.0"?>\n<!-- c -->\n' +
+          svg(
+            '<defs><linearGradient id="g"><stop offset="0" stop-color="red"/></linearGradient></defs><g clip-path="url(#c)"><title>a &amp; b</title><rect width="4" height="4" fill="url(#g)"/></g>'
+          )
+      )
+    ).toEqual([]);
+  });
   it.each([
-    ['script', '<svg><script>alert(1)</script></svg>'],
-    ['SCRIPT', '<svg><SCRIPT >x</SCRIPT></svg>'],
-    ['onload', '<svg onload="x()"></svg>'],
-    ['onclick spaced', '<svg><rect ONCLICK = "x()"/></svg>'],
-    ['javascript:', '<svg><a href="javascript:x()"/></svg>'],
-    ['foreignObject', '<svg><foreignObject/></svg>'],
-    ['external href', '<svg><image href="https://evil/x.png"/></svg>'],
-    ['external xlink', '<svg><use xlink:href="//evil/x.svg#a"/></svg>'],
-    ['css url', '<svg><style>a{fill:url(https://evil/x)}</style></svg>'],
-    ['entity', '<!DOCTYPE svg [<!ENTITY a "b">]><svg/>']
+    ['script', svg('<script>alert(1)</script>')],
+    ['SCRIPT', svg('<SCRIPT >x</SCRIPT>')],
+    ['prefixed script', svg('<svg:script>x</svg:script>')],
+    ['prefixed foreignObject', svg('<x:foreignObject/>')],
+    ['foreignObject', svg('<foreignObject/>')],
+    ['style element', svg('<style>a{fill:red}</style>')],
+    ['image', svg('<image href="a.png"/>')],
+    ['use', svg('<use href="#a"/>')],
+    ['a', svg('<a href="x"/>')],
+    ['animate', svg('<animate attributeName="href" to="javascript:alert(1)"/>')],
+    ['set', svg('<set attributeName="href" to="javascript:alert(1)"/>')],
+    ['text', svg('<text>x</text>')],
+    ['onload', svg('', ' onload="x()"')],
+    ['ONCLICK spaced', svg('<rect ONCLICK = "x()"/>')],
+    ['href attr', svg('<path href="x"/>')],
+    ['xlink:href attr', svg('<path xlink:href="x"/>')],
+    ['xmlns:xlink', svg('', ' xmlns:xlink="http://www.w3.org/1999/xlink"')],
+    ['foreign xmlns', '<svg xmlns="http://evil/ns"/>'],
+    ['style attribute', svg('<rect style="fill:red"/>')],
+    ['class attribute', svg('<rect class="a"/>')],
+    ['javascript in value', svg('<path fill="javascript:x"/>')],
+    ['char ref javascript', svg('<path fill="&#106;avascript:x"/>')],
+    ['named ref colon', svg('<path fill="javascript&colon;x"/>')],
+    ['hex char ref in text', svg('<title>&#x6a;</title>')],
+    ['data: with whitespace', svg('<path fill="d\tata:text/html,x"/>')],
+    ['url to external', svg('<rect fill="url(https://evil/x)"/>')],
+    ['url hidden by control chars', svg('<rect fill="u&#x72;l(https://evil)"/>')],
+    ['DOCTYPE', '<!DOCTYPE svg><svg/>'],
+    ['ENTITY', '<!DOCTYPE svg [<!ENTITY a "b">]>' + svg('')],
+    ['CDATA', svg('<title><![CDATA[x]]></title>')],
+    ['processing instruction', '<?xml-stylesheet href="x"?>' + svg('')],
+    ['unquoted attribute', svg('<rect width=4/>')],
+    ['unterminated tag', '<svg ' + NS + '><rect'],
+    ['unterminated comment', '<!-- x ' + svg('')],
+    ['mismatched close', svg('<g></rect>')],
+    ['unclosed', '<svg ' + NS + '><g>'],
+    ['empty', ''],
+    ['not svg root', '<g/>']
   ])('rejects %s', (_n, s) => expect(scanSvg('a.svg', s).length).toBeGreaterThan(0));
-  it('allows internal references', () =>
-    expect(scanSvg('a.svg', '<svg><use href="#a"/><use xlink:href="#b"/></svg>')).toEqual([]));
+  it('never echoes svg content', () =>
+    expect(scanSvg('a.svg', svg('<script>SECRETVALUE</script>')).join()).not.toContain(
+      'SECRETVALUE'
+    ));
 });

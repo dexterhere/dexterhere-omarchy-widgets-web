@@ -88,21 +88,101 @@ export function scanTree(entries: TreeEntry[], opts: { entryPoints?: string[] } 
   return out;
 }
 
-/** SVG is XML that browsers run: no scripts, event handlers, foreign content, entities or external references. */
+const SVG_ELEMENTS = new Set(
+  'svg g path circle ellipse rect line polyline polygon defs linearGradient radialGradient stop clipPath mask title desc'.split(
+    ' '
+  )
+);
+const SVG_ATTRS = new Set(
+  'id d x y cx cy r rx ry x1 y1 x2 y2 width height points viewBox fill stroke stroke-width stroke-linecap stroke-linejoin opacity fill-opacity stroke-opacity fill-rule clip-rule transform offset stop-color stop-opacity gradientUnits gradientTransform xmlns version preserveAspectRatio clip-path mask'.split(
+    ' '
+  )
+);
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const ENT: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
+
+/** SVG allow-list: a tokenizer that accepts only plain shapes, gradients and clip paths. No script,
+ *  style, image, use, a, animation, text, foreignObject, DOCTYPE/ENTITY/CDATA, namespace prefixes,
+ *  event handlers, hrefs, or character references beyond the five predefined. Anything it cannot
+ *  parse is an error (fail closed). Messages never echo svg content. Our site never renders widget
+ *  SVGs (previews are re-encoded); this is a listing-quality gate, not a defence for viewers. */
 export function scanSvg(file: string, text: string): string[] {
-  const out: string[] = [];
   const f = safe(file);
-  const hit = (re: RegExp, why: string) => re.test(text) && out.push(`${f}: svg ${why}`);
-  hit(/<\s*script/i, 'contains a script element');
-  hit(/\bon[a-z]+\s*=/i, 'has an event handler attribute');
-  hit(/javascript\s*:/i, 'uses a javascript: URL');
-  hit(/<\s*foreignObject/i, 'contains foreignObject');
-  hit(/<!ENTITY/i, 'declares an entity');
-  hit(
-    /(?:xlink:)?\bhref\s*=\s*["']?\s*(?!#)[^"'\s>]/i,
-    'has an external href (only #fragment references are allowed)'
-  );
-  hit(/url\(\s*["']?\s*(?!#)/i, 'references a non-fragment URL in CSS');
-  hit(/@import/i, 'uses CSS @import');
-  return out;
+  const fail = (why: string) => [`${f}: svg ${why}`];
+  let t = text.replace(/^﻿/, '');
+  // eslint-disable-next-line no-control-regex
+  if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(t))
+    return fail('has control characters');
+  const bad = (v: string) => {
+    if (/&(?!(?:amp|lt|gt|quot|apos);)/.test(v))
+      return 'has a character reference other than the five predefined';
+    const d = v.replace(/&(\w+);/g, (_m, n) => ENT[n]);
+    const n = d.replace(/[\s\u0000-\u001f\u007f-\u009f]+/g, '').toLowerCase();
+    if (n.includes('javascript:') || n.includes('data:')) return 'has a javascript: or data: URL';
+    for (const m of n.matchAll(/url\(/g))
+      if (!/^url\(#[\w.-]+\)/.test(n.slice(m.index))) return 'has a url() that is not a #fragment';
+    return null;
+  };
+  const stack: string[] = [];
+  let root = false;
+  let i = 0;
+  while (i < t.length) {
+    if (t[i] !== '<') {
+      const j = t.indexOf('<', i);
+      const chunk = t.slice(i, j < 0 ? t.length : j);
+      const b = bad(chunk);
+      if (b) return fail(b);
+      if (stack.length === 0 && chunk.trim()) return fail('has text outside the root element');
+      i = j < 0 ? t.length : j;
+      continue;
+    }
+    if (t.startsWith('<!--', i)) {
+      const j = t.indexOf('-->', i + 4);
+      if (j < 0) return fail('has an unterminated comment');
+      i = j + 3;
+      continue;
+    }
+    if (t.startsWith('<?xml', i) && i === 0 && /^<\?xml[\s?]/.test(t)) {
+      const j = t.indexOf('?>');
+      if (j < 0) return fail('has an unterminated XML declaration');
+      i = j + 2;
+      continue;
+    }
+    if (t[i + 1] === '!' || t[i + 1] === '?')
+      return fail('has a DOCTYPE, ENTITY, CDATA or processing instruction');
+    const close = /^<\/([^\s>]+)\s*>/.exec(t.slice(i, i + 80));
+    if (close) {
+      if (stack.pop() !== close[1]) return fail('has mismatched closing tags');
+      i += close[0].length;
+      continue;
+    }
+    const open = /^<([^\s/>]+)/.exec(t.slice(i, i + 80));
+    if (!open) return fail('could not be parsed');
+    const name = open[1];
+    if (!SVG_ELEMENTS.has(name)) return fail('uses an element that is not on the allow-list');
+    if (stack.length === 0) {
+      if (root || name !== 'svg') return fail('must have a single svg root element');
+      root = true;
+    }
+    i += open[0].length;
+    const attr = /^\s+([^\s=/>]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/;
+    for (;;) {
+      const m = attr.exec(t.slice(i));
+      if (!m) break;
+      const [all, an, v1, v2] = m;
+      const v = v1 ?? v2 ?? '';
+      if (!SVG_ATTRS.has(an)) return fail('uses an attribute that is not on the allow-list');
+      if (an === 'xmlns' && v !== SVG_NS) return fail('declares a foreign namespace');
+      const b = bad(v);
+      if (b) return fail(b);
+      i += all.length;
+    }
+    const end = /^\s*(\/?)>/.exec(t.slice(i));
+    if (!end) return fail('could not be parsed');
+    i += end[0].length;
+    if (!end[1]) stack.push(name);
+  }
+  if (!root) return fail('has no svg root element');
+  if (stack.length) return fail('has unclosed elements');
+  return [];
 }

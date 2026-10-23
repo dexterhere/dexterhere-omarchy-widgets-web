@@ -66,6 +66,8 @@ describe('lintFile evasions (G6)', () => {
     ['alias Hyprland', 'var h = Hyprland; h.dispatch("x")'],
     ['constructor', '(function(){}).constructor("return 1")()'],
     ['Function()', 'Function("return 1")()'],
+    ['unicode-escaped identifier', '\\u0065val("1")'],
+    ['hex-escaped identifier', 'var a = \\x65val'],
     ['escaped member', 'this["\\x58MLHttpRequest"]'],
     ['env', 'Quickshell.env("GITHUB_TOKEN")'],
     ['clipboard', 'var c = Quickshell.clipboardText'],

@@ -75,6 +75,11 @@ export const RULES: Rule[] = [
     why: 'builds code at run time'
   },
   {
+    id: 'escape',
+    re: /\\(?:u|x)/g,
+    why: 'escape sequence outside a string (hides an identifier from the text rules)'
+  },
+  {
     id: 'reflect',
     re: /\bconstructor\b|\bglobalThis\b|\b__proto__\b|\bthis\s*\[/g,
     why: 'reaches globals or constructors by name'
