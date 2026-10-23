@@ -24,7 +24,8 @@ export const EXT_ALLOW = new Set([
   'jpeg',
   'ttf',
   'otf',
-  'woff2'
+  'woff2',
+  'gif'
 ]);
 /** Extension-less names that are allowed (qmldir lists QML modules). */
 export const NAME_ALLOW = new Set([
@@ -32,9 +33,13 @@ export const NAME_ALLOW = new Set([
   'LICENCE',
   'COPYING',
   'NOTICE',
-  'qmldir',
-  '.gitignore'
+  'README',
+  'CHANGELOG',
+  'qmldir'
 ]);
+/** Hidden files allowed in the repository root only. `.github/**` is allowed for .yml, .yaml and .md (never fetched or run). */
+const ROOT_HIDDEN = new Set(['.gitignore', '.editorconfig', '.gitattributes']);
+const GITHUB_EXT = new Set(['yml', 'yaml', 'md']);
 
 const CONFUSABLE = /[^ -~]/; // any non-ASCII name is rejected: no lookalike letters, no bidi
 const SYMLINK = '120000';
@@ -58,8 +63,10 @@ export function scanTree(entries: TreeEntry[], opts: { entryPoints?: string[] } 
     const segs = p.split('/');
     if (p.includes('\\')) add(`${sp}: backslash in path`);
     // Hidden entries (.git, .github, .env, ...) are never part of a widget; a root .gitignore is the one exception.
+    const inGithub = p === '.github' || p.startsWith('.github/');
     if (
-      p !== '.gitignore' &&
+      !ROOT_HIDDEN.has(p) &&
+      !inGithub &&
       segs.some((g) => (g.startsWith('.') && g !== '.' && g !== '..') || /[. ]$|^git~\d/i.test(g))
     )
       add(`${sp}: hidden, .git or oddly named path`);
@@ -70,8 +77,10 @@ export function scanTree(entries: TreeEntry[], opts: { entryPoints?: string[] } 
     if (e.type !== 'blob') continue;
     const base = p.split('/').pop() ?? '';
     const ext = base.includes('.') ? base.split('.').pop()!.toLowerCase() : '';
-    if (!(ext ? EXT_ALLOW.has(ext) : NAME_ALLOW.has(base)) && !NAME_ALLOW.has(base))
-      add(`${sp}: file type not allowed`);
+    const okType = inGithub
+      ? GITHUB_EXT.has(ext)
+      : ROOT_HIDDEN.has(p) || NAME_ALLOW.has(base) || (ext !== '' && EXT_ALLOW.has(ext));
+    if (!okType) add(`${sp}: file type not allowed`);
     const size = e.size;
     if (typeof size !== 'number' || !Number.isFinite(size) || size < 0) {
       add(`${sp}: size missing or not a number`); // unknown is not zero: it would dodge every cap
@@ -94,21 +103,21 @@ const SVG_ELEMENTS = new Set(
   )
 );
 const SVG_ATTRS = new Set(
-  'id d x y cx cy r rx ry x1 y1 x2 y2 width height points viewBox fill stroke stroke-width stroke-linecap stroke-linejoin opacity fill-opacity stroke-opacity fill-rule clip-rule transform offset stop-color stop-opacity gradientUnits gradientTransform xmlns version preserveAspectRatio clip-path mask'.split(
+  'id class stroke-dasharray stroke-dashoffset d x y cx cy r rx ry x1 y1 x2 y2 width height points viewBox fill stroke stroke-width stroke-linecap stroke-linejoin opacity fill-opacity stroke-opacity fill-rule clip-rule transform offset stop-color stop-opacity gradientUnits gradientTransform xmlns version preserveAspectRatio clip-path mask'.split(
     ' '
   )
 );
 const PAINT = new Set(['fill', 'stroke', 'stop-color', 'clip-path', 'mask']);
 const COLOURS = new Set(
-  'black white red green blue yellow orange purple pink gray grey cyan magenta transparent silver maroon navy teal olive lime aqua fuchsia'.split(
+  'aliceblue antiquewhite aqua aquamarine azure beige bisque black blanchedalmond blue blueviolet brown burlywood cadetblue chartreuse chocolate coral cornflowerblue cornsilk crimson cyan darkblue darkcyan darkgoldenrod darkgray darkgreen darkgrey darkkhaki darkmagenta darkolivegreen darkorange darkorchid darkred darksalmon darkseagreen darkslateblue darkslategray darkslategrey darkturquoise darkviolet deeppink deepskyblue dimgray dimgrey dodgerblue firebrick floralwhite forestgreen fuchsia gainsboro ghostwhite gold goldenrod gray green greenyellow grey honeydew hotpink indianred indigo ivory khaki lavender lavenderblush lawngreen lemonchiffon lightblue lightcoral lightcyan lightgoldenrodyellow lightgray lightgreen lightgrey lightpink lightsalmon lightseagreen lightskyblue lightslategray lightslategrey lightsteelblue lightyellow lime limegreen linen magenta maroon mediumaquamarine mediumblue mediumorchid mediumpurple mediumseagreen mediumslateblue mediumspringgreen mediumturquoise mediumvioletred midnightblue mintcream mistyrose moccasin navajowhite navy oldlace olive olivedrab orange orangered orchid palegoldenrod palegreen paleturquoise palevioletred papayawhip peachpuff peru pink plum powderblue purple rebeccapurple red rosybrown royalblue saddlebrown salmon sandybrown seagreen seashell sienna silver skyblue slateblue slategray slategrey snow springgreen steelblue tan teal thistle tomato transparent turquoise violet wheat white whitesmoke yellow yellowgreen'.split(
     ' '
   )
 );
 /** Strict paint grammar: none, currentColor, a short keyword list, #hex, rgb()/rgba()/hsl()/hsla() of plain numbers, or exactly url(#id). */
 const paintOk = (v: string) =>
   v === 'none' ||
-  v === 'currentColor' ||
-  COLOURS.has(v) ||
+  v.toLowerCase() === 'currentcolor' ||
+  COLOURS.has(v.toLowerCase()) ||
   /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(v) ||
   /^(?:rgb|rgba|hsl|hsla)\([0-9., %]+\)$/.test(v) ||
   /^url\(#[A-Za-z0-9_-]+\)$/.test(v);
@@ -122,8 +131,8 @@ const ENT: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apo
  *  SVGs (previews are re-encoded); this is a listing-quality gate, not a defence for viewers. */
 export function scanSvg(file: string, text: string): string[] {
   const f = safe(file);
-  const fail = (why: string) => [`${f}: svg ${why}`];
-  const t = text.replace(/^﻿/, '');
+  const fail = (why: string) => [`${f}: svg ${why} (re-export as plain SVG)`];
+  const t = text.replace(/^\ufeff/, '');
 
   if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(t))
     return fail('has control characters');
@@ -135,7 +144,8 @@ export function scanSvg(file: string, text: string): string[] {
     const n = d.replace(/[\s\u0000-\u001f\u007f-\u009f]+/g, '').toLowerCase();
     if (n.includes('javascript:') || n.includes('data:')) return 'has a javascript: or data: URL';
     for (const m of n.matchAll(/url\(/g))
-      if (!/^url\(#[\w.-]+\)/.test(n.slice(m.index))) return 'has a url() that is not a #fragment';
+      if (!/^url\(#[\w.-]+\)/.test(n.slice(m.index, m.index + 80)))
+        return 'has a url() that is not a #fragment';
     return null;
   };
   const stack: string[] = [];
@@ -180,13 +190,18 @@ export function scanSvg(file: string, text: string): string[] {
       root = true;
     }
     i += open[0].length;
-    const attr = /^\s+([^\s=/>]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/;
+    const attr = /\s+([^\s=/>]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/y;
     for (;;) {
-      const m = attr.exec(t.slice(i));
+      attr.lastIndex = i;
+      const m = attr.exec(t);
       if (!m) break;
       const [all, an, v1, v2] = m;
       const v = v1 ?? v2 ?? '';
-      if (!SVG_ATTRS.has(an)) return fail('uses an attribute that is not on the allow-list');
+      const okAttr =
+        SVG_ATTRS.has(an) ||
+        /^data-[a-z0-9-]{1,40}$/.test(an) ||
+        (an === 'xml:space' && v === 'preserve');
+      if (!okAttr) return fail('uses an attribute that is not on the allow-list');
       if (an === 'xmlns' && v !== SVG_NS) return fail('declares a foreign namespace');
       const b =
         bad(v) ??
@@ -194,7 +209,9 @@ export function scanSvg(file: string, text: string): string[] {
       if (b) return fail(b);
       i += all.length;
     }
-    const end = /^\s*(\/?)>/.exec(t.slice(i));
+    const endRe = /\s*(\/?)>/y;
+    endRe.lastIndex = i;
+    const end = endRe.exec(t);
     if (!end) return fail('could not be parsed');
     i += end[0].length;
     if (!end[1]) stack.push(name);
