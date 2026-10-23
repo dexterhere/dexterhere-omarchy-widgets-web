@@ -257,6 +257,9 @@
     border-bottom: 0;
     border-right: 1px solid var(--border);
   }
+  .card[data-variant='list'] .go {
+    flex: 0 1 180px;
+  }
   .card[data-variant='list'] .sum {
     min-height: 0;
   }
