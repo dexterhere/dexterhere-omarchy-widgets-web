@@ -26,11 +26,11 @@ See [Security](/docs/next/project/security/) and the [threat model](/docs/next/r
 A tier is a label for how much review a widget had. It says nothing about isolation.
 
 - `community`: not reviewed, passed automated checks only. Every new listing starts here.
-- `spec`: a maintainer confirmed it is JSON with no code.
+- `spec`: a maintainer confirmed it is JSON with no code. Nothing sets this automatically.
 - `verified`: a maintainer read the pinned commit.
 - `core`: maintained by the project.
 
-Only maintainers can set the last three, for one exact commit. See [Trust tiers](/docs/next/publish/trust-tiers/).
+Only maintainers can set the last three, and only for one exact commit. A new commit goes back to `community`. See [Trust tiers](/docs/next/publish/trust-tiers/).
 
 ## What does a grant do?
 
@@ -58,7 +58,23 @@ It targets Omarchy 4 and later. Nothing else is a goal. The daemon and CLI are L
 
 ## How do I make a widget?
 
-Start with [Choose a path](/docs/next/create/choose-a-path/) or follow [Your first widget, end to end](/docs/next/create/your-first-widget-end-to-end/). To list it, see the [contribute checklist](/docs/next/publish/contribute-checklist/).
+Start with [Choose a path](/docs/next/create/choose-a-path/) or follow [Your first widget, end to end](/docs/next/create/your-first-widget-end-to-end/).
+
+## How do I list a widget, and how long does it take?
+
+Open a pull request that adds one JSON file. The steps are in [Submit a widget](/docs/next/publish/submit-a-widget/). There is one maintainer and no promised turnaround.
+
+## My listing was merged. Why is it not on the site?
+
+Merge is not publish. A maintainer must also add your repository to `registry/lock.json`. Until then the build excludes the listing with "pending maintainer approval: no entry in registry/lock.json". That is not an error in your listing. Today no third-party widget is published yet.
+
+## How do I update or remove my listing?
+
+By pull request: change `commit` to update, set `status` to `removed` or delete the file to remove. See [Updating a listing](/docs/next/publish/updating-a-listing/).
+
+## Can I test a listing before I open the pull request?
+
+Yes. In the website repository run `bun run registry -- --strict`. See [Contributing](/docs/next/project/contributing/#test-locally).
 
 ## How do I report a problem?
 
