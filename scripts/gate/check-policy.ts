@@ -39,7 +39,31 @@ export const FILES_DENY = [
 export const SPAWN_ALLOW = new Set(['date', 'uname', 'uptime', 'free', 'df', 'sensors', 'nproc']);
 
 const HOST = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
-const IPV4 = /^\d+(\.\d+){3}$/;
+// A last label that is a number (decimal, 0x hex, leading-0 octal) makes URL parsers read the whole
+// name as an IPv4 address in any notation (127.1, 0x7f.1, 0177.1), so reject it.
+const NUMERIC = /^(0x[0-9a-f]*|\d+)$/;
+const PRIVATE_TLD = new Set([
+  'localhost',
+  'local',
+  'internal',
+  'lan',
+  'corp',
+  'intranet',
+  'home',
+  'localdomain'
+]);
+const PRIVATE_SUFFIX = ['home.arpa', 'nip.io', 'sslip.io', 'xip.io'];
+
+/** True for names that are not plain public hostnames: IPs in any notation, private or wildcard-DNS names. */
+export function badHost(h: string): boolean {
+  if (h.length > 253 || !HOST.test(h)) return true; // also rejects IPv6, uppercase, non-ASCII, single labels
+  const labels = h.split('.');
+  if (NUMERIC.test(labels[labels.length - 1]) || labels.every((l) => NUMERIC.test(l))) return true;
+  return (
+    PRIVATE_TLD.has(labels[labels.length - 1]) ||
+    PRIVATE_SUFFIX.some((x) => h === x || h.endsWith(`.${x}`))
+  );
+}
 
 /** Collapse `..`, `//` and `.`; reject globs and non-absolute shapes. Returns null if unusable. */
 export function canonPath(p: string): string | null {
@@ -72,13 +96,7 @@ export function checkPolicy(w: PolicyInput): string[] {
     out.push('no widget combines a sensitive provider with its own network, files or spawn');
   if (w.classes.includes('secret-mail')) out.push('mail providers are not available in v1');
   for (const h of network)
-    if (
-      !HOST.test(h) ||
-      IPV4.test(h) ||
-      h === 'localhost' ||
-      h.endsWith('.local') ||
-      h.endsWith('.internal')
-    )
+    if (badHost(h))
       out.push(`network ${h}: hostnames only, no IP literals, localhost or private names`);
   for (const f of files) {
     const c = canonPath(f);

@@ -78,6 +78,40 @@ describe('checkPolicy truth table', () => {
       )
   );
   it.each([
+    '127.1',
+    '0x7f.1',
+    '127.0.1',
+    '0177.1',
+    '0x7f.0x0.0x0.0x1',
+    '2130706433',
+    '1.2.3.4',
+    '[::1]',
+    '::1',
+    'localhost',
+    'a.localhost',
+    'x.local',
+    'x.internal',
+    'x.lan',
+    'router.home.arpa',
+    'x.corp',
+    'x.intranet',
+    '10.0.0.1.nip.io',
+    'a.sslip.io',
+    'a.xip.io',
+    'nip.io',
+    'intranet',
+    'Example.com',
+    'exämple.com',
+    'a..com',
+    '-a.com'
+  ])('rejects bad network host %s', (h) =>
+    expect(checkPolicy({ ...base, capabilities: caps({ network: [h] }) }).join()).toMatch(/network/)
+  );
+  it.each(['example.com', 'api.github.com', 'xn--bcher-kva.example', 'a-b.example.org'])(
+    'accepts network host %s',
+    (h) => expect(checkPolicy({ ...base, capabilities: caps({ network: [h] }) })).toEqual([])
+  );
+  it.each([
     '~/.ssh/id_ed25519',
     '~/.aws',
     '~/.config/gh/hosts.yml',
