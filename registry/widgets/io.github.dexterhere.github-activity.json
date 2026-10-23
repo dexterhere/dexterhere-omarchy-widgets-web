@@ -1,6 +1,6 @@
 {
   "id": "io.github.dexterhere.github-activity",
-  "repo": "https://github.com/dexterhere/github-activity",
+  "repo": "https://github.com/dexterhere/omarchy-widget-github-activity",
   "commit": "0000000000000000000000000000000000000000",
   "categories": ["dev-git", "productivity"],
   "tags": ["github", "pull-requests"],

@@ -1,6 +1,6 @@
 {
   "id": "io.github.dexterhere.docker",
-  "repo": "https://github.com/dexterhere/docker",
+  "repo": "https://github.com/dexterhere/omarchy-widget-docker",
   "commit": "0000000000000000000000000000000000000000",
   "categories": ["network-containers", "dev-git"],
   "tags": ["docker", "containers"],

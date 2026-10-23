@@ -1,6 +1,6 @@
 {
   "id": "io.github.dexterhere.battery",
-  "repo": "https://github.com/dexterhere/battery",
+  "repo": "https://github.com/dexterhere/omarchy-widget-battery",
   "commit": "0000000000000000000000000000000000000000",
   "categories": ["system", "utilities"],
   "tags": ["battery", "power"],
