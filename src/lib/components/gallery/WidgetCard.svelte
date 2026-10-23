@@ -1,11 +1,13 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import { categoryLabels, statusLabels } from '../../registry';
+  import { statusLabels, tierLabels } from '../../registry';
+  import { safeRepoUrl } from '../../registry/links';
   import type { RegistryWidget } from '../../registry/types';
   import type { Stats } from '../../stats';
   import AuthorBadge from '../stats/AuthorBadge.svelte';
   import LikeButton from '../stats/LikeButton.svelte';
   import ViewCount from '../stats/ViewCount.svelte';
+  import Icon from '../ui/Icon.svelte';
   import Highlight from './Highlight.svelte';
   import { STATUS_WORD } from './model';
   import WidgetPreview from './WidgetPreview.svelte';
@@ -31,6 +33,13 @@
     stats?: Stats | null;
   } = $props();
 
+  const ICON = { planned: 'concept', alpha: 'alpha', stable: 'stable' } as const;
+  const tier = $derived(tierLabels[widget.tier].label);
+  const names = $derived(widget.providers.map((p) => p.name));
+  const source = $derived(safeRepoUrl(widget.repo));
+  /** First two entries, then "+N". The full list is in the chip's title. */
+  const few = (xs: string[]) =>
+    xs.length > 2 ? `${xs.slice(0, 2).join(', ')} +${xs.length - 2}` : xs.join(', ');
   const hid = $derived(`wc-${widget.id.replace(/[^A-Za-z0-9_-]/g, '_')}`);
 </script>
 
@@ -45,39 +54,63 @@
     <WidgetPreview {widget} />
   </a>
   <div class="body">
-    <div class="head">
-      <h2 id={hid}>
-        <a href={resolve('/widgets/[id]', { id: widget.id })} tabindex="-1" onclick={onOpen}
-          ><Highlight text={widget.name} {tokens} /></a
-        >
-      </h2>
-      <span class="badge" data-status={widget.status}
-        >{STATUS_WORD[widget.status]}<span class="sr-only"
-          >{statusLabels[widget.status].replace(STATUS_WORD[widget.status], '')}</span
-        ></span
+    <h2 id={hid}>
+      <a href={resolve('/widgets/[id]', { id: widget.id })} tabindex="-1" onclick={onOpen}
+        ><Highlight text={widget.name} {tokens} /></a
       >
-    </div>
+    </h2>
     <p class="sum small text-2"><Highlight text={widget.summary} {tokens} /></p>
-    <div class="meta small">
+    <ul class="chips" aria-label="Status, review and access">
+      <li class="badge" data-status={widget.status}>
+        <Icon name={ICON[widget.status]} />{STATUS_WORD[widget.status]}<span class="sr-only"
+          >{statusLabels[widget.status].replace(STATUS_WORD[widget.status], '')}</span
+        >
+      </li>
+      {#if tier !== STATUS_WORD[widget.status]}
+        <li class="tag" title={tierLabels[widget.tier].text}>
+          <Icon name="shield" />{tier}
+        </li>
+      {/if}
+      {#if widget.surfaces.length}
+        <li class="tag" title="Surfaces: {widget.surfaces.join(', ')}">
+          <Icon name="monitor" />{few(widget.surfaces)}
+        </li>
+      {/if}
+      {#if widget.providers.length}
+        <li class="tag" title="Data providers: {names.join(', ')}">
+          <Icon name="plug" />{few(names)}
+        </li>
+      {/if}
+    </ul>
+    <div class="by small">
       <AuthorBadge repo={widget.repo} />
-      <ul class="cats">
-        {#each widget.categories as c (c)}<li>{categoryLabels[c]}</li>{/each}
-      </ul>
+      <ViewCount views={stats?.views ?? null} />
     </div>
     <div class="foot">
       <a
-        class="btn-primary small"
+        class="btn-primary small go"
         href={resolve('/widgets/[id]', { id: widget.id })}
         aria-describedby={hid}
-        onclick={onOpen}>Details</a
+        onclick={onOpen}>Details<Icon name="arrow" /></a
       >
-      <LikeButton id={widget.id} name={widget.name} likes={stats?.likes ?? null} compact />
-      <ViewCount views={stats?.views ?? null} />
       {#if onTry}
-        <button class="btn small try" type="button" onclick={() => onTry(widget.id)}
-          >Try on the desktop above</button
+        <button class="btn small go" type="button" onclick={() => onTry(widget.id)}
+          ><Icon name="play" />Try on the desktop above</button
         >
+      {:else if widget.installable}
+        <a class="btn small go" href={resolve('/emulator')}><Icon name="play" />Try in emulator</a>
       {/if}
+      {#if source}
+        <!-- eslint-disable svelte/no-navigation-without-resolve -- external URL, checked by safeRepoUrl -->
+        <a
+          class="btn small src"
+          href={source}
+          rel="noopener noreferrer"
+          aria-label="Source code of {widget.name} on GitHub"><Icon name="code" />Source</a
+        >
+        <!-- eslint-enable svelte/no-navigation-without-resolve -->
+      {/if}
+      <LikeButton id={widget.id} name={widget.name} likes={stats?.likes ?? null} compact />
     </div>
   </div>
 </article>
@@ -118,17 +151,9 @@
     display: flex;
     flex-direction: column;
     flex: 1;
-    align-items: flex-start;
     gap: 8px;
     min-width: 0;
     padding: 16px;
-  }
-  .head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 8px;
-    width: 100%;
   }
   h2 {
     margin: 0;
@@ -146,21 +171,6 @@
     text-decoration-thickness: 2px;
     text-underline-offset: 3px;
   }
-  .badge {
-    flex: none;
-    padding: 0 8px;
-    border: 1px solid var(--border-strong);
-    color: var(--text-2);
-    font-size: 13px;
-    line-height: 22px;
-  }
-  .badge[data-status='planned'] {
-    border-style: dashed;
-  }
-  .badge[data-status='stable'] {
-    border-color: var(--brand);
-    color: var(--text);
-  }
   .sum {
     margin: 0;
     display: -webkit-box;
@@ -169,39 +179,69 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
     overflow-wrap: anywhere;
-    min-height: 3em;
+    line-height: 20px;
+    min-height: 40px; /* two lines, so a one-line summary does not pull the rows up */
   }
-  .meta {
+  .chips {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
-    gap: 4px 12px;
-    color: var(--text-2);
-  }
-  .cats {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 8px;
+    gap: 6px;
     margin: 0;
     padding: 0;
     list-style: none;
   }
-  .cats li {
-    padding: 0 6px;
-    border: 1px solid var(--border);
+  .chips li {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    min-height: 24px;
+    padding: 0 8px;
+    border: 1px solid var(--border-strong);
+    color: var(--text-2);
     font-size: 12px;
-    line-height: 18px;
+    line-height: 20px;
+    white-space: nowrap;
   }
-  .foot {
+  .chips .badge[data-status='planned'] {
+    border-style: dashed;
+  }
+  .chips .badge[data-status='stable'] {
+    border-color: var(--brand);
+    color: var(--text);
+  }
+  .chips .badge[data-status='alpha'] {
+    color: var(--text);
+  }
+  .by {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 8px 12px;
-    margin-top: auto;
-    padding-top: 8px;
+    justify-content: space-between;
+    gap: 4px 12px;
+    color: var(--text-2);
   }
-  .try {
-    margin-left: auto;
+  /* Pinned to the bottom of the card; every control is one height; the two text buttons share
+     the free width equally, Source and Like keep their natural width. */
+  .foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+  }
+  .foot > :global(*) {
+    min-height: var(--ctl);
+  }
+  .foot :global(.like) {
+    min-height: var(--ctl);
+  }
+  .go {
+    flex: 1 1 120px;
+  }
+  .src {
+    flex: none;
   }
 
   .card[data-variant='carousel'] {
