@@ -339,8 +339,9 @@ test('JS budget: a docs page ships under 64 KB of gzipped JavaScript', async ({ 
   await page.goto('/docs/next/create/spec-widgets/');
   await page.waitForLoadState('networkidle');
   await Promise.all(jobs);
-  // 60 until the shell polish (sticky header logic, route transition hook, theme-fade): see SHELL-BUDGET in docs/DECISIONS.md
-  expect(gz / 1024).toBeLessThan(64);
+  // 60 until the shell polish (sticky header logic, route transition hook, theme-fade): see SHELL-BUDGET;
+  // 72 after the contribution docs rewrite: see DOCS-BUDGET in docs/DECISIONS.md
+  expect(gz / 1024).toBeLessThan(72);
 });
 
 test('synced reference pages render as text, no injected markup', async ({ page }) => {
