@@ -271,7 +271,7 @@
   .ideas {
     display: grid;
     gap: 8px;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 1fr));
   }
   .ideas a {
     display: flex;
