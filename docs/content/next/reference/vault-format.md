@@ -6,7 +6,7 @@ synced: true
 source: "https://github.com/dexterhere/omarchy-widgets/blob/main/docs/VAULT_FORMAT.md"
 ---
 
-> Synced from dexterhere/omarchy-widgets@main (docs/VAULT_FORMAT.md); do not edit here. Change the file in the code repository.
+> Synced from a local checkout of dexterhere/omarchy-widgets at 6f46d9bd4c3f8c54f63ba95aa3ebfe189121019a (not verified against main) (docs/VAULT_FORMAT.md); do not edit here. Change the file in the code repository.
 
 Status: v0.1 after Codex design review (10 findings, all addressed below). Reviewed before implementation. Implements DAEMON_SPEC section 7. Nothing here is novel cryptography: it composes XChaCha20-Poly1305 and Argon2id from RustCrypto, with a random 32-byte data key wrapped by a master key.
 
