@@ -28,10 +28,10 @@ async function gallery(page: Page, qs = '') {
 }
 
 test('lists every registry widget (7 concept widgets) as preview-first cards', async ({ page }) => {
-  await gallery(page);
+  await gallery(page, '?per=24');
   expect(widgets).toHaveLength(7);
   await expect(page.getByTestId('cards').locator(':scope > li')).toHaveCount(7);
-  await expect(count(page)).toHaveText('7 widgets');
+  await expect(count(page)).toHaveText('Showing 1-7 of 7');
   await expect(page.getByText('No preview yet')).toHaveCount(0);
   // the long concept explanation lives on the detail page, not on cards
   const text = await page.getByTestId('cards').innerText();
@@ -43,7 +43,7 @@ test('lists every registry widget (7 concept widgets) as preview-first cards', a
 test('every card has a large unclipped preview, status, author, like and keyboard order', async ({
   page
 }) => {
-  await gallery(page);
+  await gallery(page, '?per=24');
   const cardEls = page.locator('article.card');
   for (let i = 0; i < 7; i++) {
     const card = cardEls.nth(i);
@@ -84,9 +84,7 @@ test('every card has a large unclipped preview, status, author, like and keyboar
   await expect(first.getByRole('button', { name: /^Like / })).toBeFocused();
 });
 
-test('the grid uses 4 columns at 1440 and 1 on a phone; carousel/list variants differ', async ({
-  page
-}) => {
+test('the grid uses 4 columns at 1440 and 1 on a phone; list differs', async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await gallery(page);
   const xs = async () =>
@@ -107,11 +105,75 @@ test('a card carries one status word with a hidden full explanation', async ({ p
   await expect(badge.locator('.sr-only')).toContainText('not installable');
 });
 
+test('six cards a page by default, a pager under the grid, and the URL stays clean', async ({
+  page
+}) => {
+  await gallery(page);
+  await expect(cards(page)).toHaveCount(6);
+  await expect(count(page)).toHaveText('Showing 1-6 of 7');
+  await expect(page).toHaveURL(/\/widgets\/?$/);
+  const nav = page.getByRole('navigation', { name: 'Widget pages' });
+  await expect(nav.getByRole('button', { name: 'Previous page' })).toBeDisabled();
+  await nav.getByRole('button', { name: 'Next page' }).click();
+  await expect(page).toHaveURL(/\?page=2$/);
+  await expect(cards(page)).toHaveCount(1);
+  await expect(count(page)).toHaveText('Showing 7 of 7');
+  await expect(nav.getByRole('button', { name: 'Page 2' })).toHaveAttribute('aria-current', 'page');
+  await expect(nav.getByRole('button', { name: 'Page 2' })).toBeFocused();
+  await page.reload();
+  await expect(count(page)).toHaveText('Showing 7 of 7');
+  await nav.getByRole('button', { name: 'Previous page' }).click();
+  await expect(page).toHaveURL(/\/widgets\/?$/);
+});
+
+test('page size control: per is in the URL unless it is 6, and it resets to page 1', async ({
+  page
+}) => {
+  await gallery(page, '?page=2');
+  await expect(cards(page)).toHaveCount(1);
+  await pick(page, 'per', '12');
+  await expect(page).toHaveURL(/\?per=12$/);
+  await expect(cards(page)).toHaveCount(7);
+  await expect(page.getByRole('navigation', { name: 'Widget pages' })).toHaveCount(0);
+  await pick(page, 'per', '6');
+  await expect(page).toHaveURL(/\/widgets\/?$/);
+  await expect(cards(page)).toHaveCount(6);
+});
+
+test('a filter or sort change goes back to page 1; list view pages too; bad values are ignored', async ({
+  page
+}) => {
+  await gallery(page, '?page=2');
+  await search(page).fill('docker');
+  await expect(page).toHaveURL(/\?q=docker$/);
+  await expect(cards(page)).toHaveCount(1);
+  await search(page).fill('');
+  await expect(page).toHaveURL(/\/widgets\/?$/);
+  await page
+    .getByRole('navigation', { name: 'Widget pages' })
+    .getByRole('button', { name: 'Page 2' })
+    .click();
+  await pick(page, 'sort', 'Name, A to Z');
+  await expect(page).toHaveURL(/\?sort=name$/);
+  await page
+    .getByRole('navigation', { name: 'Widget pages' })
+    .getByRole('button', { name: 'Page 2' })
+    .click();
+  await page.getByRole('button', { name: 'List' }).click();
+  await expect(page).toHaveURL(/page=2/);
+  await expect(page.getByTestId('list').locator(':scope > li')).toHaveCount(1);
+  await gallery(page, '?page=99');
+  await expect(page).toHaveURL(/\?page=2$/);
+  await gallery(page, '?page=-3&per=7');
+  await expect(page).toHaveURL(/\/widgets\/?$/);
+  await expect(cards(page)).toHaveCount(6);
+});
+
 test('search narrows the list and the URL follows; reload restores it', async ({ page }) => {
   await gallery(page);
   await search(page).fill('Docker');
   await expect(page.getByTestId('cards').locator(':scope > li')).toHaveCount(1);
-  await expect(count(page)).toHaveText('1 of 7 widgets');
+  await expect(count(page)).toHaveText('Showing 1 of 1');
   await expect(page).toHaveURL(/\?q=Docker$/);
   await page.reload();
   await expect(search(page)).toHaveValue('Docker');
@@ -153,7 +215,7 @@ test('category chips filter, show counts, and a multi-category widget appears un
     await expect(cards(page)).toHaveCount(inCat(c).length);
     await expect(page).toHaveURL(new RegExp(`cat=${c}$`));
     await catBtn(page, c).click();
-    await expect(cards(page)).toHaveCount(widgets.length);
+    await expect(cards(page)).toHaveCount(Math.min(6, widgets.length));
   }
   // multi-select is a union and the URL carries both
   const [c1, c2] = multi.categories;
@@ -177,7 +239,7 @@ test('active filter chips can be removed and Clear all resets', async ({ page })
   await expect(page).not.toHaveURL(/cat=system/);
   await page.getByRole('button', { name: 'Clear all' }).click();
   await expect(page.getByTestId('active')).toHaveCount(0);
-  await expect(cards(page)).toHaveCount(widgets.length);
+  await expect(cards(page)).toHaveCount(Math.min(6, widgets.length));
   await expect(page).not.toHaveURL(/cat=|status=/);
 });
 
@@ -197,7 +259,7 @@ test('the empty state offers suggested searches and category buttons', async ({ 
   const empty = page.getByTestId('empty');
   await expect(empty).toBeVisible();
   await expect(empty).toContainText('zzzz-nothing');
-  await expect(count(page)).toHaveText(`0 of ${widgets.length} widgets`);
+  await expect(count(page)).toHaveText('No widgets');
   await empty.getByRole('button', { name: 'clock', exact: true }).click();
   await expect(search(page)).toHaveValue('clock');
   await expect(cards(page).first()).toBeVisible();
@@ -207,7 +269,7 @@ test('the empty state offers suggested searches and category buttons', async ({ 
   await expect(search(page)).toHaveValue('');
   await search(page).fill('zzzz-nothing');
   await page.getByTestId('empty').getByRole('button', { name: 'Clear all' }).click();
-  await expect(cards(page)).toHaveCount(widgets.length);
+  await expect(cards(page)).toHaveCount(Math.min(6, widgets.length));
 });
 
 test('typeahead is labelled by kind and fully keyboard operable', async ({ page }) => {
@@ -349,7 +411,7 @@ test('the result count is a live status region', async ({ page }) => {
   await expect(count(page)).toHaveAttribute('role', 'status');
   await expect(count(page)).toHaveAttribute('aria-live', 'polite');
   await search(page).fill('docker');
-  await expect(count(page)).toHaveText(`1 of ${widgets.length} widgets`);
+  await expect(count(page)).toHaveText('Showing 1 of 1');
 });
 
 test('typing does not shift the layout', async ({ page }) => {
@@ -363,12 +425,12 @@ test('typing does not shift the layout', async ({ page }) => {
 });
 
 test('junk URL state falls back to the full list', async ({ page }) => {
-  await gallery(page, '?cat=__proto__&tier=%00&view=zzz&sort=%25');
+  await gallery(page, '?cat=__proto__&tier=%00&view=zzz&sort=%25&per=24');
   await expect(page.getByTestId('cards').locator(':scope > li')).toHaveCount(7);
 });
 
 test('cards and list views toggle and persist in the URL', async ({ page }) => {
-  await gallery(page);
+  await gallery(page, '?per=24');
   await page.getByRole('button', { name: 'List' }).click();
   await expect(page.getByTestId('list').locator(':scope > li')).toHaveCount(7);
   await expect(page).toHaveURL(/view=list/);

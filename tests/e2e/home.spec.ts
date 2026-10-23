@@ -7,12 +7,12 @@ test.use({ colorScheme: 'dark' });
 const PORT = process.env.PW_PORT ?? 4173;
 const DOCKER = 'io.github.dexterhere.concept-docker';
 const emu = (p: Page) => p.locator('[data-home-stage] [data-emulator]');
-const track = (p: Page) => p.locator('[data-carousel-track]');
-const slides = (p: Page) => p.locator('[data-slide]');
-const prev = (p: Page) => p.getByRole('button', { name: 'Previous widgets' });
-const next = (p: Page) => p.getByRole('button', { name: 'Next widgets' });
+const cards = (p: Page) => p.locator('[data-widget-card]');
+const pager = (p: Page) => p.getByRole('navigation', { name: 'Widget pages' });
+const prev = (p: Page) => pager(p).getByRole('button', { name: 'Previous page' });
+const next = (p: Page) => pager(p).getByRole('button', { name: 'Next page' });
+const shownText = (p: Page) => p.locator('[data-home-widgets] [data-pager-summary]');
 const live = (p: Page) => p.locator('[data-emulator] [aria-live]');
-const left = (p: Page) => track(p).evaluate((el) => el.scrollLeft);
 
 async function ready(page: Page, theme?: string) {
   await page.addInitScript((t) => {
@@ -29,25 +29,39 @@ async function toBuilder(page: Page) {
   await expect(page.locator('[data-builder]')).toBeVisible();
 }
 
-test('hero says widgets are open-ended and there is no privacy section', async ({ page }) => {
+test('hero is short, says widgets are open-ended, and there is no privacy section', async ({
+  page
+}) => {
   await ready(page);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(
     'Any widget you can think of, on your Omarchy desktop.'
   );
   await expect(
     page.getByText(
-      'A clock, system stats and GitHub activity are where we started, not where it ends. If it can show data or respond to a click, it can be a widget: a build monitor, a focus timer, your next meeting, a music deck, a server status board, a weather strip, a habit streak. Every widget takes its colours from your theme and sees only the data you allow.'
+      'Clocks, stats, git, music, or anything with data. They follow your theme and see only what you allow.'
     )
   ).toBeVisible();
+  await expect(page.getByText('Pre-release: the daemon, vault and CLI work;')).toBeVisible();
   await expect(
-    page.getByText('Pre-release: the daemon, vault and CLI work today;').first()
+    page.getByText('Spec widgets are JSON, no code. Code widgets run as you.')
   ).toBeVisible();
   await expect(page.getByRole('link', { name: 'Browse widgets' }).first()).toBeVisible();
   await expect(page.getByRole('link', { name: 'Read the docs' })).toBeVisible();
-  await expect(
-    page.getByText('Press T to change the theme: every widget follows it.')
-  ).toBeVisible();
   await expect(page.getByText('How your data stays private')).toHaveCount(0);
+  await expect(page.getByText('How a widget gets made')).toHaveCount(0);
+});
+
+test('sections come in order: hero, stage, widgets, ideas, make your own', async ({ page }) => {
+  await ready(page);
+  const ys = await page.evaluate(() =>
+    ['[data-home-stage]', '[data-home-widgets]', '[data-home-ideas]', '[data-home-make]'].map(
+      (q) => document.querySelector(q)!.getBoundingClientRect().top
+    )
+  );
+  expect(ys).toEqual([...ys].sort((a, b) => a - b));
+  const ideas = page.locator('[data-home-ideas] li a');
+  await expect(ideas).toHaveCount(10);
+  await expect(ideas.first()).toHaveAttribute('href', /\/widgets\/?\?cat=/);
 });
 
 test('the emulator stage is visible without scrolling and starts with widgets and no windows', async ({
@@ -63,7 +77,7 @@ test('the emulator stage is visible without scrolling and starts with widgets an
   await expect(page.locator('[data-home-stage] [data-widget]')).toHaveCount(4);
   await expect(page.locator('[data-home-stage] .win')).toHaveCount(0);
   await expect(page.getByText('Emulated desktop, sample data.')).toBeVisible();
-  await expect(page.getByText('Press Super + Alt + W (proposed) or click Widgets')).toBeVisible();
+  await expect(page.getByText('(proposed) for the Widget Center')).toBeVisible();
 });
 
 test('Open full view and Esc', async ({ page }) => {
@@ -203,96 +217,100 @@ test('the builder loads near the viewport, not before', async ({ page }) => {
   expect(await has('b-template')).toBe(true);
 });
 
-test.describe('carousel', () => {
-  test('lists every registry widget with author, categories, status and a like control', async ({
+test.describe('widget cards', () => {
+  test('page 1 has six cards with author, status and a like control; the pager says where you are', async ({
     page
   }) => {
     await ready(page);
     const n = await registryCount(page);
-    await expect(slides(page)).toHaveCount(n);
-    const region = page.getByRole('region', { name: 'Widget carousel' });
-    await expect(region).toHaveAttribute('aria-roledescription', 'carousel');
-    await expect(page.getByRole('listitem', { name: new RegExp(`, 1 of ${n}$`) })).toBeAttached();
-    await expect(
-      page.getByRole('listitem', { name: new RegExp(`, ${n} of ${n}$`) })
-    ).toBeAttached();
-    const first = slides(page).first();
+    await expect(cards(page)).toHaveCount(Math.min(6, n));
+    await expect(shownText(page)).toHaveText(`Showing 1-${Math.min(6, n)} of ${n}`);
+    const first = cards(page).first();
     await expect(first.getByRole('link', { name: '@dexterhere' })).toBeVisible();
     await expect(first.getByText('Concept, not installable').first()).toBeVisible();
     await expect(first.getByRole('button', { name: /^Like / })).toBeVisible();
-    await expect(
-      first.getByText(/Utilities|System|Productivity|AI and Agents/).first()
-    ).toBeVisible();
     await expect(first.getByRole('link', { name: /concept/i }).first()).toHaveAttribute(
       'href',
       /\/widgets\/io\.github\./
     );
-    await expect(page.getByRole('link', { name: 'View all widgets' })).toHaveAttribute(
+    await expect(page.getByRole('link', { name: 'Search the gallery' })).toHaveAttribute(
       'href',
       /\/widgets\/?$/
     );
   });
 
-  test('previous and next buttons move it and are disabled at the ends', async ({ page }) => {
+  test('the cards sit below the emulator, three across, in equal-height rows', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
     await ready(page);
-    await toBuilder(page).catch(() => {});
-    await page.locator('[data-home-widgets]').scrollIntoViewIfNeeded();
-    await expect(prev(page)).toBeDisabled();
-    await expect(next(page)).toBeEnabled();
-    await next(page).click();
-    await expect.poll(() => left(page)).toBeGreaterThan(100);
-    await expect(prev(page)).toBeEnabled();
-    for (let i = 0; i < 12 && (await next(page).isEnabled()); i++) {
-      await next(page).click();
-      await page.waitForTimeout(550);
-    }
-    await expect(next(page)).toBeDisabled();
-    await expect(prev(page)).toBeEnabled();
-    // focus was not lost when the button became disabled
-    expect(await page.evaluate(() => document.activeElement !== document.body)).toBe(true);
-    await prev(page).click();
-    await expect(next(page)).toBeEnabled();
+    const desk = (await page.locator('[data-home-stage] .desk').boundingBox())!;
+    const boxes = await cards(page).evaluateAll((els) =>
+      els.map((e) => e.getBoundingClientRect().toJSON())
+    );
+    expect(boxes[0].top).toBeGreaterThan(desk.y + desk.height);
+    expect(boxes[1].top).toBeCloseTo(boxes[0].top, 0);
+    expect(boxes[2].top).toBeCloseTo(boxes[0].top, 0);
+    expect(boxes[3].top).toBeGreaterThan(boxes[0].bottom);
+    expect(boxes[0].height).toBeCloseTo(boxes[1].height, 0);
   });
 
-  test('arrow keys scroll the focused track and Tab walks the cards', async ({ page }) => {
-    await ready(page);
-    await track(page).focus();
-    const a = await left(page);
-    await page.keyboard.press('ArrowRight');
-    await expect.poll(() => left(page)).toBeGreaterThan(a + 100);
-    await page.keyboard.press('ArrowLeft');
-    await expect.poll(() => left(page)).toBeLessThan(50);
-    await page.keyboard.press('Tab');
-    expect(await page.evaluate(() => !!document.activeElement?.closest('[data-slide]'))).toBe(true);
-  });
-
-  test('dragging with the mouse scrolls it and does not open a card', async ({ page }) => {
-    await ready(page);
-    await page.locator('[data-home-widgets]').scrollIntoViewIfNeeded();
-    const box = (await track(page).boundingBox())!;
-    const y = box.y + 60;
-    await page.mouse.move(box.x + box.width - 80, y);
-    await page.mouse.down();
-    await page.mouse.move(box.x + box.width - 380, y, { steps: 8 });
-    await page.mouse.up();
-    await expect.poll(() => left(page)).toBeGreaterThan(100);
-    expect(new URL(page.url()).pathname).toBe('/');
-  });
-
-  test('category chips filter the cards', async ({ page }) => {
+  test('next and previous move between pages and are disabled at the ends', async ({ page }) => {
     await ready(page);
     const n = await registryCount(page);
-    await page.getByRole('button', { name: /^System \d/ }).click();
-    await expect(slides(page)).toHaveCount(2);
-    await expect(page.getByRole('listitem', { name: /, 2 of 2$/ })).toBeAttached();
-    await page.getByRole('button', { name: /^All \d/ }).click();
-    await expect(slides(page)).toHaveCount(n);
+    test.skip(n <= 6, 'needs more than six widgets');
+    await page.locator('[data-home-widgets]').scrollIntoViewIfNeeded();
+    await expect(prev(page)).toBeDisabled();
+    const first = await cards(page).first().getAttribute('data-widget-card');
+    await next(page).click();
+    await expect(cards(page)).toHaveCount(Math.min(6, n - 6));
+    expect(await cards(page).first().getAttribute('data-widget-card')).not.toBe(first);
+    await expect(shownText(page)).toHaveText(
+      n - 6 === 1 ? `Showing ${n} of ${n}` : `Showing 7-${n} of ${n}`
+    );
+    await expect(pager(page).getByRole('button', { name: 'Page 2' })).toHaveAttribute(
+      'aria-current',
+      'page'
+    );
+    await expect(next(page)).toBeDisabled();
+    // focus stays in the pager when the button under it becomes disabled
+    expect(await page.evaluate(() => !!document.activeElement?.closest('nav'))).toBe(true);
+    await prev(page).click();
+    await expect(cards(page)).toHaveCount(6);
+    await expect(prev(page)).toBeDisabled();
+  });
+
+  test('the pager is a labelled nav with named, keyboard-operable buttons', async ({ page }) => {
+    await ready(page);
+    test.skip((await registryCount(page)) <= 6, 'needs more than six widgets');
+    await expect(pager(page)).toBeVisible();
+    await expect(pager(page).getByRole('button', { name: 'Page 1' })).toHaveAttribute(
+      'aria-current',
+      'page'
+    );
+    await pager(page).getByRole('button', { name: 'Page 2' }).focus();
+    await page.keyboard.press('Enter');
+    await expect(pager(page).getByRole('button', { name: 'Page 2' })).toHaveAttribute(
+      'aria-current',
+      'page'
+    );
+    await expect(pager(page).getByRole('button', { name: 'Page 2' })).toBeFocused();
+  });
+
+  test('changing page does not move the content below it', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await ready(page);
+    test.skip((await registryCount(page)) <= 6, 'needs more than six widgets');
+    const y = () =>
+      page.locator('[data-home-ideas]').evaluate((e) => e.getBoundingClientRect().top + scrollY);
+    const before = await y();
+    await next(page).click();
+    await expect(shownText(page)).toContainText('Showing 7');
+    expect(Math.abs((await y()) - before)).toBeLessThan(2);
   });
 
   test('clicking a card opens its detail page', async ({ page }) => {
     await ready(page);
     await page.locator('[data-home-widgets]').scrollIntoViewIfNeeded();
-    await page.locator('[data-slide] h2 a').first().click();
+    await page.locator('[data-widget-card] h2 a').first().click();
     await expect(page).toHaveURL(/\/widgets\/io\.github\./);
     await expect(page.getByRole('button', { name: /^Like / })).toBeVisible();
     await expect(page.getByRole('link', { name: '@dexterhere' }).first()).toBeVisible();
@@ -300,19 +318,19 @@ test.describe('carousel', () => {
 
   test('a like persists on this device and across a reload', async ({ page }) => {
     await ready(page);
-    const like = slides(page)
+    const like = cards(page)
       .first()
       .getByRole('button', { name: /^Like / });
     await like.scrollIntoViewIfNeeded();
     await like.click();
     await expect(
-      slides(page)
+      cards(page)
         .first()
         .getByRole('button', { name: /^Unlike / })
     ).toHaveAttribute('aria-pressed', 'true');
     await page.reload();
     await expect(
-      slides(page)
+      cards(page)
         .first()
         .getByRole('button', { name: /^Unlike / })
     ).toHaveAttribute('aria-pressed', 'true');
@@ -454,7 +472,7 @@ for (const id of ['tokyo-night', 'catppuccin-latte', 'vantablack']) {
   });
 }
 
-test('360 px: no horizontal overflow, static desktop, carousel scrolls natively', async ({
+test('360 px: no horizontal overflow, static desktop, one card per row, 44px pager', async ({
   page
 }) => {
   await page.setViewportSize({ width: 360, height: 740 });
@@ -466,7 +484,15 @@ test('360 px: no horizontal overflow, static desktop, carousel scrolls natively'
   expect(over).toBe(false);
   await expect(emu(page)).toHaveAttribute('data-narrow', 'true');
   await expect(page.getByText('This emulator needs a larger screen')).toBeVisible();
-  expect(await track(page).evaluate((el) => el.scrollWidth > el.clientWidth)).toBe(true);
+  const boxes = await cards(page).evaluateAll((els) =>
+    els.slice(0, 2).map((e) => e.getBoundingClientRect().toJSON())
+  );
+  expect(boxes[1].top).toBeGreaterThan(boxes[0].bottom);
+  if ((await registryCount(page)) > 6) {
+    const b = (await next(page).boundingBox())!;
+    expect(b.width).toBeGreaterThanOrEqual(44);
+    expect(b.height).toBeGreaterThanOrEqual(44);
+  }
 });
 
 test('makes no request to any origin other than the site', async ({ page }) => {
@@ -478,16 +504,14 @@ test('makes no request to any origin other than the site', async ({ page }) => {
   await ready(page);
   await toBuilder(page);
   await page.locator('[data-home-widgets]').scrollIntoViewIfNeeded();
-  await slides(page)
+  await cards(page)
     .first()
     .getByRole('button', { name: /^Like / })
     .click();
   expect([...hosts]).toEqual([`localhost:${PORT}`]);
 });
 
-test('reduced motion: the carousel jumps without animation and the coach does not pulse', async ({
-  browser
-}) => {
+test('reduced motion: the coach does not pulse', async ({ browser }) => {
   const ctx = await browser.newContext({
     reducedMotion: 'reduce',
     viewport: { width: 1440, height: 900 }
@@ -498,9 +522,6 @@ test('reduced motion: the carousel jumps without animation and the coach does no
     .locator('[data-bar="widgets"]')
     .evaluate((el) => getComputedStyle(el).animationName);
   expect(anim).toBe('none');
-  await next(page).scrollIntoViewIfNeeded();
-  await next(page).click();
-  expect(await left(page)).toBeGreaterThan(100); // instant, no wait
   await ctx.close();
 });
 
