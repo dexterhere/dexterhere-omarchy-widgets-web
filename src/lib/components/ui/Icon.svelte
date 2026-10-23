@@ -1,16 +1,6 @@
 <script lang="ts" module>
   export type IconName =
-    | 'arrow'
-    | 'code'
-    | 'play'
-    | 'shield'
-    | 'monitor'
-    | 'plug'
-    | 'concept'
-    | 'alpha'
-    | 'stable'
-    | 'calendar'
-    | 'eye';
+    'arrow' | 'code' | 'play' | 'shield' | 'monitor' | 'plug' | 'concept' | 'alpha' | 'stable';
 </script>
 
 <script lang="ts">
@@ -52,10 +42,6 @@
       d="M5.5 8.2 7.3 10l3.3-3.6"
       stroke="var(--surface)"
     />
-  {:else if name === 'calendar'}
-    <path d="M2.5 3.5h11v10h-11zM2.5 6.5h11M5.5 1.5v3M10.5 1.5v3" />
-  {:else if name === 'eye'}
-    <path d="M1 8s2.5-4.5 7-4.5S15 8 15 8s-2.5 4.5-7 4.5S1 8 1 8z" /><circle cx="8" cy="8" r="2" />
   {/if}
 </svg>
 

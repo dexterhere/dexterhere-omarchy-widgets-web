@@ -1,6 +1,6 @@
 <script lang="ts">
   import { resolve } from '$app/paths';
-  import { statusLabels, tierLabels } from '../../registry';
+  import { categoryLabels, statusLabels, tierLabels } from '../../registry';
   import { safeRepoUrl } from '../../registry/links';
   import type { RegistryWidget } from '../../registry/types';
   import type { Stats } from '../../stats';
@@ -36,6 +36,7 @@
   const ICON = { planned: 'concept', alpha: 'alpha', stable: 'stable' } as const;
   const tier = $derived(tierLabels[widget.tier].label);
   const names = $derived(widget.providers.map((p) => p.name));
+  const cats = $derived(widget.categories.map((c) => categoryLabels[c]).join(', '));
   const source = $derived(safeRepoUrl(widget.repo));
   /** First two entries, then "+N". The full list is in the chip's title. */
   const few = (xs: string[]) =>
@@ -84,6 +85,7 @@
     </ul>
     <div class="by small">
       <AuthorBadge repo={widget.repo} />
+      <span class="cats">{cats}</span>
       <ViewCount views={stats?.views ?? null} />
     </div>
     <div class="foot">
@@ -106,7 +108,8 @@
           class="btn small src"
           href={source}
           rel="noopener noreferrer"
-          aria-label="Source code of {widget.name} on GitHub"><Icon name="code" />Source</a
+          aria-label="Source code on GitHub"
+          aria-describedby={hid}><Icon name="code" />Source</a
         >
         <!-- eslint-enable svelte/no-navigation-without-resolve -->
       {/if}
@@ -212,6 +215,9 @@
   }
   .chips .badge[data-status='alpha'] {
     color: var(--text);
+  }
+  .cats {
+    margin-right: auto;
   }
   .by {
     display: flex;

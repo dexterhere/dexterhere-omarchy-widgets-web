@@ -79,7 +79,7 @@ test('every card has a large unclipped preview, status, author, like and keyboar
   const first = cardEls.first();
   await first.getByRole('link', { name: 'Details' }).focus();
   await page.keyboard.press('Tab');
-  await expect(first.getByRole('link', { name: /^Source code of / })).toBeFocused();
+  await expect(first.getByRole('link', { name: 'Source code on GitHub' })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(first.getByRole('button', { name: /^Like / })).toBeFocused();
 });
