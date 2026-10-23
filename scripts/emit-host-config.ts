@@ -276,7 +276,9 @@ export function vercelProjectJson(): string {
     $schema: 'https://openapi.vercel.sh/vercel.json',
     framework: null,
     installCommand: 'bun install --frozen-lockfile',
-    buildCommand: 'bun run build',
+    // Strict first: if GitHub is unreachable or rate limited, the build fails and Vercel keeps serving
+    // the previous production deployment instead of publishing an empty widget list.
+    buildCommand: 'bun run registry -- --strict && bun run build',
     outputDirectory: 'build',
     trailingSlash: true,
     headers: vercelHeaders()
