@@ -1,11 +1,11 @@
 import type { WidgetType } from '../desktop/layout';
 
-// Concept ids that have a real sample component. Everything else gets a "No preview yet" box.
+// Fixture ids that have a real sample component. Everything else gets a "No preview yet" box.
 const BY_ID: Record<string, WidgetType> = {
-  'io.github.dexterhere.concept-clock': 'clock',
-  'io.github.dexterhere.concept-system-monitor': 'system',
-  'io.github.dexterhere.concept-battery': 'battery',
-  'io.github.dexterhere.concept-github-activity': 'github'
+  'io.github.dexterhere.clock': 'clock',
+  'io.github.dexterhere.system-monitor': 'system',
+  'io.github.dexterhere.battery': 'battery',
+  'io.github.dexterhere.github-activity': 'github'
 };
 
 export const previewType = (id: string): WidgetType | null =>

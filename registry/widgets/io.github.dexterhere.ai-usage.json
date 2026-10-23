@@ -1,0 +1,10 @@
+{
+  "id": "io.github.dexterhere.ai-usage",
+  "repo": "https://github.com/dexterhere/omarchy-widget-ai-usage",
+  "commit": "0000000000000000000000000000000000000000",
+  "categories": ["ai-agents", "utilities"],
+  "tags": ["ai", "agents", "usage"],
+  "summary": "Shows counts and timings of your local coding-agent sessions today, never what was said in them.",
+  "status": "planned",
+  "source": "fixture"
+}

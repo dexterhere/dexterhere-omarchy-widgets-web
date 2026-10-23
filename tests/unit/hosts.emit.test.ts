@@ -7,8 +7,10 @@ import {
   netlifyHeaders,
   netlifyRedirects,
   nginxConf,
-  vercelJson
+  vercelJson,
+  vercelProjectJson
 } from '../../scripts/emit-host-config';
+import { SECURITY_HEADERS } from '../../src/lib/hosts';
 import { docsHome } from '../../scripts/host-env';
 
 const HOME = '/docs/next/start/what-it-is/';
@@ -22,6 +24,22 @@ describe('emit-host-config', () => {
   it.each(Object.keys(OUTPUTS(c)))('deploy/%s is up to date (golden)', (name) => {
     const committed = readFileSync(new URL(`../../deploy/${name}`, import.meta.url), 'utf8');
     expect(committed).toBe(OUTPUTS(ctxFor({}))[name]);
+  });
+
+  it('root vercel.json (one hostname) is up to date and carries the security headers', () => {
+    const committed = readFileSync(new URL('../../vercel.json', import.meta.url), 'utf8');
+    expect(committed).toBe(vercelProjectJson());
+    const cfg = JSON.parse(committed);
+    expect(cfg.outputDirectory).toBe('build');
+    expect(cfg.trailingSlash).toBe(true);
+    const all = cfg.headers[0];
+    expect(all.source).toBe('/(.*)');
+    expect(
+      Object.fromEntries(all.headers.map((h: { key: string; value: string }) => [h.key, h.value]))
+    ).toEqual(SECURITY_HEADERS);
+    // no host rules: those need a domain and live in deploy/vercel.json
+    expect(cfg.redirects).toBeUndefined();
+    expect(cfg.rewrites).toBeUndefined();
   });
 
   it('Caddyfile: both hosts, exceptions before the rewrite, fixed redirect target', () => {

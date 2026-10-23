@@ -1,7 +1,0 @@
-{
-  "id": "io.github.dexterhere.concept-clock",
-  "name": "Clock (concept)",
-  "version": "0.0.0-concept",
-  "description": "Concept clock with digital, analog, binary and world variants.",
-  "license": "MIT"
-}

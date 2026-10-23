@@ -16,3 +16,4 @@ build-stats
 deploy/Caddyfile
 deploy/nginx.conf
 deploy/netlify
+registry/fixtures

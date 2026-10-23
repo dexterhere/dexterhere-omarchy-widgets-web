@@ -3,11 +3,11 @@ import { expect, test, type Page } from '@playwright/test';
 
 test.use({ colorScheme: 'dark' });
 
-const DOCKER = 'io.github.dexterhere.concept-docker';
+const DOCKER = 'io.github.dexterhere.docker';
 const emu = (p: Page) => p.locator('[data-emulator]');
 const sheet = (p: Page) => p.getByRole('dialog', { name: 'Widget Center' });
 const widget = (p: Page, reg: string) => p.locator(`[data-widget][data-reg="${reg}"]`);
-const clock = (p: Page) => widget(p, 'io.github.dexterhere.concept-clock');
+const clock = (p: Page) => widget(p, 'io.github.dexterhere.clock');
 const live = (p: Page) => p.locator('[data-emulator] [aria-live]');
 
 async function ready(page: Page, url = '/emulator/') {
@@ -106,7 +106,7 @@ test('Discover states needs before install; installing places at the first free 
   for (const k of ['Data', 'Network', 'Files', 'Programs', 'Secrets'])
     await expect(card.locator('dt', { hasText: k })).toBeVisible();
   await expect(card).toContainText('none');
-  await expect(card).toContainText('/run/docker.sock');
+  await expect(card).toContainText('docker.containers'); // the topic it needs, no host of its own
   await expect(widget(page, DOCKER)).toHaveCount(0);
   await card.getByRole('button', { name: /Install Docker.*concept preview/ }).click();
   const w = widget(page, DOCKER);
@@ -310,7 +310,7 @@ test('widget detail page: Try it on a desktop preloads the widget, Expand works'
 });
 
 test('every widget page has the section (concept widgets work too)', async ({ page }) => {
-  await page.goto('/widgets/io.github.dexterhere.concept-ai-usage/');
+  await page.goto('/widgets/io.github.dexterhere.ai-usage/');
   const section = page.locator('[data-try-desktop]');
   await section.scrollIntoViewIfNeeded();
   await expect(section.locator('[data-emulator]')).toBeVisible();

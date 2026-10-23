@@ -250,6 +250,40 @@ export function netlifyRedirects(c: HostCtx): string {
   return lines.join('\n') + '\n';
 }
 
+function vercelHeaders() {
+  return [
+    {
+      source: '/(.*)',
+      headers: Object.entries(SECURITY_HEADERS).map(([key, value]) => ({ key, value }))
+    },
+    {
+      source: '/pagefind/:file(wasm\\..+\\.pagefind)',
+      headers: [{ key: 'Content-Type', value: 'application/wasm' }]
+    },
+    {
+      source: '/pagefind/:dir(index|fragment|filter)/:rest*',
+      headers: [{ key: 'Content-Type', value: 'application/octet-stream' }]
+    }
+  ];
+}
+
+/**
+ * Project file for a Vercel deployment on ONE hostname (docs under /docs/). It goes at the repo
+ * root. The two-hostname rules in deploy/vercel.json need both origins and a domain you own.
+ */
+export function vercelProjectJson(): string {
+  const config = {
+    $schema: 'https://openapi.vercel.sh/vercel.json',
+    framework: null,
+    installCommand: 'bun install --frozen-lockfile',
+    buildCommand: 'bun run build',
+    outputDirectory: 'build',
+    trailingSlash: true,
+    headers: vercelHeaders()
+  };
+  return JSON.stringify(config, null, 2) + '\n';
+}
+
 export function vercelJson(c: HostCtx): string {
   // has.value is a regular expression: anchor it and escape the dots
   const rx = (o: string) => `^${host(o).replace(/\./g, '\\.')}$`;
@@ -258,20 +292,7 @@ export function vercelJson(c: HostCtx): string {
   const config = {
     $schema: 'https://openapi.vercel.sh/vercel.json',
     trailingSlash: true,
-    headers: [
-      {
-        source: '/(.*)',
-        headers: Object.entries(SECURITY_HEADERS).map(([key, value]) => ({ key, value }))
-      },
-      {
-        source: '/pagefind/:file(wasm\\..+\\.pagefind)',
-        headers: [{ key: 'Content-Type', value: 'application/wasm' }]
-      },
-      {
-        source: '/pagefind/:dir(index|fragment|filter)/:rest*',
-        headers: [{ key: 'Content-Type', value: 'application/octet-stream' }]
-      }
-    ],
+    headers: vercelHeaders(),
     redirects: [
       {
         source: '/docs/:path*',
@@ -320,5 +341,7 @@ if (import.meta.main) {
     writeFileSync(file, text);
     console.log(`wrote deploy/${name}`);
   }
+  writeFileSync(join(ROOT, 'vercel.json'), vercelProjectJson());
+  console.log('wrote vercel.json (one hostname)');
   console.log(`site ${c.siteOrigin}  docs ${c.docsOrigin}  start ${start(c)}`);
 }

@@ -6,7 +6,7 @@ test.use({ colorScheme: 'dark' });
 const PAGES = [
   '/',
   '/widgets/',
-  '/widgets/io.github.dexterhere.concept-clock/',
+  '/widgets/io.github.dexterhere.clock/',
   '/docs/next/start/what-it-is/',
   '/security/'
 ];
