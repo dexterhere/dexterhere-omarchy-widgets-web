@@ -129,7 +129,7 @@ describe('scanSecrets (G7)', () => {
   ])('finds %s', (s, id) => expect(scanSecrets('f.json', `{"a": "${s}"}`).join()).toContain(id));
   const A = (n: number, c = 'a') => c.repeat(n);
   it.each([
-    ['prefix glued to a word', 'x' + 'ghp_' + A(36), null],
+    ['prefix glued to a word', 'x' + 'ghp_' + A(36), 'github-token'],
     ['underscore-prefixed', '_ghp_' + A(36), 'github-token'],
     ['gitlab', 'glpat-' + A(20), 'gitlab-token'],
     ['npm', 'npm_' + A(36), 'npm-token'],
