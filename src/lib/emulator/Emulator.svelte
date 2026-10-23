@@ -594,17 +594,18 @@
     position: relative;
     overflow: hidden;
     width: 100%;
-    aspect-ratio: 16 / 9;
-    min-height: 220px;
-    max-height: 760px;
+    aspect-ratio: 16 / 10;
+    min-height: 600px;
+    max-height: clamp(600px, 85vh, 960px);
     background: var(--bg-deep);
     border: 1px solid var(--border-strong);
     contain: layout paint;
     container-type: inline-size;
   }
   .emu.compact:not(.full) .desk {
-    aspect-ratio: 3 / 1;
-    min-height: 320px;
+    aspect-ratio: 16 / 10;
+    min-height: 560px;
+    max-height: clamp(560px, 80vh, 880px);
   }
   .emu.full .desk {
     flex: 1 1 auto;
@@ -614,8 +615,8 @@
   }
   .emu.stage:not(.full) .desk {
     aspect-ratio: 16 / 10;
-    min-height: 560px;
-    max-height: clamp(560px, 76vh, 880px);
+    min-height: 680px;
+    max-height: clamp(680px, 85vh, 960px);
   }
   .emu.preview .desk {
     width: 1024px;
@@ -755,10 +756,11 @@
   }
   @media (max-width: 719px) {
     .desk,
+    .emu.compact:not(.full) .desk,
     .emu.stage:not(.full) .desk {
-      aspect-ratio: 4 / 3;
-      min-height: 0;
-      max-height: none;
+      aspect-ratio: 9 / 14;
+      min-height: 520px;
+      max-height: 80vh;
     }
   }
 </style>
