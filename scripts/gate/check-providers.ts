@@ -2,9 +2,16 @@
 // registry/providers.json, with the auth the catalog says. Returns the catalog classes in use.
 export interface Catalog {
   schemaVersion: number;
+  /** Per provider: `topic.field` pairs the shipped daemon serves today (the rest is planned). */
   providers: Record<
     string,
-    { class: string; auth: 'none' | 'vault'; egress: string[]; topics: Record<string, string[]> }
+    {
+      class: string;
+      auth: 'none' | 'vault';
+      egress: string[];
+      topics: Record<string, string[]>;
+      serving?: string[];
+    }
   >;
 }
 export interface WidgetProviders {
