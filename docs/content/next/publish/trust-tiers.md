@@ -10,7 +10,7 @@ description: What the core, verified, spec, community and concept tiers mean, ho
     { title: 'Listing pins a commit', text: 'The listing file names one 40-character commit.', who: 'Author' },
     { title: 'Maintainer reviews that commit', text: 'Reads the code and writes registry/review/<id>.json with the tier and reviewedCommit.', who: 'Maintainer' },
     { title: 'Build compares commits', text: 'If reviewedCommit equals the listing commit, the tier in the record is used. If not, the record is ignored with a note.', who: 'Site' },
-    { title: 'Tier is shown', text: 'No matching record means community. Maintainer fixtures show concept.', who: 'Site' }
+    { title: 'Tier is shown', text: 'No matching record means community. Test fixtures show concept.', who: 'Site' }
   ];
 </script>
 
@@ -20,7 +20,7 @@ description: What the core, verified, spec, community and concept tiers mean, ho
 | `verified`  | A maintainer read the pinned commit and recorded the review.                   | Maintainers, in `registry/review/<id>.json`           |
 | `spec`      | A maintainer reviewed the pinned commit and confirmed it is JSON with no code. | Maintainers, in `registry/review/<id>.json`           |
 | `community` | Not reviewed. It passed automated checks only.                                 | The default for any listing without a matching record |
-| `concept`   | A maintainer fixture. Not built, not installable.                              | Maintainers                                           |
+| `concept`   | A test fixture, never published on the site.                                   | Maintainers                                           |
 
 ## How a tier is decided
 

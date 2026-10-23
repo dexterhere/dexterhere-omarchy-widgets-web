@@ -23,21 +23,21 @@ These URLs are relative to the site origin. Humans can open them in a browser. A
 
 `/registry.json` holds a schema version, the pinned widget schema version, `counts`, a `widgets` array and an `excluded` array. The fields an agent should read on each widget are:
 
-| Field                       | Meaning                                                                                                                                                 |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`                        | Reverse-domain id                                                                                                                                       |
-| `name`, `summary`           | What it is. Plain text written by the author.                                                                                                           |
-| `categories`, `tags`        | For searching                                                                                                                                           |
-| `status`                    | `planned` (a concept, not installable), `alpha` or `stable`                                                                                             |
-| `installable`               | True only for alpha and stable                                                                                                                          |
-| `tier`                      | `concept` (maintainer fixtures), `community` (the default), `spec`, `verified` or `core`. Set only by a maintainer review record for this exact commit. |
-| `declaredTier`              | What `widget.json` claims: `spec` or `code`. Information only, never trust.                                                                             |
-| `review`, `reviewNote`      | The review record (tier, reviewer, date, reviewed commit) or `null`. `reviewNote` says why a record was ignored, for example a stale commit.            |
-| `providers`, `capabilities` | The permissions: topics and fields, and network hosts, files and programs                                                                               |
-| `access`                    | A plain-language summary: data, network, files, programs, secrets. Empty rows say "none".                                                               |
-| `layout`, `sampleData`      | For spec widgets, the validated `layout.json` tree and the sample values. `null` for code widgets.                                                      |
-| `sizeClasses`, `variants`   | Declared size classes and variant names                                                                                                                 |
-| `repo`, `commit`, `license` | Where the source is and which commit is listed                                                                                                          |
+| Field                       | Meaning                                                                                                                                                            |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`                        | Reverse-domain id                                                                                                                                                  |
+| `name`, `summary`           | What it is. Plain text written by the author.                                                                                                                      |
+| `categories`, `tags`        | For searching                                                                                                                                                      |
+| `status`                    | `planned` (announced, not installable yet), `alpha` or `stable`                                                                                                    |
+| `installable`               | True only for alpha and stable                                                                                                                                     |
+| `tier`                      | `concept` (test fixtures, never published), `community` (the default), `spec`, `verified` or `core`. Set only by a maintainer review record for this exact commit. |
+| `declaredTier`              | What `widget.json` claims: `spec` or `code`. Information only, never trust.                                                                                        |
+| `review`, `reviewNote`      | The review record (tier, reviewer, date, reviewed commit) or `null`. `reviewNote` says why a record was ignored, for example a stale commit.                       |
+| `providers`, `capabilities` | The permissions: topics and fields, and network hosts, files and programs                                                                                          |
+| `access`                    | A plain-language summary: data, network, files, programs, secrets. Empty rows say "none".                                                                          |
+| `layout`, `sampleData`      | For spec widgets, the validated `layout.json` tree and the sample values. `null` for code widgets.                                                                 |
+| `sizeClasses`, `variants`   | Declared size classes and variant names                                                                                                                            |
+| `repo`, `commit`, `license` | Where the source is and which commit is listed                                                                                                                     |
 
 `excluded` lists listings that did not make it into `widgets`. Each entry has `ref` (the listing), `reason` and `pending`. `pending: true` means the listing is valid so far but no maintainer has recorded it in `registry/lock.json`. It is not an error. Any other entry is a real problem with the listing. A widget that is merged but pending is not published, so look in `excluded` before you tell a user that a widget is missing. Today only the maintainers' seven fixture entries (clock, system-monitor, battery, github-activity, docker, tasks, ai-usage) are in `widgets`.
 

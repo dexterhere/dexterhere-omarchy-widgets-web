@@ -21,7 +21,7 @@ A listing points at one commit. A new version of your widget does not reach user
 
 | Status    | Meaning                                                                    |
 | --------- | -------------------------------------------------------------------------- |
-| `planned` | Announced, not usable. Shown as a concept, never as installable.           |
+| `planned` | Announced, not usable. Shown as planned, never as installable.             |
 | `alpha`   | Usable but unfinished.                                                     |
 | `stable`  | Considered finished.                                                       |
 | `removed` | Set by a maintainer to take the listing down. The build stops fetching it. |

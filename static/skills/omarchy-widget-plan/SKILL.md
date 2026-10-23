@@ -50,7 +50,7 @@ Decide and tell the user one of:
 
 - An installable widget already does it. Recommend it and stop.
 - A widget can be extended or forked. Name it, its license and `repo`.
-- Entries with status `planned` are concepts and not installable. They are not a reason to skip building.
+- Entries with status `planned` are announced and not installable yet. They are not a reason to skip building.
 - Nothing fits. Continue.
 
 If the fetch fails, say so and ask the user for the registry file or the site origin. Do not assume the registry is empty.
