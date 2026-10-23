@@ -27,4 +27,4 @@ export function previewModel(
 }
 
 /** Card status badge: one word. The long explanation lives on the detail page. */
-export const STATUS_WORD = { planned: 'Concept', alpha: 'Alpha', stable: 'Stable' } as const;
+export const STATUS_WORD = { planned: 'Planned', alpha: 'Alpha', stable: 'Stable' } as const;

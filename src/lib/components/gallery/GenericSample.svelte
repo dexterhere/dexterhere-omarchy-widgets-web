@@ -9,7 +9,7 @@
 
   const rows = $derived(sampleRows(widget).slice(0, 4));
   const ring = $derived(rows.find((r) => r.pct !== undefined));
-  const title = $derived(widget.name.replace(/\s*\(concept\)$/i, ''));
+  const title = $derived(widget.name);
   const R = 26;
   const C = 2 * Math.PI * R;
 </script>

@@ -27,16 +27,16 @@ async function gallery(page: Page, qs = '') {
   await expect(search(page)).toBeVisible();
 }
 
-test('lists every registry widget (7 concept widgets) as preview-first cards', async ({ page }) => {
+test('lists every registry widget (7 planned widgets) as preview-first cards', async ({ page }) => {
   await gallery(page, '?per=24');
   expect(widgets).toHaveLength(7);
   await expect(page.getByTestId('cards').locator(':scope > li')).toHaveCount(7);
   await expect(count(page)).toHaveText('Showing 1-7 of 7');
   await expect(page.getByText('No preview yet')).toHaveCount(0);
-  // the long concept explanation lives on the detail page, not on cards
+  // the long explanation lives on the detail page, not on cards
   const text = await page.getByTestId('cards').innerText();
   expect(text).not.toContain('Nothing has been built or reviewed');
-  expect(text).not.toContain('Tier: Concept');
+  expect(text).not.toMatch(/concept/i);
   await expect(page.locator('article.card [data-preview-mount]')).toHaveCount(7);
 });
 
@@ -69,7 +69,7 @@ test('every card has a large unclipped preview, status, author, like and keyboar
       )
     );
     expect(clipped).toBe(false);
-    await expect(card.locator('.badge')).toContainText(/^(Concept|Alpha|Stable)/);
+    await expect(card.locator('.badge')).toContainText(/^(Planned|Alpha|Stable)/);
     await expect(card.getByRole('link', { name: /^@/ })).toBeVisible();
     await expect(card.getByRole('button', { name: /^Like / })).toBeVisible();
     await expect(card.getByRole('link', { name: 'Details' })).toBeVisible();
@@ -101,7 +101,7 @@ test('the grid uses 4 columns at 1440 and 1 on a phone; list differs', async ({ 
 test('a card carries one status word with a hidden full explanation', async ({ page }) => {
   await gallery(page);
   const badge = page.locator('article.card').first().locator('.badge');
-  await expect(badge).toContainText('Concept');
+  await expect(badge).toContainText('Planned');
   await expect(badge.locator('.sr-only')).toContainText('not installable');
 });
 
@@ -485,7 +485,14 @@ for (const w of widgets) {
     );
     if (!w.installable) {
       await expect(page.getByText('Not installable yet.')).toBeVisible();
-      await expect(page.getByText('ow install')).toHaveCount(0);
+      await expect(page.getByText('Planned, not installable yet')).toBeVisible();
+      await expect(page.getByText('are not built')).toBeVisible();
+      await expect(page.getByText('omarchy plugin add')).toHaveCount(0);
+      await expect(page.getByRole('link', { name: /Read the code on GitHub/ })).toHaveAttribute(
+        'href',
+        w.repo
+      );
+      await expect(page.locator('main')).not.toContainText(/concept/i);
     }
     // every external link is https and carries rel
     for (const a of await page.locator('main a[href^="http"]').all()) {
