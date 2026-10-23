@@ -85,15 +85,15 @@ Create `registry/widgets/io.github.you.github-activity.json` in a fork of the we
 }
 ```
 
-| Field        | Rule                                                                                                                                  |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
-| `id`         | Reverse domain, lowercase, at most 100 characters, never under `omarchy.`. Use `io.github.<your-login>.<name>`. Same id in all files. |
-| `repo`       | `https://github.com/<owner>/<repo>`. Only github.com.                                                                                 |
-| `commit`     | 40 lowercase hex characters, on the default branch. Not a branch or tag.                                                              |
+| Field        | Rule                                                                                                                                                                                                              |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`         | Reverse domain, lowercase, at most 100 characters, never under `omarchy.`. Use `io.github.<your-login>.<name>`. Same id in all files.                                                                             |
+| `repo`       | `https://github.com/<owner>/<repo>`. Only github.com.                                                                                                                                                             |
+| `commit`     | 40 lowercase hex characters, on the default branch. Not a branch or tag.                                                                                                                                          |
 | `categories` | One to three of `system`, `time-calendar`, `productivity`, `dev-git`, `ai-agents`, `media`, `communication`, `network-containers`, `ambient-fun`, `utilities`. The category in `widget.json` must be one of them. |
-| `tags`       | Up to 8, each matching `^[a-z0-9-]{1,24}$`.                                                                                           |
-| `summary`    | Up to 140 characters, plain text.                                                                                                     |
-| `status`     | `planned`, `alpha`, `stable` or `removed`.                                                                                            |
+| `tags`       | Up to 8, each matching `^[a-z0-9-]{1,24}$`.                                                                                                                                                                       |
+| `summary`    | Up to 140 characters, plain text.                                                                                                                                                                                 |
+| `status`     | `planned`, `alpha`, `stable` or `removed`.                                                                                                                                                                        |
 
 No other properties are allowed. Do not add a tier or review field. The listing is a pointer. Name, version, capabilities and the rest come from your own files.
 
@@ -127,28 +127,28 @@ Expected result: after the next site build, your widget has a page. If it does n
 
 Messages come from `scripts/build-registry.ts` (shown in the CI log and in `bun run registry`).
 
-| Message                                                                                         | Fix                                                                                              |
-| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| `pending maintainer approval: no entry in registry/lock.json`                                   | Nothing to fix. A maintainer must approve. Not a CI failure.                                     |
-| `repo or owner id differs from registry/lock.json (deleted, re-created or transferred?)`        | The repository was re-created or moved. Ask a maintainer to approve again.                       |
-| `<file>: file name must be <id>.json`                                                           | Rename the file to match `id`.                                                                   |
-| `<file>: duplicate id <id>`                                                                     | Another listing already uses this id. Pick another.                                              |
-| `id namespace io.github.<owner> must match the repo owner`                                      | Use `io.github.<owner>.<name>` where `<owner>` owns the repository.                              |
-| `id namespace is not allowed for this repo owner (see registry/namespaces.json)`                | Use an `io.github.<your-login>` id.                                                              |
-| `commit not found in this repository (is it from a fork?)`                                      | Use a commit from the listed repository itself.                                                  |
-| `commit is not reachable from the default branch <branch> (compare status: ...)`                | Merge the commit into the default branch first.                                                  |
-| `no LICENSE file found at the pinned commit`                                                    | Add a `LICENSE` file and use a commit that contains it.                                          |
-| `license not recognised or not allowed (detected: ...)`                                         | Use a license from the allow-list in step 2.                                                     |
-| `manifest license X differs from the detected Y`                                                | Set `license` in `manifest.json` to the detected id.                                             |
-| `manifest.json invalid: ...` / `widget.json invalid: ...`                                       | Fix the field named in the message. `manifest.json` needs `id`, `name`, `version`, `description`, `license`. |
-| `id mismatch across listing, manifest.json and widget.json`                                     | Make the three ids identical.                                                                    |
-| `categories must hold 1 to 3 slugs`                                                             | Use one to three categories.                                                                     |
-| `widget.json category is not one of the listing categories`                                     | Add the widget's category to the listing, or change the widget.                                  |
-| `spec widget needs layout.json`                                                                 | Add `layout.json` at the pinned commit. See [Spec widgets](/docs/next/create/spec-widgets/).     |
-| `layout.json invalid: ...` / `layout.json bindings: ...` / `sampleData invalid: ...`            | Fix the node or bind named. Every bind needs a provider in `widget.json` and matching `sampleData`. |
-| `<path>: control or invisible characters not allowed`                                           | Remove hidden characters from that string. Strings are rejected, not cleaned.                    |
-| `<path>: looks like HTML, plain text only`                                                      | Remove tags. Nothing from a widget is shown as HTML or markdown.                                 |
-| `HTTP 404: ...` / `rejected: redirect` / `rejected: body over N bytes` / `rejected: not valid JSON` | The file is missing at that commit, is too large (256 KB cap), or is not JSON.               |
+| Message                                                                                             | Fix                                                                                                          |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `pending maintainer approval: no entry in registry/lock.json`                                       | Nothing to fix. A maintainer must approve. Not a CI failure.                                                 |
+| `repo or owner id differs from registry/lock.json (deleted, re-created or transferred?)`            | The repository was re-created or moved. Ask a maintainer to approve again.                                   |
+| `<file>: file name must be <id>.json`                                                               | Rename the file to match `id`.                                                                               |
+| `<file>: duplicate id <id>`                                                                         | Another listing already uses this id. Pick another.                                                          |
+| `id namespace io.github.<owner> must match the repo owner`                                          | Use `io.github.<owner>.<name>` where `<owner>` owns the repository.                                          |
+| `id namespace is not allowed for this repo owner (see registry/namespaces.json)`                    | Use an `io.github.<your-login>` id.                                                                          |
+| `commit not found in this repository (is it from a fork?)`                                          | Use a commit from the listed repository itself.                                                              |
+| `commit is not reachable from the default branch <branch> (compare status: ...)`                    | Merge the commit into the default branch first.                                                              |
+| `no LICENSE file found at the pinned commit`                                                        | Add a `LICENSE` file and use a commit that contains it.                                                      |
+| `license not recognised or not allowed (detected: ...)`                                             | Use a license from the allow-list in step 2.                                                                 |
+| `manifest license X differs from the detected Y`                                                    | Set `license` in `manifest.json` to the detected id.                                                         |
+| `manifest.json invalid: ...` / `widget.json invalid: ...`                                           | Fix the field named in the message. `manifest.json` needs `id`, `name`, `version`, `description`, `license`. |
+| `id mismatch across listing, manifest.json and widget.json`                                         | Make the three ids identical.                                                                                |
+| `categories must hold 1 to 3 slugs`                                                                 | Use one to three categories.                                                                                 |
+| `widget.json category is not one of the listing categories`                                         | Add the widget's category to the listing, or change the widget.                                              |
+| `spec widget needs layout.json`                                                                     | Add `layout.json` at the pinned commit. See [Spec widgets](/docs/next/create/spec-widgets/).                 |
+| `layout.json invalid: ...` / `layout.json bindings: ...` / `sampleData invalid: ...`                | Fix the node or bind named. Every bind needs a provider in `widget.json` and matching `sampleData`.          |
+| `<path>: control or invisible characters not allowed`                                               | Remove hidden characters from that string. Strings are rejected, not cleaned.                                |
+| `<path>: looks like HTML, plain text only`                                                          | Remove tags. Nothing from a widget is shown as HTML or markdown.                                             |
+| `HTTP 404: ...` / `rejected: redirect` / `rejected: body over N bytes` / `rejected: not valid JSON` | The file is missing at that commit, is too large (256 KB cap), or is not JSON.                               |
 
 If the table does not cover your message, search the message text in `scripts/build-registry.ts`.
 

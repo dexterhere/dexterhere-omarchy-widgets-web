@@ -34,6 +34,7 @@ A listing points at one commit. A new version does not reach users until the lis
    ```
 
    Expected result: no excluded line for your id.
+
 4. Open a pull request from the same GitHub account that owns `io.github.<owner>`.
 
 Expected result: after merge and the next site build, the page shows the new commit. Your existing `lock.json` entry stays valid while the repository is the same one.
@@ -44,11 +45,11 @@ A review applies only to the commit that was reviewed. The new commit is `commun
 
 ## Status values
 
-| Status    | Meaning                                                              |
-| --------- | -------------------------------------------------------------------- |
-| `planned` | Announced, not usable.                                               |
-| `alpha`   | Usable but unfinished.                                               |
-| `stable`  | Considered finished.                                                 |
+| Status    | Meaning                                                                 |
+| --------- | ----------------------------------------------------------------------- |
+| `planned` | Announced, not usable.                                                  |
+| `alpha`   | Usable but unfinished.                                                  |
+| `stable`  | Considered finished.                                                    |
 | `removed` | Takedown. The listing is not published and the build stops fetching it. |
 
 ## Remove a listing
@@ -64,12 +65,12 @@ If the widget is dangerous, report it privately first. See [Security](/docs/next
 
 ## Common errors
 
-| Message                                                                           | Fix                                                                   |
-| --------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| `commit is not reachable from the default branch <branch> (compare status: ...)`  | Merge the commit into the default branch first.                       |
-| `commit not found in this repository (is it from a fork?)`                        | Use a commit from the listed repository.                              |
+| Message                                                                                  | Fix                                                                  |
+| ---------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `commit is not reachable from the default branch <branch> (compare status: ...)`         | Merge the commit into the default branch first.                      |
+| `commit not found in this repository (is it from a fork?)`                               | Use a commit from the listed repository.                             |
 | `repo or owner id differs from registry/lock.json (deleted, re-created or transferred?)` | The repository changed identity. A maintainer must approve it again. |
-| `id mismatch across listing, manifest.json and widget.json`                       | Fix the ids at the new commit.                                        |
-| `manifest license X differs from the detected Y`                                  | Align `manifest.json` `license` with the `LICENSE` file.              |
+| `id mismatch across listing, manifest.json and widget.json`                              | Fix the ids at the new commit.                                       |
+| `manifest license X differs from the detected Y`                                         | Align `manifest.json` `license` with the `LICENSE` file.             |
 
 More messages are in [Submit a widget](/docs/next/publish/submit-a-widget/#common-errors).

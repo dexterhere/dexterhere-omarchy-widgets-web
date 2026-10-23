@@ -14,13 +14,13 @@ description: What the core, verified, spec, community and concept tiers mean, ho
   ];
 </script>
 
-| Tier        | Meaning                                                                      | Who sets it                                      |
-| ----------- | ---------------------------------------------------------------------------- | ------------------------------------------------ |
-| `core`      | Maintained by this project.                                                  | Maintainers, in `registry/review/<id>.json`      |
-| `verified`  | A maintainer read the pinned commit and recorded the review.                 | Maintainers, in `registry/review/<id>.json`      |
-| `spec`      | A maintainer reviewed the pinned commit and confirmed it is JSON with no code. | Maintainers, in `registry/review/<id>.json`    |
-| `community` | Not reviewed. It passed automated checks only.                               | The default for any listing without a matching record |
-| `concept`   | A maintainer fixture. Not built, not installable.                            | Maintainers                                      |
+| Tier        | Meaning                                                                        | Who sets it                                           |
+| ----------- | ------------------------------------------------------------------------------ | ----------------------------------------------------- |
+| `core`      | Maintained by this project.                                                    | Maintainers, in `registry/review/<id>.json`           |
+| `verified`  | A maintainer read the pinned commit and recorded the review.                   | Maintainers, in `registry/review/<id>.json`           |
+| `spec`      | A maintainer reviewed the pinned commit and confirmed it is JSON with no code. | Maintainers, in `registry/review/<id>.json`           |
+| `community` | Not reviewed. It passed automated checks only.                                 | The default for any listing without a matching record |
+| `concept`   | A maintainer fixture. Not built, not installable.                              | Maintainers                                           |
 
 ## How a tier is decided
 
