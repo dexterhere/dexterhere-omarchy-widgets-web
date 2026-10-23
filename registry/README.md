@@ -95,7 +95,7 @@ On pull requests: `check`, `lint`, `themes:check`, `bun run registry -- --strict
 
 `scripts/gate/` (`scan-tree`, `check-policy`, `lint-code`, `scan-secrets`, `check-providers`) implement a listing policy: file and size limits, extension allow-list, capability rules, QML lint, secret scan, provider catalog check. They are unit-tested but run neither in CI nor in the build. Reviewers apply them by hand. They are listing policy, not isolation.
 
-Provider catalog caveat: `providers.json` lists system.time, system.cpu, system.memory, system.temp, battery.status, github.prs, docker.containers, ai-usage.sessions and tasks.list, while the daemon serves only `system.cpu`, `system.memory` and `system.load`. The two disagree.
+Provider catalog: `providers.json` lists every topic and field a listing may declare, including planned ones (system.time, system.temp, battery.status, github.prs, docker.containers, ai-usage.sessions, tasks.list). Each provider's `serving` list names the `topic.field` pairs the shipped daemon serves today (system only: `system.cpu`, `system.memory`, `system.load`). A widget can be listed with any catalog field, but it only runs on the daemon today if it sticks to `serving` pairs.
 
 ## Add a listing
 

@@ -8,9 +8,19 @@
       "topics": {
         "system.time": ["hm", "hms", "date", "tz"],
         "system.cpu": ["load", "usage_pct"],
-        "system.memory": ["used", "total", "used_pct"],
+        "system.load": ["load1", "load5", "load15"],
+        "system.memory": ["used", "total", "used_pct", "used_mib", "total_mib"],
         "system.temp": ["celsius"]
-      }
+      },
+      "serving": [
+        "system.cpu.usage_pct",
+        "system.load.load1",
+        "system.load.load5",
+        "system.load.load15",
+        "system.memory.total_mib",
+        "system.memory.used_mib",
+        "system.memory.used_pct"
+      ]
     },
     "battery": {
       "class": "local-system",
