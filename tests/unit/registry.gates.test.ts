@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { buildRegistry, fetchText, type BuildInput } from '../../scripts/build-registry';
+import { buildRegistry, fetchText, localMode, type BuildInput } from '../../scripts/build-registry';
 import {
   blob,
   codeWidgetJson,
@@ -222,4 +222,18 @@ describe('fetchText shares the fetchJson rules', () => {
       fetchText(url, { fetch: (() => new Promise(() => {})) as never, timeoutMs: 20 })
     ).rejects.toThrow(/timeout/);
   });
+});
+
+describe('--local (gates on a candidate without a lock entry)', () => {
+  it('is refused in CI and with --strict, and needs --only', () => {
+    expect(() => localMode(['--local', '--only', ID], { GITHUB_ACTIONS: 'true' })).toThrow(/CI/);
+    expect(() => localMode(['--local', '--only', ID, '--strict'], {})).toThrow(/strict/);
+    expect(() => localMode(['--local'], {})).toThrow(/--only/);
+    expect(() => localMode(['--local', '--only', ID, '--skip-reachability'], {})).not.toThrow();
+  });
+  it('is off by default and never mentioned by the CI workflow', () => {
+    expect(localMode([], {})).toBeNull();
+    expect(readFileSync('.github/workflows/ci.yml', 'utf8')).not.toMatch(/--local/);
+  });
+  it('returns the id to check', () => expect(localMode(['--local', '--only', ID], {})).toBe(ID));
 });

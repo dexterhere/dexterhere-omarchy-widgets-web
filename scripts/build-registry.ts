@@ -1,6 +1,7 @@
 // Registry build. Validates listings, fetches DATA (two JSON files) at a pinned commit, derives
 // everything from them and writes registry/dist. It never executes anything from a widget repo.
 // Usage: bun scripts/build-registry.ts [--offline] [--skip-reachability] [--out registry/dist]
+//        bun scripts/build-registry.ts --local --only <listing id>   (gates on a candidate, writes nothing)
 // --skip-reachability is for local development only; CI must never use it.
 import {
   existsSync,
@@ -761,16 +762,29 @@ export async function buildRegistry(inp: BuildInput): Promise<BuildResult> {
 }
 
 // ---------- CLI ----------
+/** `--local --only <id>`: run the reachability, fetch and gate steps for one candidate listing that
+ *  has no registry/lock.json entry yet, and write nothing. It could skip the maintainer approval, so
+ *  it refuses to run in CI (GITHUB_ACTIONS=true) or together with --strict. Returns the id, or null. */
+export function localMode(args: string[], env: Record<string, string | undefined>): string | null {
+  if (!args.includes('--local')) return null;
+  if (env.GITHUB_ACTIONS === 'true') throw new Error('--local is refused in CI');
+  if (args.includes('--strict')) throw new Error('--local cannot be combined with --strict');
+  const i = args.indexOf('--only');
+  if (i < 0 || !args[i + 1]) throw new Error('--local needs --only <listing id>');
+  return args[i + 1];
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const offline = args.includes('--offline');
   const skipReachability = args.includes('--skip-reachability');
   const strict = args.includes('--strict'); // CI on pull requests: any problem fails the run
+  const only = localMode(args, process.env);
   const oi = args.indexOf('--out');
   const out = resolve(ROOT, oi >= 0 && args[oi + 1] ? args[oi + 1] : 'registry/dist');
   const dir = join(REG, 'widgets');
   const listings = readdirSync(dir)
-    .filter((f) => f.endsWith('.json'))
+    .filter((f) => f.endsWith('.json') && (only === null || f === `${only}.json`))
     .sort()
     .map((file) => {
       // Only regular files: a symlink or directory named *.json is excluded, never followed.
@@ -791,7 +805,9 @@ async function main() {
     token: process.env.GITHUB_TOKEN || undefined,
     readFixture: (id, name) => optional(join(REG, 'fixtures', id, `${name}.json`)),
     namespaces: optional(join(REG, 'namespaces.json')),
-    lock: (optional(join(REG, 'lock.json')) as Lock | undefined) ?? {},
+    // --local: no lock, so no pending-approval skip. Everything else (gates included) still runs.
+    lock:
+      only === null ? ((optional(join(REG, 'lock.json')) as Lock | undefined) ?? {}) : undefined,
     readReview: (id) =>
       /^[a-z0-9.-]+$/.test(id) ? optional(join(REG, 'review', `${id}.json`)) : undefined
   });
@@ -805,6 +821,11 @@ async function main() {
   if (errors.length) {
     console.error(`\nregistry: ${errors.length} listing(s) excluded`);
     for (const e of errors) console.error(`  - ${e}`);
+  }
+  if (only !== null) {
+    for (const w of widgets) for (const x of w.warnings ?? []) console.log(`  warning: ${x}`);
+    console.log(`\nregistry --local: ${widgets.length ? 'passed' : 'excluded'} (nothing written)`);
+    process.exit(widgets.length ? 0 : 1);
   }
   if (strict && index.excluded.some((x) => !x.pending)) process.exit(1);
   writeDist(out, index, widgets);
