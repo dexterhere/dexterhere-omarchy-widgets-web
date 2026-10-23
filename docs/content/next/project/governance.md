@@ -5,7 +5,7 @@ description: Who decides what in the project today, the license, how decisions a
 
 ## Today
 
-The project is early and has a single maintainer. Branches are protected, and changes need a pull request and a passing check. The approval count rises when a second maintainer joins.
+The project is early and has a single maintainer. Changes need a pull request and a passing check. Whether GitHub branch protection and code-owner review are enforced cannot be verified from the repository; it is a GitHub setting. The approval count rises when a second maintainer joins.
 
 ## License
 
