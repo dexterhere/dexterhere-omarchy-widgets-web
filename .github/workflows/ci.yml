@@ -5,9 +5,13 @@ on:
   pull_request:
 permissions:
   contents: read
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   web:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -18,11 +22,19 @@ jobs:
       - run: bun run check
       - run: bun run lint
       - run: bun run themes:check
-      - run: bun run registry
+      - run: bun run registry -- ${{ github.event_name == 'pull_request' && '--strict' || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: only maintainers change review records
-        run: bun scripts/check-review-changes.ts
+        if: github.event_name == 'pull_request'
+        # Run the guard as it is on the BASE branch, not the copy in the PR: a PR cannot weaken
+        # its own check. A missing script fails closed. Branch protection with code-owner review
+        # is still what stops a PR from editing this workflow file (see SECURITY.md).
+        env:
+          BASE: ${{ github.base_ref }}
+        run: |
+          git show "origin/${BASE}:scripts/check-review-changes.ts" > "${RUNNER_TEMP}/guard.ts"
+          bun "${RUNNER_TEMP}/guard.ts"
       - run: bunx vitest run --passWithNoTests
       - run: bun run build
         env:

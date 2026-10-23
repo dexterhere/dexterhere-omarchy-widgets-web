@@ -5,3 +5,17 @@
 /registry/review/        @dexterhere
 /registry/namespaces.json @dexterhere
 /registry/MAINTAINERS.json @dexterhere
+/registry/schema/      @dexterhere
+/registry/lock.json    @dexterhere
+/registry/reserved.json @dexterhere
+/registry/retired.json @dexterhere
+/registry/fixtures/ @dexterhere
+/registry/providers.json @dexterhere
+/vite.config.ts @dexterhere
+/package.json @dexterhere
+/bun.lock @dexterhere
+/deploy/ @dexterhere
+/services/ @dexterhere
+/static/theme-boot.js @dexterhere
+/src/lib/registry/layout.ts @dexterhere
+/src/lib/registry/links.ts @dexterhere

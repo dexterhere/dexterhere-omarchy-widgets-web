@@ -10,6 +10,8 @@ import {
 import {
   COMMIT,
   json,
+  blob,
+  layoutJson,
   listing,
   manifestJson,
   noFixture,
@@ -34,7 +36,16 @@ const reach = (m: ReturnType<typeof api>, token?: string) =>
 
 describe('commit reachability', () => {
   it.each(['behind', 'identical'])('accepts %s', async (s) => {
-    await expect(reach(api(st(s)))).resolves.toBeUndefined();
+    await expect(reach(api(st(s)))).resolves.toHaveProperty('repoId');
+  });
+  it('reads the pinned commit committer date as yyyy-mm-dd, or null', async () => {
+    const body = (date: unknown) => () =>
+      json({ status: 'behind', merge_base_commit: { commit: { committer: { date } } } });
+    await expect(reach(api(body('2026-02-03T23:59:59Z')))).resolves.toMatchObject({
+      committed: '2026-02-03'
+    });
+    await expect(reach(api(body('garbage')))).resolves.toMatchObject({ committed: null });
+    await expect(reach(api(st('behind')))).resolves.toMatchObject({ committed: null });
   });
   it.each(['ahead', 'diverged', 'weird', 7, undefined])('rejects status %s', async (s) => {
     await expect(reach(api(st(s)))).rejects.toThrow(/not reachable/);
@@ -112,13 +123,19 @@ describe('commit reachability', () => {
 describe('build integration', () => {
   const files: Record<string, unknown> = {
     'manifest.json': manifestJson(),
-    'widget.json': widgetJson()
+    'widget.json': widgetJson(),
+    'layout.json': layoutJson()
   };
   const build = async (compare: string, skip = false) => {
     const calls: string[] = [];
     const fetch: FetchFn = async (url) => {
       calls.push(url);
       if (url.includes('/compare/')) return json({ status: compare });
+      if (url.includes('/git/trees/'))
+        return json({
+          truncated: false,
+          tree: Object.keys(files).map((n) => blob(n, 50))
+        });
       if (url.startsWith(API)) return json({ default_branch: 'main' });
       return json(files[url.split('/').pop() as string]);
     };
@@ -135,7 +152,7 @@ describe('build integration', () => {
     const { r, calls } = await build('behind');
     expect(r.errors).toEqual([]);
     expect(calls[0]).toBe(API);
-    expect(calls.findIndex((c) => c.includes('raw.'))).toBe(2);
+    expect(calls.findIndex((c) => c.includes('raw.'))).toBe(2); // after info + compare
   });
   it('does not fetch raw files for an unreachable commit', async () => {
     const { r, calls } = await build('diverged');
@@ -144,7 +161,10 @@ describe('build integration', () => {
   });
   it('skipReachability skips the API', async () => {
     const { calls } = await build('diverged', true);
-    expect(calls.some((c) => c.includes('api.github.com'))).toBe(false);
+    // no repo-info or compare call; the gate's tree request is the only API use
+    expect(calls.filter((c) => c.includes('api.github.com'))).toEqual([
+      expect.stringContaining('/git/trees/')
+    ]);
   });
 });
 
@@ -153,7 +173,7 @@ describe('ci config', () => {
   it('never uses --skip-reachability', () => expect(ci).not.toContain('skip-reachability'));
   it('passes GITHUB_TOKEN to the registry step only, with read-only permissions', () => {
     expect(ci).toMatch(
-      /- run: bun run registry\n\s+env:\n\s+GITHUB_TOKEN: \$\{\{ secrets\.GITHUB_TOKEN \}\}/
+      /- run: bun run registry -- .*\n\s+env:\n\s+GITHUB_TOKEN: \$\{\{ secrets\.GITHUB_TOKEN \}\}/
     );
     expect(ci.match(/GITHUB_TOKEN:/g)).toHaveLength(1);
     expect(ci).toMatch(/permissions:\n {2}contents: read/);

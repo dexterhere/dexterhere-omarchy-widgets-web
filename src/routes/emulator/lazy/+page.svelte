@@ -1,11 +1,15 @@
 <script lang="ts">
+  import Seo from '../../../lib/components/Seo.svelte';
   import LazyEmulator from '../../../lib/emulator/LazyEmulator.svelte';
   import { theme } from '../../../lib/themes/store.svelte';
 </script>
 
-<svelte:head>
-  <title>Emulated desktop (lazy) - Omarchy Widgets</title>
-</svelte:head>
+<Seo
+  title="Emulated desktop (lazy)"
+  description="A test page: the emulator chunk loads only when it nears the viewport, so the page itself stays light."
+  path="/emulator/lazy/"
+  noindex
+/>
 
 <!-- Demonstrates (and e2e-tests) that the emulator chunk loads only when it nears the viewport. -->
 <div class="spacer">

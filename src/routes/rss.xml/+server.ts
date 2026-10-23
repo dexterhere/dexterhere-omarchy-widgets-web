@@ -1,13 +1,11 @@
 import { getAll } from '../../lib/registry';
 import { buildRss } from '../../lib/registry/rss';
+import { urls } from '../../lib/site';
 
 export const prerender = true;
 
-// The domain is the maintainer's to choose; set SITE_URL at build time once it exists.
-const SITE = process.env.SITE_URL ?? 'https://dexterhere.github.io/dexterhere-omarchy-widgets-web';
-
 export function GET() {
-  return new Response(buildRss(getAll(), SITE), {
+  return new Response(buildRss(getAll(), urls.site('')), {
     headers: { 'Content-Type': 'application/rss+xml; charset=utf-8' }
   });
 }

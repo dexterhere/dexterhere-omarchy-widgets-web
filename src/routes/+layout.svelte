@@ -11,7 +11,7 @@
   import ThemeHint from '../lib/components/ThemeHint.svelte';
   import { theme } from '../lib/themes/store.svelte';
   import { carryOnClick } from '../lib/themes/carry';
-  import { links, origins, sitePath } from '../lib/site';
+  import { links, origins, urls } from '../lib/site';
 
   let { children, data } = $props();
   let main: HTMLElement;
@@ -62,19 +62,26 @@
     ? (e) => carryOnClick(e, theme.current, [origins.site, origins.docs])
     : undefined}
 />
-<svelte:head
-  ><link
+<svelte:head>
+  <link
     rel="alternate"
     type="application/rss+xml"
     title="Omarchy Widgets"
-    href={links.hosts ? sitePath('/rss.xml') : '/rss.xml'}
-  /><link
+    href={urls.site('/rss.xml')}
+  />
+  <link
     rel="alternate"
     type="text/plain"
     title="Index for language models"
-    href={links.hosts ? sitePath('/llms.txt') : '/llms.txt'}
-  /></svelte:head
->
+    href={urls.site('/llms.txt')}
+  />
+  <link
+    rel="alternate"
+    type="application/json"
+    title="Widget registry"
+    href={urls.site('/registry.json')}
+  />
+</svelte:head>
 <a class="skip" href="#main">Skip to content</a>
 <Header docsVersion={data.footer?.docsVersion} />
 <ThemeHint />

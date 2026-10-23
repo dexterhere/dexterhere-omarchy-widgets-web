@@ -6,8 +6,11 @@ import {
   type BuildInput
 } from '../../scripts/build-registry';
 import {
+  blob,
+  codeWidgetJson,
   COMMIT,
   ID,
+  layoutJson,
   listing,
   manifestJson,
   mockFetch,
@@ -75,21 +78,41 @@ describe('buildRegistry', () => {
       expect(r.errors).toHaveLength(1);
     }
   });
-  it('fetches only the two pinned files from raw.githubusercontent.com', async () => {
+  it('fetches the three pinned data files, then the gate inputs, only from the pinned commit', async () => {
     const m = mockFetch(files());
     await run({ listings: [L()], fetch: m.fn });
-    expect(m.calls).toEqual([
-      `https://raw.githubusercontent.com/someone/demo/${COMMIT}/manifest.json`,
-      `https://raw.githubusercontent.com/someone/demo/${COMMIT}/widget.json`
+    const raw = `https://raw.githubusercontent.com/someone/demo/${COMMIT}/`;
+    expect(m.calls.slice(0, 3)).toEqual([
+      `${raw}manifest.json`,
+      `${raw}widget.json`,
+      `${raw}layout.json`
     ]);
+    // then the gates: the tree at the pinned commit, and text files from the same pinned commit
+    expect(m.calls[3]).toBe(
+      `https://api.github.com/repos/someone/demo/git/trees/${COMMIT}?recursive=1`
+    );
+    expect(m.calls.slice(4).every((c) => c.startsWith(raw))).toBe(true);
   });
   it('sorts output by id', async () => {
     const ids = ['io.github.b.w', 'io.github.a.w'];
     const f = async (url: string) => {
+      if (url.includes('/git/trees/'))
+        return new Response(
+          JSON.stringify({
+            truncated: false,
+            tree: ['manifest.json', 'widget.json', 'layout.json'].map((n) => blob(n, 50))
+          })
+        );
       const id = ids.find((i) => url.includes(`/${i.split('.')[2]}/`))!;
       const name = url.split('/').pop()!;
       return new Response(
-        JSON.stringify(name === 'widget.json' ? widgetJson({ id }) : manifestJson({ id }))
+        JSON.stringify(
+          name === 'widget.json'
+            ? widgetJson({ id })
+            : name === 'layout.json'
+              ? layoutJson()
+              : manifestJson({ id })
+        )
       );
     };
     const r = await run({
@@ -111,7 +134,16 @@ describe('buildRegistry', () => {
       listings: [L(), L(listing(), 'copy.json')],
       fetch: mockFetch(files()).fn
     });
-    expect(r.errors.join('\n')).toMatch(/duplicate id/);
+    expect(r.errors.join('\n')).toMatch(/copy\.json: file name must be <id>\.json/);
+    expect(r.widgets).toHaveLength(1); // the copy is excluded, only <id>.json is published
+  });
+  it('never publishes a listing whose file name is not its id', async () => {
+    const r = await run({
+      listings: [L(listing(), 'zzz.json')],
+      fetch: mockFetch(files()).fn
+    });
+    expect(r.widgets).toHaveLength(0);
+    expect(r.errors.join()).toMatch(/file name must be/);
   });
   it('reports invalid listings and bad widget.json without secrets', async () => {
     const r = await run({
@@ -141,7 +173,8 @@ describe('buildRegistry', () => {
       listings: [L(listing({ status: 'planned', source: 'fixture', commit: '0'.repeat(40) }))],
       fetch: m.fn,
       offline: true,
-      readFixture: (_id, n) => (n === 'widget' ? widgetJson() : manifestJson())
+      readFixture: (_id, n) =>
+        n === 'widget' ? widgetJson() : n === 'layout' ? layoutJson() : manifestJson()
     });
     expect(r.errors).toEqual([]);
     expect(m.calls).toEqual([]);
@@ -156,7 +189,7 @@ describe('buildRegistry', () => {
     it('tier:"spec" in widget.json without a review stays community, with declaredTier', async () => {
       const r = await run({ listings: [L()], fetch: mockFetch(files()).fn });
       expect(r.widgets[0]).toMatchObject({ tier: 'community', declaredTier: 'spec', review: null });
-      const c = await run({ listings: [L()], fetch: mockFetch(files({ w: { tier: 'code' } })).fn });
+      const c = await run({ listings: [L()], fetch: mockFetch(files({ w: codeWidgetJson() })).fn });
       expect(c.widgets[0]).toMatchObject({ tier: 'community', declaredTier: 'code' });
     });
     it('spec tier comes only from a matching review record', async () => {
@@ -189,7 +222,7 @@ describe('buildRegistry', () => {
     it('ignores and states a stale review record', async () => {
       const r = await run({
         listings: [L()],
-        fetch: mockFetch(files({ w: { tier: 'code' } })).fn,
+        fetch: mockFetch(files({ w: codeWidgetJson() })).fn,
         readReview: () => review({ reviewedCommit: 'b'.repeat(40) })
       });
       expect(r.widgets[0]).toMatchObject({ tier: 'community', review: null });

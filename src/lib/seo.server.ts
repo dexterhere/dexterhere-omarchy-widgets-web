@@ -5,12 +5,14 @@ import {
   buildLlmsFull,
   buildLlmsTxt,
   buildRobots,
+  buildSecurityTxt,
   buildSitemap,
   docBodyToText,
-  makeUrls,
   type DocPage
 } from './seo';
-import { origins } from './site';
+import { urls } from './site';
+
+export { urls };
 
 const raw = import.meta.glob<string>('/docs/content/*/*/*.md', {
   query: '?raw',
@@ -21,10 +23,6 @@ const metas = import.meta.glob<{ title: string; description?: string }>('/docs/c
   eager: true,
   import: 'metadata'
 });
-
-// Same fallback as the RSS feed: the real domain is the maintainer's to choose (host mode sets it).
-const FALLBACK = 'https://dexterhere.github.io/dexterhere-omarchy-widgets-web';
-export const urls = makeUrls(origins.site || process.env.SITE_URL || FALLBACK, origins.docs);
 
 export function latestPages(): (DocPage & { body: string })[] {
   const v = latest.version;
@@ -60,7 +58,9 @@ export const sitemap = () =>
     urls.site('/widgets/'),
     urls.site('/contribute/'),
     urls.site('/security/'),
+    urls.site('/emulator/'),
     urls.docs('/docs/'),
     ...getAll().map((w) => urls.site(`/widgets/${encodeURIComponent(w.id)}/`)),
     ...latestPages().map((p) => urls.docs(p.path))
   ]);
+export const securityTxt = () => buildSecurityTxt(urls);

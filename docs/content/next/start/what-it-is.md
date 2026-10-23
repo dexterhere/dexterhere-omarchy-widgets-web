@@ -1,11 +1,13 @@
 ---
 title: What it is
-description: Omarchy Widgets is a data layer and package format for desktop widgets on Omarchy 4. What exists today and what is planned.
+description: Omarchy Widgets is a data layer and package format for any desktop widget you can think of on Omarchy 4. What exists today and what is planned.
 ---
 
 <script>import Callout from '$lib/docs/Callout.svelte';</script>
 
 Omarchy Widgets is a project to let you install, place and create desktop widgets on [Omarchy](https://omarchy.org) 4, with your credentials kept out of the widgets. The name is a placeholder.
+
+Widgets are not limited to a clock, system stats or GitHub activity. Anything that can show data or respond to a click can be a widget, such as a build monitor, a focus timer or a server status board. Spec widgets are JSON built from blocks, with no code. Code widgets (QML) can do whatever Quickshell can do and run as you, so read one before you install it.
 
 <Callout type="planned">
 
@@ -37,21 +39,21 @@ widget (QML or JSON spec)  ->  bridge plugin  ->  owd daemon  ->  encrypted vaul
 
 ## What exists and what is planned
 
-| Part                                                                    | State   |
-| ----------------------------------------------------------------------- | ------- |
-| `owd` daemon: socket, grants, audit log, provider hub                   | Exists  |
-| `system` provider (CPU, memory, load)                                   | Exists  |
-| Passphrase vault and `ow vault init/status/list/set/remove/rotate/wipe` | Exists  |
-| `ow status`                                                             | Exists  |
-| `PKGBUILD` (build blocked until a signing key is pinned)                | Exists  |
-| Sandboxed systemd user unit for `owd`                                   | Exists  |
-| QML bridge and widget kit                                               | Planned |
-| Desktop canvas with edit mode                                           | Planned |
-| Widget Center                                                           | Planned |
-| `ow new`, `ow check`, `ow install`, `ow place`, `ow publish`            | Planned |
-| Real widgets, spec-widget renderer                                      | Planned |
-| Keyring and TPM vault modes                                             | Planned |
-| Network providers (GitHub, Gmail and others)                            | Planned |
+| Part                                                                                                   | State   |
+| ------------------------------------------------------------------------------------------------------ | ------- |
+| `owd` daemon: socket, grants, audit log, provider hub                                                  | Exists  |
+| `system` provider (CPU, memory, load)                                                                  | Exists  |
+| Passphrase vault and `ow vault init/status/list/set/remove/rotate/wipe`                                | Exists  |
+| `ow status`                                                                                            | Exists  |
+| `PKGBUILD` (build blocked until a signing key is pinned)                                               | Exists  |
+| Sandboxed systemd user unit for `owd` (verified offline as a transient unit, not as an installed unit) | Exists  |
+| QML bridge and widget kit                                                                              | Planned |
+| Desktop canvas with edit mode                                                                          | Planned |
+| Widget Center                                                                                          | Planned |
+| `ow new`, `ow check`, `ow install`, `ow place`, `ow publish`                                           | Planned |
+| Real widgets, spec-widget renderer                                                                     | Planned |
+| Keyring and TPM vault modes                                                                            | Planned |
+| Network providers (GitHub, Gmail and others)                                                           | Planned |
 
 The roadmap and open questions live in the code repository: `README.md` and `docs/OPEN_QUESTIONS.md`.
 

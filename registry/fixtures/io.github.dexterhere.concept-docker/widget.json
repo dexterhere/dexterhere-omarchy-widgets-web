@@ -46,5 +46,13 @@
   "compat": {
     "omarchy": ">=4.0",
     "widgetsKit": "^1"
+  },
+  "sampleData": {
+    "docker.containers": {
+      "running": 5,
+      "stopped": 2,
+      "unhealthy": 0,
+      "names": ["web", "db", "cache"]
+    }
   }
 }

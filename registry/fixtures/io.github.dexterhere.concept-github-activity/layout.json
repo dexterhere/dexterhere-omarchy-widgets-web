@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 0,
+  "root": {
+    "type": "stack",
+    "gap": "sm",
+    "children": [
+      {
+        "type": "row",
+        "gap": "md",
+        "children": [
+          {
+            "type": "icon",
+            "name": "git",
+            "color": "accent"
+          },
+          {
+            "type": "text",
+            "text": "Pull requests",
+            "size": "md",
+            "color": "foreground"
+          }
+        ]
+      },
+      {
+        "type": "row",
+        "gap": "lg",
+        "children": [
+          {
+            "type": "value",
+            "bind": {
+              "topic": "github.prs",
+              "field": "open"
+            },
+            "size": "xl",
+            "color": "accent"
+          },
+          {
+            "type": "text",
+            "text": "open",
+            "size": "sm",
+            "color": "muted"
+          }
+        ]
+      },
+      {
+        "type": "row",
+        "gap": "lg",
+        "children": [
+          {
+            "type": "value",
+            "bind": {
+              "topic": "github.prs",
+              "field": "review"
+            },
+            "size": "lg",
+            "color": "foreground"
+          },
+          {
+            "type": "text",
+            "text": "to review",
+            "size": "sm",
+            "color": "muted"
+          }
+        ]
+      }
+    ]
+  }
+}
