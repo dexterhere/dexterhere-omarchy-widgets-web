@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_QUERY,
   categoryCounts,
+  clampQueryPage,
   clearFilters,
   facets,
   filterWidgets,
@@ -366,5 +367,36 @@ describe('registry listings', () => {
       expect(d.categories.length, f).toBeLessThanOrEqual(3);
       for (const c of d.categories) expect(known, f).toContain(c);
     }
+  });
+});
+
+describe('paging in the url', () => {
+  const parse = (s: string) => parseQuery(new URLSearchParams(s));
+  it('defaults are left out and values round-trip', () => {
+    expect(DEFAULT_QUERY).toMatchObject({ page: 1, per: 6 });
+    expect(serializeQuery({ ...DEFAULT_QUERY, page: 1, per: 6 })).toBe('');
+    const q = { ...DEFAULT_QUERY, page: 3, per: 12 };
+    expect(serializeQuery(q)).toBe('page=3&per=12');
+    expect(parse('page=3&per=12')).toEqual(q);
+  });
+  it('ignores bad values like the other params', () => {
+    for (const s of ['page=0', 'page=-2', 'page=x', 'page=1.5', 'page=', 'page=99999999999'])
+      expect(parse(s).page).toBe(1);
+    for (const s of ['per=5', 'per=100', 'per=abc', 'per=', 'per=6.0'])
+      expect(parse(s).per).toBe(6);
+    expect(parse('per=24').per).toBe(24);
+  });
+  it('clamps a page past the end to the last page', () => {
+    expect(clampQueryPage({ ...DEFAULT_QUERY, page: 9 }, 7).page).toBe(2);
+    expect(clampQueryPage({ ...DEFAULT_QUERY, page: 9, per: 12 }, 7).page).toBe(1);
+    expect(clampQueryPage({ ...DEFAULT_QUERY, page: 3 }, 0).page).toBe(1);
+    const q = { ...DEFAULT_QUERY, page: 2 };
+    expect(clampQueryPage(q, 7)).toBe(q);
+  });
+  it('clearFilters goes back to page 1 and keeps the page size', () => {
+    expect(clearFilters({ ...DEFAULT_QUERY, page: 3, per: 12, q: 'x' })).toMatchObject({
+      page: 1,
+      per: 12
+    });
   });
 });

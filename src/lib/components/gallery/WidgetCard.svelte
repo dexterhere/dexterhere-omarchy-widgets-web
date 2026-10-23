@@ -24,7 +24,7 @@
     stats = null
   }: {
     widget: RegistryWidget;
-    variant: 'carousel' | 'grid' | 'list';
+    variant: 'grid' | 'list';
     onTry?: (id: string) => void;
     onOpen?: () => void;
     /** Search tokens to highlight in the name and summary. */
@@ -250,10 +250,6 @@
     flex: none;
   }
 
-  .card[data-variant='carousel'] {
-    width: min(100%, 400px);
-    flex: none;
-  }
   .card[data-variant='list'] {
     flex-direction: row;
     height: auto;

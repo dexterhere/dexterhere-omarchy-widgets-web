@@ -1,25 +1,25 @@
-// Home page text that only the prerendered HTML needs: the ideas grid and the JSON-LD. Loading it
+// Home page text that only the prerendered HTML needs: the idea tiles and the JSON-LD. Loading it
 // here keeps these strings out of the page's JavaScript bundle (the home JS budget is tight).
 import type { Category } from '../lib/registry';
 import { urls } from '../lib/site';
 
 export function load() {
-  // Ideas, not listed widgets: three prompts per registry category.
-  const ideas: Record<Category, string[]> = {
-    system: ['CPU and memory', 'Disk space left', 'Battery and power draw'],
-    'time-calendar': ['World clocks', 'Your next meeting', 'Countdown to a deadline'],
-    productivity: ['Focus timer', 'Habit streak', "Today's tasks"],
-    'dev-git': ['Build monitor', 'Open pull requests', 'Deploy status'],
-    'ai-agents': ['Agent run status', 'Token spend', 'Prompt queue'],
-    media: ['Music deck', 'Podcast progress', 'Recording controls'],
-    communication: ['Unread mail', 'Chat mentions', 'Missed calls'],
-    'network-containers': ['Server status board', 'Container health', 'Ping and bandwidth'],
-    'ambient-fun': ['Weather strip', 'Moon phase', 'Pixel pet'],
-    utilities: ['Quick notes', 'Clipboard history', 'Unit converter']
+  // Ideas, not listed widgets: one short example per registry category.
+  const ideas: Record<Category, string> = {
+    system: 'CPU and memory',
+    'time-calendar': 'Next meeting',
+    productivity: 'Focus timer',
+    'dev-git': 'Build monitor',
+    'ai-agents': 'Agent run status',
+    media: 'Music deck',
+    communication: 'Unread mail',
+    'network-containers': 'Server status board',
+    'ambient-fun': 'Weather strip',
+    utilities: 'Quick notes'
   };
 
   const description =
-    'Any widget you can think of, on your Omarchy desktop: build monitors, focus timers, server boards and more. Spec widgets are JSON, code widgets are QML.';
+    'Clocks, stats, git, music or anything with data, on your Omarchy desktop. Spec widgets are JSON with no code; code widgets run as you.';
   const nodes = [
     { '@type': 'WebSite', name: 'Omarchy Widgets', url: urls.site('/'), description },
     {

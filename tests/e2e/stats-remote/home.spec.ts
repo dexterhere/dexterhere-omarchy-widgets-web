@@ -32,13 +32,13 @@ test('the CSP allows exactly the configured stats origin, and only it is contact
     .getAttribute('content');
   const connect = csp!.split(';').find((d) => d.trim().startsWith('connect-src'))!;
   expect(connect.trim().split(/\s+/).slice(1).sort()).toEqual(["'self'", API].sort());
-  await expect(page.locator('[data-slide]').first()).toBeVisible();
+  await expect(page.locator('[data-widget-card]').first()).toBeVisible();
   await expect
     .poll(() => [...hosts].sort())
     .toEqual([`127.0.0.1:${PORT + 3}`, `localhost:${PORT + 2}`].sort());
 });
 
-test('real counts: a like from the carousel is counted by the service and survives a reload', async ({
+test('real counts: a like from a home card is counted by the service and survives a reload', async ({
   page
 }) => {
   await page.goto('/');
