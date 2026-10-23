@@ -75,6 +75,8 @@ export interface RegistryWidget {
   license: string;
   repo: string;
   commit: string;
+  /** Committer date (yyyy-mm-dd, UTC) of the pinned commit; null when it could not be read. */
+  updated: string | null;
   /** Primary category: the first entry of `categories`. */
   category: Category;
   /** 1 to 3 categories, primary first. The gallery lists the widget under each. */

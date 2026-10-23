@@ -37,6 +37,15 @@ describe('commit reachability', () => {
   it.each(['behind', 'identical'])('accepts %s', async (s) => {
     await expect(reach(api(st(s)))).resolves.toHaveProperty('repoId');
   });
+  it('reads the pinned commit committer date as yyyy-mm-dd, or null', async () => {
+    const body = (date: unknown) => () =>
+      json({ status: 'behind', merge_base_commit: { commit: { committer: { date } } } });
+    await expect(reach(api(body('2026-02-03T23:59:59Z')))).resolves.toMatchObject({
+      committed: '2026-02-03'
+    });
+    await expect(reach(api(body('garbage')))).resolves.toMatchObject({ committed: null });
+    await expect(reach(api(st('behind')))).resolves.toMatchObject({ committed: null });
+  });
   it.each(['ahead', 'diverged', 'weird', 7, undefined])('rejects status %s', async (s) => {
     await expect(reach(api(st(s)))).rejects.toThrow(/not reachable/);
   });
