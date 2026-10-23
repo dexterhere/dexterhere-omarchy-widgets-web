@@ -59,9 +59,9 @@
   }
   .ph {
     width: 100%;
-    aspect-ratio: 16 / 9;
-    min-height: 220px;
-    max-height: 760px;
+    aspect-ratio: 16 / 10;
+    min-height: 600px;
+    max-height: clamp(600px, 85vh, 960px);
     display: grid;
     place-items: center;
     box-sizing: border-box;
@@ -71,22 +71,24 @@
     font: 400 12px / 18px var(--font-mono);
   }
   .ph.compact {
-    aspect-ratio: 3 / 1;
-    min-height: 320px;
+    aspect-ratio: 16 / 10;
+    min-height: 560px;
+    max-height: clamp(560px, 80vh, 880px);
   }
   /* Same box as the loaded stage (toolbar above, key strip below), so nothing shifts on load. */
   .ph.stage {
     aspect-ratio: 16 / 10;
-    min-height: 560px;
-    max-height: clamp(560px, 76vh, 880px);
+    min-height: 680px;
+    max-height: clamp(680px, 85vh, 960px);
     margin-block: 38px 168px;
   }
   @media (max-width: 719px) {
     .ph,
+    .ph.compact,
     .ph.stage {
-      aspect-ratio: 4 / 3;
-      min-height: 0;
-      max-height: none;
+      aspect-ratio: 9 / 14;
+      min-height: 520px;
+      max-height: 80vh;
     }
     .ph.stage {
       margin-block: 64px 120px;
