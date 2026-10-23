@@ -157,10 +157,7 @@ async function fetchBody(
       throw new Error(`rejected: content-type ${type.split(';')[0]}`);
     const declared = Number(res.headers.get('content-length') ?? 0);
     if (declared > maxBytes) throw new Error(`rejected: body over ${maxBytes} bytes`);
-    if (!res.body) {
-      if (opts.text) return new Uint8Array();
-      throw new Error('rejected: empty body');
-    }
+    if (!res.body) throw new Error('rejected: empty body'); // fail closed, also for text files
     const reader = res.body.getReader();
     const chunks: Uint8Array[] = [];
     let total = 0;
@@ -651,7 +648,7 @@ async function buildOne(l: Listing, inp: BuildInput): Promise<RegistryWidget> {
     });
     if (g.errors.length)
       throw new Error(`gates: ${g.errors.length} problem(s): ${g.errors.slice(0, 3).join(' | ')}`);
-    warnings = g.warnings.slice(0, 10);
+    warnings = g.warnings.slice(0, 10).map((x) => scrub(x).slice(0, 200));
   }
 
   return {
@@ -692,6 +689,10 @@ async function buildOne(l: Listing, inp: BuildInput): Promise<RegistryWidget> {
     ...(warnings.length ? { warnings } : {})
   };
 }
+
+/** Author-controlled text in published fields: spoofing characters and markup-looking text become '?'. */
+export const scrub = (e: string) =>
+  e.replace(new RegExp(SPOOF.source, 'gu'), '?').replace(/[<>]/g, '?');
 
 const tally = (xs: string[]) =>
   Object.fromEntries(
@@ -749,7 +750,7 @@ export async function buildRegistry(inp: BuildInput): Promise<BuildResult> {
     excluded: errors.map((e) => {
       // Error text can echo author-controlled names (file names, paths): neutralise it before
       // publishing. Spoofing characters and markup-looking text become '?'.
-      e = e.replace(new RegExp(SPOOF.source, 'gu'), '?').replace(/[<>]/g, '?');
+      e = scrub(e);
       const i = e.indexOf(': ');
       return {
         ref: (i > 0 ? e.slice(0, i) : 'registry').slice(0, 120),
@@ -767,7 +768,9 @@ export async function buildRegistry(inp: BuildInput): Promise<BuildResult> {
  *  it refuses to run in CI (GITHUB_ACTIONS=true) or together with --strict. Returns the id, or null. */
 export function localMode(args: string[], env: Record<string, string | undefined>): string | null {
   if (!args.includes('--local')) return null;
-  if (env.GITHUB_ACTIONS === 'true') throw new Error('--local is refused in CI');
+  const ga = (env.GITHUB_ACTIONS ?? '').trim().toLowerCase();
+  if ((ga !== '' && ga !== 'false' && ga !== '0') || (env.CI ?? '') !== '')
+    throw new Error('--local is refused in CI');
   if (args.includes('--strict')) throw new Error('--local cannot be combined with --strict');
   const i = args.indexOf('--only');
   if (i < 0 || !args[i + 1]) throw new Error('--local needs --only <listing id>');

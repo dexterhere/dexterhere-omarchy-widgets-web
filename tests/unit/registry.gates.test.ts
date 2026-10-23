@@ -224,6 +224,46 @@ describe('fetchText shares the fetchJson rules', () => {
   });
 });
 
+describe('F7 hardening', () => {
+  it('--local is refused for any truthy GITHUB_ACTIONS and any non-empty CI', () => {
+    for (const env of [
+      { GITHUB_ACTIONS: 'TRUE' },
+      { GITHUB_ACTIONS: 'True' },
+      { GITHUB_ACTIONS: '1' },
+      { CI: 'true' },
+      { CI: '1' },
+      { CI: 'false' },
+      { CI: 'anything' }
+    ])
+      expect(() => localMode(['--local', '--only', ID], env), JSON.stringify(env)).toThrow(/CI/);
+    expect(() =>
+      localMode(['--local', '--only', ID], { CI: '', GITHUB_ACTIONS: '' })
+    ).not.toThrow();
+  });
+  it('fetchText fails closed on a null body', async () => {
+    const url = `https://raw.githubusercontent.com/someone/demo/${COMMIT}/a.md`;
+    await expect(
+      fetchText(url, { fetch: (async () => new Response(null, { status: 200 })) as never })
+    ).rejects.toThrow(/empty body/);
+  });
+  it('widget warnings are scrubbed like excluded[] and capped', async () => {
+    const r = await run(
+      code({ capabilities: { network: ['example.com'], files: [], spawn: [] } }),
+      {
+        raw: {
+          'Main.qml':
+            'import QtQuick\nItem { Component.onCompleted: fetch("https://example.com") }',
+          'a<b>.qml': 'Item { Component.onCompleted: fetch("https://example.com") }'
+        }
+      }
+    );
+    const w = r.widgets[0].warnings ?? [];
+    expect(w.length).toBeGreaterThan(0);
+    expect(w.join()).not.toMatch(/[<>]/);
+    expect(w.every((x) => x.length <= 200)).toBe(true);
+  });
+});
+
 describe('--local (gates on a candidate without a lock entry)', () => {
   it('is refused in CI and with --strict, and needs --only', () => {
     expect(() => localMode(['--local', '--only', ID], { GITHUB_ACTIONS: 'true' })).toThrow(/CI/);
