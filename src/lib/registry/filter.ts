@@ -1,6 +1,7 @@
 // Pure gallery filtering, ranking, suggestion and URL-state helpers. No DOM, no Svelte.
 import { categoryLabels, statusLabels, tierLabels } from './index';
 import { isIso, orderRange } from '../date';
+import { DEFAULT_PER, PAGE_SIZES, clampPage, pageCount } from '../paging';
 import type { Category, RegistryWidget, Status, Tier } from './types';
 
 export type SortKey = 'relevance' | 'name' | 'status';
@@ -20,6 +21,9 @@ export interface Query {
   to: string;
   sort: SortKey;
   view: ViewKey;
+  /** 1-based page and page size (6, 12 or 24). */
+  page: number;
+  per: number;
 }
 
 export const DEFAULT_QUERY: Query = {
@@ -33,7 +37,9 @@ export const DEFAULT_QUERY: Query = {
   from: '',
   to: '',
   sort: 'relevance',
-  view: 'cards'
+  view: 'cards',
+  page: 1,
+  per: DEFAULT_PER
 };
 
 export const MAX_Q = 100;
@@ -50,6 +56,16 @@ export function parseCategories(values: string[]): Category[] {
 }
 
 const SORTS: SortKey[] = ['relevance', 'name', 'status'];
+
+/** A whole number of at least 1, else 1 (the other params ignore junk the same way). */
+const parsePage = (v: string | null) => (/^\d{1,6}$/.test(v ?? '') ? Math.max(1, Number(v)) : 1);
+const parsePer = (v: string | null) => PAGE_SIZES.find((n) => String(n) === v) ?? DEFAULT_PER;
+
+/** The same query with `page` pulled back into 1..last page for this many results. */
+export const clampQueryPage = (q: Query, total: number): Query => {
+  const page = clampPage(q.page, pageCount(total, q.per));
+  return page === q.page ? q : { ...q, page };
+};
 
 /** Read URL state. Unknown or junk values fall back to the defaults. */
 export function parseQuery(params: URLSearchParams): Query {
@@ -72,7 +88,9 @@ export function parseQuery(params: URLSearchParams): Query {
     from,
     to,
     sort: SORTS.includes(sort) ? sort : 'relevance',
-    view: params.get('view') === 'list' ? 'list' : 'cards'
+    view: params.get('view') === 'list' ? 'list' : 'cards',
+    page: parsePage(params.get('page')),
+    per: parsePer(params.get('per'))
   };
 }
 
@@ -100,11 +118,12 @@ export const hasFilters = (q: Query) =>
     q.to
   );
 
-/** Same query with every filter cleared; sort and view are kept. */
+/** Same query with every filter cleared and back on page 1; sort, view and page size are kept. */
 export const clearFilters = (q: Query): Query => ({
   ...DEFAULT_QUERY,
   sort: q.sort,
-  view: q.view
+  view: q.view,
+  per: q.per
 });
 
 export const toggleCategory = (cat: Category[], c: Category): Category[] =>

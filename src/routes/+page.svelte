@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { resolve } from '$app/paths';
   import Builder from '../lib/components/home/LazyBuilder.svelte';
-  import WidgetCarousel from '../lib/components/home/WidgetCarousel.svelte';
+  import WidgetPage from '../lib/components/home/WidgetPage.svelte';
   import TryList from '../lib/components/home/TryList.svelte';
   import { HomeStage } from '../lib/components/home/stage.svelte';
   import { START_WIDGETS as start, START_ZOOM } from '../lib/emulator/startLayout';
@@ -35,20 +35,20 @@
 
   const paths = [
     {
-      title: 'Write a spec widget',
-      text: 'A JSON file with a layout and the data it needs. It holds no code.',
+      text: 'Spec widget',
+      sub: 'JSON, no code',
       href: docsUrl('/docs/next/create/spec-widgets/'),
       cta: 'Spec widget guide'
     },
     {
-      title: 'Write a code widget',
-      text: 'For what a spec cannot do. It runs as you, so people should read it first.',
+      text: 'Code widget',
+      sub: 'QML, runs as you',
       href: docsUrl('/docs/next/create/code-widgets/'),
       cta: 'Code widget guide'
     },
     {
-      title: 'Ask an agent',
-      text: 'Describe the widget to your coding agent, then review the spec it writes.',
+      text: 'Your agent',
+      sub: 'You review the spec',
       href: docsUrl('/docs/next/create/choose-a-path/'),
       cta: 'Choose a path'
     }
@@ -71,31 +71,20 @@
     <h1 id="hero-h">Any widget you can think of, on your Omarchy desktop.</h1>
     <div class="cols">
       <div class="copy">
-        <p class="text-2">
-          A clock, system stats and GitHub activity are where we started, not where it ends. If it
-          can show data or respond to a click, it can be a widget: a build monitor, a focus timer,
-          your next meeting, a music deck, a server status board, a weather strip, a habit streak.
-          Every widget takes its colours from your theme and sees only the data you allow.
+        <p class="lead text-2">
+          Clocks, stats, git, music, or anything with data. They follow your theme and see only what
+          you allow.
         </p>
         <div class="row">
           <a class="btn-primary" href={sitePath('/widgets')}>Browse widgets</a>
           <a class="btn" href={docsUrl('/docs')}>Read the docs</a>
         </div>
+        <p class="small text-2">Spec widgets are JSON, no code. Code widgets run as you.</p>
       </div>
-      <div class="aside">
-        <p class="status small text-2">
-          Pre-release: the daemon, vault and CLI work today; the desktop canvas, Widget Center and
-          the widgets are in development.
-        </p>
-        <p class="small text-2">
-          Spec widgets are JSON with no code and are built from blocks. Code widgets (QML) can do
-          whatever Quickshell can do, and they run as you, so people should read them before
-          installing.
-        </p>
-        <p class="small text-2">
-          Press <kbd>T</kbd> to change the theme: every widget follows it.
-        </p>
-      </div>
+      <p class="status small text-2">
+        Pre-release: the daemon, vault and CLI work; the desktop canvas and Widget Center do not
+        yet.
+      </p>
     </div>
   </section>
 
@@ -111,92 +100,83 @@
       onwidgets={stage.setWidgets}
       onPickTheme={() => theme.openPicker()}
     />
-    <p class="guide">
-      Press <strong>Super + Alt + W</strong> (proposed) or click <strong>Widgets</strong> in the bar to
-      open the Widget Center
+    <p class="guide small">
+      Press <kbd>Super</kbd> + <kbd>Alt</kbd> + <kbd>W</kbd> (proposed) for the Widget Center,
+      <kbd>T</kbd>
+      for themes.
     </p>
     <TryList {stage} onPickTheme={() => theme.openPicker()} />
   </section>
 
+  <section class="block" aria-labelledby="widgets-h" data-home-widgets>
+    <header class="bhead">
+      <div>
+        <h2 id="widgets-h">Widgets</h2>
+        <p class="text-2">Sample data. Try any on the desktop above.</p>
+      </div>
+      <a href={resolve('/widgets')}>Search the gallery</a>
+    </header>
+    <WidgetPage {widgets} onTry={(id) => stage.tryOn(id)} />
+  </section>
+
   <section class="block" aria-labelledby="ideas-h" data-home-ideas>
     <header class="bhead">
-      <h2 id="ideas-h">What could you build?</h2>
-      <p class="text-2">
-        Ideas for each category, not a list of finished widgets. What is actually listed is in the
-        gallery below.
-      </p>
+      <div>
+        <h2 id="ideas-h">What could you build?</h2>
+        <p class="text-2">Ideas, not finished widgets. Pick a category to see what is listed.</p>
+      </div>
     </header>
     <ul class="ideas">
       {#each categories as c (c)}
         <li>
-          <h3>{categoryLabels[c]}</h3>
-          <ul class="small text-2">
-            {#each data.ideas[c] as idea (idea)}<li>{idea}</li>{/each}
-          </ul>
-          <a href={`${sitePath('/widgets')}?cat=${c}`}
-            >Listed in {categoryLabels[c]}<span class="sr-only"> widgets</span></a
-          >
+          <a href={`${sitePath('/widgets')}?cat=${c}`}>
+            <span class="cat">{categoryLabels[c]}</span>
+            <span class="text-2 small">{data.ideas[c]}</span>
+            <span class="sr-only"> (listed widgets)</span>
+          </a>
         </li>
       {/each}
     </ul>
   </section>
 
-  <section class="block" aria-labelledby="how-h" data-home-how>
+  <section class="block" aria-labelledby="make-h" data-home-make>
     <header class="bhead">
-      <h2 id="how-h">How a widget gets made</h2>
+      <div>
+        <h2 id="make-h">Make your own</h2>
+        <p class="text-2">
+          Build a spec widget from blocks and see it live. The format is a draft.
+        </p>
+      </div>
     </header>
     <ol class="steps">
       <li>
         <h3>Describe it</h3>
-        <p class="text-2">
-          Write down what it shows, where the data comes from and what a click does. Or tell your
-          coding agent: the <a href={docsUrl('/docs/next/ai/overview/')}>agent skills</a> plan, build
-          and test a widget with you.
+        <p class="small text-2">
+          What it shows and what a click does, or let an <a
+            href={docsUrl('/docs/next/ai/overview/')}>agent skill</a
+          > plan it.
         </p>
       </li>
       <li>
-        <h3>Build it as a spec or a code widget, or ask your agent</h3>
+        <h3>Build it</h3>
         <ul class="paths">
-          {#each paths as p (p.title)}
+          {#each paths as p (p.cta)}
             <li>
-              <h4>{p.title}</h4>
-              <p class="small text-2">{p.text}</p>
               <a class="btn" href={p.href}>{p.cta}</a>
+              <span class="small text-2">{p.sub}</span>
             </li>
           {/each}
         </ul>
       </li>
       <li>
-        <h3>Share it by pull request</h3>
-        <p class="text-2">
-          Listing a widget is a pull request, pinned to a commit.
-          <a href={sitePath('/contribute')}>Publishing guide</a>.
+        <h3>Share it</h3>
+        <p class="small text-2">
+          A pull request, pinned to a commit.
+          <a href={sitePath('/contribute')}>Read how to contribute it</a>.
         </p>
       </li>
     </ol>
-  </section>
-
-  <section class="block" aria-labelledby="widgets-h" data-home-widgets>
-    <header class="bhead">
-      <h2 id="widgets-h">Widgets</h2>
-      <p class="text-2">Every entry in the registry, on sample data.</p>
-    </header>
-    <WidgetCarousel {widgets} onTry={(id) => stage.tryOn(id)} />
-  </section>
-
-  <section class="block" aria-labelledby="make-h" data-home-make>
-    <header class="bhead">
-      <h2 id="make-h">Make your own</h2>
-      <p class="text-2">
-        Build a spec widget from blocks and see it live. The format is a draft and can change.
-      </p>
-    </header>
     <Builder {stage} />
-
-    <p class="text-2 more">
-      Finished one? <a href={sitePath('/contribute')}>Read how to contribute it</a> to the gallery,
-      or <a href={resolve('/widgets')}>see what is listed</a>.
-    </p>
   </section>
 </div>
 
@@ -204,15 +184,15 @@
   .hero {
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    padding-block: 24px 16px;
+    gap: 12px;
+    padding-block: 20px 12px;
   }
   .hero h1 {
     max-width: none;
   }
   .cols {
     display: grid;
-    gap: 24px 64px;
+    gap: 16px 64px;
     align-items: end;
   }
   @media (min-width: 1000px) {
@@ -223,27 +203,24 @@
   .copy {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 12px;
     align-items: flex-start;
   }
-  .copy p {
-    max-width: 70ch;
-  }
-  .aside {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
+  .lead {
+    font-size: var(--fs-4);
+    line-height: 28px;
+    max-width: 52ch;
   }
   .status {
-    max-width: 64ch;
+    max-width: 52ch;
     padding-left: 12px;
     border-left: 2px solid var(--brand);
   }
   .stage {
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    padding-bottom: 48px;
+    gap: 12px;
+    padding-bottom: 40px;
   }
   /* Sticky stage toolbar: opaque, directly under the header, only while the stage is on screen
      (its containing block is the emulator section). The full view is a fixed overlay: not sticky. */
@@ -259,84 +236,77 @@
   .stage :global([data-emulator]:not(.full) > :first-child[data-stuck='true']) {
     border-bottom-color: var(--border);
   }
-  .more {
-    max-width: none;
-  }
   .guide {
     max-width: none;
     color: var(--text-2);
   }
-  .guide strong {
-    color: var(--text);
-  }
   .block {
     display: flex;
     flex-direction: column;
-    gap: 32px;
-    padding-block: 72px;
+    gap: 24px;
+    padding-block: 48px;
     border-top: 1px solid var(--border);
   }
   .bhead {
     display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    justify-content: space-between;
+    gap: 8px 24px;
+  }
+  .bhead > div {
+    display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 4px;
   }
   .bhead h2 {
-    font-size: clamp(28px, 3vw, 40px);
-    line-height: 1.15;
+    font-size: clamp(24px, 2.5vw, 32px);
+    line-height: 1.2;
   }
-  .paths {
+  ul {
     list-style: none;
     margin: 0;
     padding: 0;
-    display: grid;
-    gap: 16px;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
-  }
-  .paths li {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 24px;
-    border: 1px solid var(--border);
-  }
-  .paths li :global(.btn) {
-    margin-top: auto;
   }
   .ideas {
-    list-style: none;
-    margin: 0;
-    padding: 0;
     display: grid;
-    gap: 0 32px;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+    gap: 8px;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 1fr));
   }
-  .ideas > li {
+  .ideas a {
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-    padding-block: 20px;
-    border-top: 1px solid var(--border);
+    gap: 2px;
+    height: 100%;
+    padding: 12px 16px;
+    text-decoration: none;
+    border: 1px solid var(--border);
+    transition: border-color 140ms ease-out;
   }
-  .ideas ul {
-    margin: 0;
-    padding-left: 1.1em;
+  .ideas a:hover {
+    border-color: var(--brand);
+  }
+  .cat {
+    font-weight: 700;
   }
   .steps {
     list-style: none;
     margin: 0;
     padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 32px;
+    display: grid;
+    gap: 16px 32px;
     counter-reset: step;
   }
+  @media (min-width: 900px) {
+    .steps {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
   .steps > li {
-    display: grid;
-    gap: 12px;
-    padding-left: 56px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-left: 44px;
     position: relative;
     counter-increment: step;
   }
@@ -345,24 +315,29 @@
     position: absolute;
     left: 0;
     top: 0;
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     display: grid;
     place-items: center;
     border: 1px solid var(--brand);
     color: var(--brand);
     font-family: var(--font-mono);
   }
-  .paths h4 {
-    font-size: inherit;
+  .paths {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .paths li {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
   }
   @media (max-width: 719px) {
-    .steps > li {
-      padding-left: 0;
-      padding-top: 48px;
-    }
     .block {
-      padding-block: 48px;
+      padding-block: 36px;
     }
   }
 </style>
