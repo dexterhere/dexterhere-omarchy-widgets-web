@@ -13,6 +13,7 @@
   } from '../../../lib/registry';
   import { REPORT_URL, safeRepoUrl, shortCommit } from '../../../lib/registry/links';
   import { CARD_SIZE, previewType } from '../../../lib/registry/preview';
+  import LayoutView from '../../../lib/components/widgets/LayoutView.svelte';
   import LazyEmulator from '../../../lib/emulator/LazyEmulator.svelte';
   import { theme } from '../../../lib/themes/store.svelte';
 
@@ -356,6 +357,20 @@
     </section>
   </div>
 
+  {#if w.layout && w.sampleData}
+    <section class="block" aria-labelledby="h-layout">
+      <h2 id="h-layout">Drawn from layout.json</h2>
+      <p class="small text-2">
+        This is the widget&rsquo;s own pinned <code>layout.json</code>, drawn by the site&rsquo;s
+        renderer with sample data. Nothing is requested from GitHub or from your machine, and no
+        widget code runs.
+      </p>
+      <div class="lstage" data-testid="layout-render">
+        <LayoutView layout={w.layout} data={w.sampleData} title={w.name} {variant} />
+      </div>
+    </section>
+  {/if}
+
   <section class="block" aria-labelledby="h-similar">
     <h2 id="h-similar">Similar widgets</h2>
     {#if data.similar.length}
@@ -376,6 +391,10 @@
 </div>
 
 <style>
+  .lstage {
+    width: min(100%, 320px);
+    height: 200px;
+  }
   .page {
     padding-block: 48px 80px;
     display: flex;
