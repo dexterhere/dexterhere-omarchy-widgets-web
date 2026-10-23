@@ -10,6 +10,7 @@ import { checkReviewChanges } from '../../scripts/check-review-changes';
 import {
   ID,
   json,
+  blob,
   layoutJson,
   listing,
   manifestJson,
@@ -31,6 +32,11 @@ let lic = 'MIT';
 const fetch: FetchFn = async (url) => {
   if (url.includes('/other')) return json({ message: 'Not Found' }, { status: 404 });
   if (url.includes('/license')) return json({ license: { spdx_id: lic } });
+  if (url.includes('/git/trees/'))
+    return json({
+      truncated: false,
+      tree: ['manifest.json', 'widget.json', 'layout.json'].map((n) => blob(n, 50))
+    });
   if (url.includes('/compare/')) return json({ status: 'behind' });
   if (url.startsWith('https://api.github.com')) return json(info(1));
   return json(

@@ -286,7 +286,7 @@ export function lintFile(
     }
     const name = (/^[^\n;]*/.exec(rest)?.[0] ?? '').replace(/\s+as\s+\w+\s*$/, '').trim();
     if (!IMPORT_ALLOW.some((a) => a.test(name)))
-      add('import', m.index!, `import ${name.slice(0, 60)} is not on the allow-list`);
+      add('import', m.index!, 'import is not on the allow-list');
   }
 
   // Resources: `source`-like and `url` properties must be plain string literals that stay inside the widget.

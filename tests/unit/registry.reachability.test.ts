@@ -10,6 +10,7 @@ import {
 import {
   COMMIT,
   json,
+  blob,
   layoutJson,
   listing,
   manifestJson,
@@ -130,6 +131,11 @@ describe('build integration', () => {
     const fetch: FetchFn = async (url) => {
       calls.push(url);
       if (url.includes('/compare/')) return json({ status: compare });
+      if (url.includes('/git/trees/'))
+        return json({
+          truncated: false,
+          tree: Object.keys(files).map((n) => blob(n, 50))
+        });
       if (url.startsWith(API)) return json({ default_branch: 'main' });
       return json(files[url.split('/').pop() as string]);
     };
@@ -155,7 +161,10 @@ describe('build integration', () => {
   });
   it('skipReachability skips the API', async () => {
     const { calls } = await build('diverged', true);
-    expect(calls.some((c) => c.includes('api.github.com'))).toBe(false);
+    // no repo-info or compare call; the gate's tree request is the only API use
+    expect(calls.filter((c) => c.includes('api.github.com'))).toEqual([
+      expect.stringContaining('/git/trees/')
+    ]);
   });
 });
 
