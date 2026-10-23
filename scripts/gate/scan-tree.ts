@@ -109,8 +109,8 @@ const ENT: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apo
 export function scanSvg(file: string, text: string): string[] {
   const f = safe(file);
   const fail = (why: string) => [`${f}: svg ${why}`];
-  let t = text.replace(/^﻿/, '');
-  // eslint-disable-next-line no-control-regex
+  const t = text.replace(/^﻿/, '');
+
   if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(t))
     return fail('has control characters');
   const bad = (v: string) => {
