@@ -312,7 +312,7 @@ test('typeahead is labelled by kind and fully keyboard operable', async ({ page 
   await box.pressSequentially('docker');
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
-  await expect(box).toHaveValue('docker'); // the exact tag ranks first
+  await expect(box).toHaveValue('Docker'); // the exact name ranks first
   await expect(list).toBeHidden();
   await expect(cards(page)).toHaveCount(1);
   // Tab leaves the field: nothing traps focus
@@ -587,7 +587,7 @@ test('rss.xml is well-formed RSS with escaped content', async ({ page, request }
   expect(parsed.root).toBe('rss');
   expect(parsed.items).toBe(widgets.length);
   expect(parsed.pubDates).toBe(0);
-  expect(parsed.titles).toContain('AI usage (concept)');
+  expect(parsed.titles).toContain('AI Usage');
   // deterministic
   expect(await (await request.get('/rss.xml')).text()).toBe(xml);
 });
@@ -697,6 +697,6 @@ test('a spec widget detail page draws its pinned layout.json from sample data on
     page.getByRole('heading', { level: 2, name: 'Drawn from layout.json' })
   ).toBeVisible();
   await expect(box).toContainText('running');
-  await expect(box.locator('li')).toHaveCount(3);
+  await expect(box.locator('.value')).toHaveCount(3); // counts variant: running, stopped, unhealthy
   expect(outside).toEqual([]);
 });

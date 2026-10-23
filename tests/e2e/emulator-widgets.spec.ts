@@ -106,7 +106,7 @@ test('Discover states needs before install; installing places at the first free 
   for (const k of ['Data', 'Network', 'Files', 'Programs', 'Secrets'])
     await expect(card.locator('dt', { hasText: k })).toBeVisible();
   await expect(card).toContainText('none');
-  await expect(card).toContainText('/run/docker.sock');
+  await expect(card).toContainText('docker.containers'); // the topic it needs, no host of its own
   await expect(widget(page, DOCKER)).toHaveCount(0);
   await card.getByRole('button', { name: /Install Docker.*concept preview/ }).click();
   const w = widget(page, DOCKER);
