@@ -70,6 +70,9 @@
     { value: 'name', label: 'Name, A to Z' },
     { value: 'status', label: 'Status, then name' }
   ];
+  // Opens when a filter in the panel is active; never closes by itself, so clearing the last one
+  // does not collapse the panel (and drop focus) under the person using it.
+  let more = $state(false);
   const moreOpen = $derived(
     Boolean(
       query.status ||
@@ -81,6 +84,10 @@
       query.to
     )
   );
+
+  $effect(() => {
+    if (moreOpen) more = true;
+  });
 
   /** Non-text filters as removable chips. Text search has its own clear button. */
   const chips = $derived.by(() => {
@@ -230,7 +237,7 @@
     </div>
   </form>
 
-  <details class="more" open={moreOpen}>
+  <details class="more" bind:open={more}>
     <summary>More filters</summary>
     <div class="selects">
       <DateField id="updated" label="Updated" bind:from={query.from} bind:to={query.to} />
