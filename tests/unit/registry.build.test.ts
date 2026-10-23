@@ -119,7 +119,16 @@ describe('buildRegistry', () => {
       listings: [L(), L(listing(), 'copy.json')],
       fetch: mockFetch(files()).fn
     });
-    expect(r.errors.join('\n')).toMatch(/duplicate id/);
+    expect(r.errors.join('\n')).toMatch(/copy\.json: file name must be <id>\.json/);
+    expect(r.widgets).toHaveLength(1); // the copy is excluded, only <id>.json is published
+  });
+  it('never publishes a listing whose file name is not its id', async () => {
+    const r = await run({
+      listings: [L(listing(), 'zzz.json')],
+      fetch: mockFetch(files()).fn
+    });
+    expect(r.widgets).toHaveLength(0);
+    expect(r.errors.join()).toMatch(/file name must be/);
   });
   it('reports invalid listings and bad widget.json without secrets', async () => {
     const r = await run({

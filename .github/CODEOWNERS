@@ -17,3 +17,5 @@
 /deploy/ @dexterhere
 /services/ @dexterhere
 /static/theme-boot.js @dexterhere
+/src/lib/registry/layout.ts @dexterhere
+/src/lib/registry/links.ts @dexterhere

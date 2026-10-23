@@ -69,9 +69,16 @@ const isObj = (v: unknown): v is Record<string, unknown> =>
 const TOPIC = /^[a-z][a-z0-9-]*(\.[a-z0-9][a-z0-9-]*)+$/;
 const FIELD = /^[a-zA-Z][a-zA-Z0-9_.-]{0,39}$/;
 // Plain text only: no control, bidi or format characters, nothing HTML-looking.
-const SPOOF = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u;
-const HTMLISH = /<\s*\/?\s*[a-z!?]/i;
-const plain = (s: string) => !SPOOF.test(s) && !HTMLISH.test(s);
+// Also private-use, surrogate and unassigned code points and the characters that render as
+// blanks (Hangul fillers, braille blank, CGJ, Mongolian and variation selectors except VS16).
+export const SPOOF =
+  /[\p{Cc}\p{Cf}\p{Cs}\p{Co}\p{Cn}\p{Zl}\p{Zp}\u034f\u115f\u1160\u17b4\u17b5\u180b-\u180f\u2800\u3164\ufe00-\ufe0e\uffa0]/u;
+export const HTMLISH = /<\s*\/?\s*[a-z!?]/i;
+/** Plain text only: no spoofing characters, nothing HTML-looking, NFC, no stacked combining marks. */
+export const plain = (s: string) =>
+  !SPOOF.test(s) && !HTMLISH.test(s) && s === s.normalize('NFC') && !/\p{M}{4,}/u.test(s);
+/** Something a person can see: a letter, number, punctuation mark or symbol. */
+export const visible = (s: string) => /[\p{L}\p{N}\p{P}\p{S}]/u.test(s);
 
 const KEYS: Record<string, string[]> = {
   stack: ['type', 'gap', 'children'],
@@ -159,7 +166,7 @@ export function validateLayout(input: unknown, variants: readonly string[] = [])
         if (
           text !== undefined &&
           (typeof text !== 'string' ||
-            !text.trim() ||
+            !visible(text) ||
             text.length > LAYOUT_LIMITS.string ||
             !plain(text))
         )
