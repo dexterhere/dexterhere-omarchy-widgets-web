@@ -4,8 +4,18 @@
     "type": "stack",
     "gap": "sm",
     "children": [
-      { "type": "value", "bind": { "topic": "system.time", "field": "hm" }, "size": "xl", "color": "accent" },
-      { "type": "text", "bind": { "topic": "system.time", "field": "date" }, "size": "sm", "color": "muted" }
+      {
+        "type": "value",
+        "bind": { "topic": "system.time", "field": "hm" },
+        "size": "xl",
+        "color": "accent"
+      },
+      {
+        "type": "text",
+        "bind": { "topic": "system.time", "field": "date" },
+        "size": "sm",
+        "color": "muted"
+      }
     ]
   },
   "variants": {
@@ -13,16 +23,36 @@
       "type": "stack",
       "gap": "sm",
       "children": [
-        { "type": "value", "bind": { "topic": "system.time", "field": "hm" }, "size": "xl", "color": "accent" },
-        { "type": "text", "bind": { "topic": "system.time", "field": "date" }, "size": "sm", "color": "muted" }
+        {
+          "type": "value",
+          "bind": { "topic": "system.time", "field": "hm" },
+          "size": "xl",
+          "color": "accent"
+        },
+        {
+          "type": "text",
+          "bind": { "topic": "system.time", "field": "date" },
+          "size": "sm",
+          "color": "muted"
+        }
       ]
     },
     "digital-seconds": {
       "type": "stack",
       "gap": "sm",
       "children": [
-        { "type": "value", "bind": { "topic": "system.time", "field": "hms" }, "size": "xl", "color": "accent" },
-        { "type": "text", "bind": { "topic": "system.time", "field": "date" }, "size": "sm", "color": "muted" }
+        {
+          "type": "value",
+          "bind": { "topic": "system.time", "field": "hms" },
+          "size": "xl",
+          "color": "accent"
+        },
+        {
+          "type": "text",
+          "bind": { "topic": "system.time", "field": "date" },
+          "size": "sm",
+          "color": "muted"
+        }
       ]
     },
     "minimal": {
@@ -35,8 +65,18 @@
       "type": "stack",
       "gap": "sm",
       "children": [
-        { "type": "text", "bind": { "topic": "system.time", "field": "date" }, "size": "xl", "color": "accent" },
-        { "type": "value", "bind": { "topic": "system.time", "field": "hm" }, "size": "md", "color": "secondary" }
+        {
+          "type": "text",
+          "bind": { "topic": "system.time", "field": "date" },
+          "size": "xl",
+          "color": "accent"
+        },
+        {
+          "type": "value",
+          "bind": { "topic": "system.time", "field": "hm" },
+          "size": "md",
+          "color": "secondary"
+        }
       ]
     },
     "chip": {
@@ -44,17 +84,37 @@
       "gap": "sm",
       "children": [
         { "type": "icon", "name": "clock", "size": "sm", "color": "secondary" },
-        { "type": "value", "bind": { "topic": "system.time", "field": "hm" }, "size": "sm", "color": "foreground" }
+        {
+          "type": "value",
+          "bind": { "topic": "system.time", "field": "hm" },
+          "size": "sm",
+          "color": "foreground"
+        }
       ]
     },
     "stacked": {
       "type": "stack",
       "gap": "sm",
       "children": [
-        { "type": "value", "bind": { "topic": "system.time", "field": "hm" }, "size": "xl", "color": "accent" },
+        {
+          "type": "value",
+          "bind": { "topic": "system.time", "field": "hm" },
+          "size": "xl",
+          "color": "accent"
+        },
         { "type": "divider" },
-        { "type": "text", "bind": { "topic": "system.time", "field": "date" }, "size": "md", "color": "foreground" },
-        { "type": "badge", "bind": { "topic": "system.time", "field": "tz" }, "size": "sm", "color": "secondary" }
+        {
+          "type": "text",
+          "bind": { "topic": "system.time", "field": "date" },
+          "size": "md",
+          "color": "foreground"
+        },
+        {
+          "type": "badge",
+          "bind": { "topic": "system.time", "field": "tz" },
+          "size": "sm",
+          "color": "secondary"
+        }
       ]
     }
   }

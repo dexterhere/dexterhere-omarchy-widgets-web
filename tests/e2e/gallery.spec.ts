@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 
 type W = {
   id: string;
+  repo: string;
   name: string;
   categories: string[];
   installable: boolean;

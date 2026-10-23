@@ -3,45 +3,24 @@
   "id": "io.github.dexterhere.system-monitor",
   "tier": "spec",
   "category": "system",
-  "surfaces": [
-    "desktop",
-    "bar"
-  ],
+  "surfaces": ["desktop", "bar"],
   "sizeClasses": [
     {
       "name": "chip",
-      "min": [
-        120,
-        24
-      ],
-      "max": [
-        240,
-        48
-      ],
+      "min": [120, 24],
+      "max": [240, 48],
       "aspectLock": null
     },
     {
       "name": "compact",
-      "min": [
-        140,
-        100
-      ],
-      "max": [
-        240,
-        180
-      ],
+      "min": [140, 100],
+      "max": [240, 180],
       "aspectLock": null
     },
     {
       "name": "wide",
-      "min": [
-        260,
-        120
-      ],
-      "max": [
-        480,
-        220
-      ],
+      "min": [260, 120],
+      "max": [480, 220],
       "aspectLock": null
     }
   ],
@@ -58,12 +37,7 @@
   "providers": [
     {
       "name": "system",
-      "topics": [
-        "system.cpu",
-        "system.memory",
-        "system.load",
-        "system.temp"
-      ],
+      "topics": ["system.cpu", "system.memory", "system.load", "system.temp"],
       "fields": [
         "usage_pct",
         "used_pct",

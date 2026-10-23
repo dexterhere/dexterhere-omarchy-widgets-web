@@ -15,9 +15,7 @@ export const SNAPSHOT_NOTE = 'Layout snapshot saved (sample)';
 
 /** Name for lists and announcements. */
 export const labelOf = (reg: string) =>
-  reg === M.SPEC_REG
-    ? 'Custom widget'
-    : getById(reg)?.name ?? reg;
+  reg === M.SPEC_REG ? 'Custom widget' : (getById(reg)?.name ?? reg);
 export const isPreviewOnly = (reg: string) => getById(reg)?.installable === false;
 
 const uniq = <T>(a: T[]) => a.filter((v, i) => a.indexOf(v) === i);
