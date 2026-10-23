@@ -19,7 +19,10 @@ test('Select works from the keyboard and writes the URL', async ({ page }) => {
   await expect(list).toBeVisible();
   await expect(status).toHaveAttribute('aria-expanded', 'true');
   await expect(list).toBeFocused();
-  await expect(page.getByRole('option', { name: 'All' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('option', { name: 'All', exact: true })).toHaveAttribute(
+    'aria-selected',
+    'true'
+  );
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
   await expect(list).toBeHidden();
@@ -27,10 +30,12 @@ test('Select works from the keyboard and writes the URL', async ({ page }) => {
   await expect(page).toHaveURL(/status=planned/);
   // Escape closes without changing anything; Home goes back to "All"
   await page.keyboard.press('Space');
+  await expect(list).toBeFocused();
   await page.keyboard.press('Home');
   await page.keyboard.press('Enter');
   await expect(page).not.toHaveURL(/status=/);
   await page.keyboard.press('Enter');
+  await expect(list).toBeFocused();
   await page.keyboard.press('Escape');
   await expect(list).toBeHidden();
   await expect(status).toBeFocused();
@@ -67,7 +72,7 @@ test('Calendar picks a range from the keyboard and the URL, count and chip follo
   await expect(page).toHaveURL(/from=\d{4}-\d{2}-\d{2}&to=\d{4}-\d{2}-\d{2}/);
   await expect(page.getByTestId('active')).toContainText('Updated:');
   await expect(page.getByTestId('count')).toHaveText(new RegExp(`^\\d+ of ${total} widgets$`));
-  await page.getByRole('button', { name: 'Clear all' }).click();
+  await page.locator('.bar').getByRole('button', { name: 'Clear all' }).click();
   await expect(page).not.toHaveURL(/from=/);
 });
 
