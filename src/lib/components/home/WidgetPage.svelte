@@ -14,9 +14,12 @@
   let page = $state(1);
   let stats = $state<Record<string, Stats | null>>({});
   let grid = $state<HTMLUListElement>();
-  const shown = $derived(slicePage(widgets, page, PER));
+  let mounted = $state(false);
+  // Without JS (and until hydration) every card is listed; the pager needs JS.
+  const shown = $derived(mounted ? slicePage(widgets, page, PER) : widgets);
 
   onMount(() => {
+    mounted = true;
     getStatsProvider()
       .getStats(widgets.map((w) => w.id))
       .then((r) => (stats = r))
@@ -47,7 +50,9 @@
       </li>
     {/each}
   </ul>
-  <Pager bind:page total={widgets.length} per={PER} anchor={grid} label="Widget pages" />
+  {#if mounted}
+    <Pager bind:page total={widgets.length} per={PER} anchor={grid} label="Widget pages" />
+  {/if}
 </div>
 
 <style>

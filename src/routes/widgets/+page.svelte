@@ -63,7 +63,8 @@
 
   const options = $derived(facets(data.widgets));
   const results = $derived(filterWidgets(data.widgets, query));
-  const shown = $derived(slicePage(results, query.page, query.per));
+  // Before hydration (and without JS) the prerendered page lists everything: the pager needs JS.
+  const shown = $derived(ready ? slicePage(results, query.page, query.per) : results);
   const perOptions = PAGE_SIZES.map((n) => ({ value: String(n), label: String(n) }));
   let top = $state<HTMLElement>();
 
@@ -422,7 +423,7 @@
     </ul>
   {/if}
 
-  {#if results.length > query.per}
+  {#if ready && results.length > query.per}
     <Pager
       bind:page={query.page}
       total={results.length}
