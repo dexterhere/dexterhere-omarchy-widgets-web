@@ -15,6 +15,11 @@ const PORT = process.env.PW_PORT ?? 4173;
 
 const search = (page: Page) => page.getByRole('combobox', { name: 'Search widgets' });
 const count = (page: Page) => page.getByTestId('count');
+/** Custom Select: open the trigger, click the option by its visible text. */
+async function pick(page: Page, label: string, option: string) {
+  await page.locator(`#${label.toLowerCase()}`).click();
+  await page.getByRole('option', { name: option, exact: true }).click();
+}
 async function gallery(page: Page, qs = '') {
   await page.goto(`/widgets/${qs}`);
   await page.waitForFunction(() => document.querySelector('[data-testid="count"]'));
@@ -70,9 +75,11 @@ test('every card has a large unclipped preview, status, author, like and keyboar
     await expect(card.getByRole('link', { name: 'Details' })).toBeVisible();
     await expect(card.locator('.pv')).toHaveAttribute('aria-hidden', 'true');
   }
-  // keyboard order inside one card: Details, then Like
+  // keyboard order inside one card: Details, Source, then Like
   const first = cardEls.first();
   await first.getByRole('link', { name: 'Details' }).focus();
+  await page.keyboard.press('Tab');
+  await expect(first.getByRole('link', { name: /^Source code of / })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(first.getByRole('button', { name: /^Like / })).toBeFocused();
 });
@@ -176,9 +183,9 @@ test('active filter chips can be removed and Clear all resets', async ({ page })
 
 test('sort menu changes order and is kept in the URL', async ({ page }) => {
   await gallery(page);
-  await page.getByLabel('Sort').selectOption('status');
+  await pick(page, 'Sort', 'Status, then name');
   await expect(page).toHaveURL(/sort=status/);
-  await page.getByLabel('Sort').selectOption('name');
+  await pick(page, 'Sort', 'Name, A to Z');
   await expect(page).toHaveURL(/sort=name/);
   const names = await cards(page).locator('h2').allTextContents();
   expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
@@ -320,7 +327,7 @@ test('URL state round-trips: query, categories, sort and view', async ({ page })
   await expect(search(page)).toHaveValue('clock');
   await expect(catBtn(page, 'time-calendar')).toHaveAttribute('aria-pressed', 'true');
   await expect(catBtn(page, 'ambient-fun')).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByLabel('Sort')).toHaveValue('status');
+  await expect(page.locator('#sort')).toContainText('Status, then name');
   await expect(page.getByTestId('list')).toBeVisible();
   await page.reload();
   await expect(search(page)).toHaveValue('clock');
