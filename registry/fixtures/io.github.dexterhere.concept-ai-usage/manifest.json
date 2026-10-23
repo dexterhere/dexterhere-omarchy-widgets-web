@@ -1,7 +1,0 @@
-{
-  "id": "io.github.dexterhere.concept-ai-usage",
-  "name": "AI usage (concept)",
-  "version": "0.0.0-concept",
-  "description": "Concept AI usage widget reading session counts and timings only.",
-  "license": "MIT"
-}
