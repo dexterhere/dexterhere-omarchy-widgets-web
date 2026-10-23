@@ -233,7 +233,7 @@ describe('scanSvg (allow-list)', () => {
         'a.svg',
         '<?xml version="1.0"?>\n<!-- c -->\n' +
           svg(
-            '<defs><linearGradient id="g"><stop offset="0" stop-color="red"/></linearGradient></defs><g clip-path="url(#c)"><title>a &amp; b</title><rect width="4" height="4" fill="url(#g)"/></g>'
+            '<defs><linearGradient id="g"><stop offset="0" stop-color="red"/></linearGradient></defs><g clip-path="url(#c)"><title>a &amp; b</title><rect width="4" height="4" fill="url(#g)"/><rect fill="rgba(1, 2, 3, 0.5)" stroke="#abcd"/><rect fill="currentColor" stroke="none"/></g>'
           )
       )
     ).toEqual([]);
@@ -261,6 +261,17 @@ describe('scanSvg (allow-list)', () => {
     ['class attribute', svg('<rect class="a"/>')],
     ['javascript in value', svg('<path fill="javascript:x"/>')],
     ['char ref javascript', svg('<path fill="&#106;avascript:x"/>')],
+    ['css escape in url', svg('<rect fill="u\\72l(https://evil/x)"/>')],
+    ['css escape javascript', svg('<path d="\\6a avascript:x"/>')],
+    ['backslash anywhere', svg('<path d="M0 0\\\\"/>')],
+    ['paint: arbitrary word', svg('<rect fill="expression(x)"/>')],
+    ['paint: url with extra', svg('<rect fill="url(#a) red"/>')],
+    ['paint: url with dot id', svg('<rect fill="url(#a.b)"/>')],
+    ['paint: unknown keyword', svg('<rect stroke="rebeccapurple"/>')],
+    ['paint: rgb with letters', svg('<rect fill="rgb(a,b,c)"/>')],
+    ['paint: bad hex length', svg('<rect fill="#12345"/>')],
+    ['clip-path non-url', svg('<g clip-path="inset(1px)"/>')],
+    ['mask external', svg('<g mask="url(https://evil/m)"/>')],
     ['named ref colon', svg('<path fill="javascript&colon;x"/>')],
     ['hex char ref in text', svg('<title>&#x6a;</title>')],
     ['data: with whitespace', svg('<path fill="d\tata:text/html,x"/>')],

@@ -98,6 +98,20 @@ const SVG_ATTRS = new Set(
     ' '
   )
 );
+const PAINT = new Set(['fill', 'stroke', 'stop-color', 'clip-path', 'mask']);
+const COLOURS = new Set(
+  'black white red green blue yellow orange purple pink gray grey cyan magenta transparent silver maroon navy teal olive lime aqua fuchsia'.split(
+    ' '
+  )
+);
+/** Strict paint grammar: none, currentColor, a short keyword list, #hex, rgb()/rgba()/hsl()/hsla() of plain numbers, or exactly url(#id). */
+const paintOk = (v: string) =>
+  v === 'none' ||
+  v === 'currentColor' ||
+  COLOURS.has(v) ||
+  /^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(v) ||
+  /^(?:rgb|rgba|hsl|hsla)\([0-9., %]+\)$/.test(v) ||
+  /^url\(#[A-Za-z0-9_-]+\)$/.test(v);
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const ENT: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
 
@@ -114,6 +128,7 @@ export function scanSvg(file: string, text: string): string[] {
   if (/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/.test(t))
     return fail('has control characters');
   const bad = (v: string) => {
+    if (v.includes('\\')) return 'has a backslash (CSS escapes are not allowed)';
     if (/&(?!(?:amp|lt|gt|quot|apos);)/.test(v))
       return 'has a character reference other than the five predefined';
     const d = v.replace(/&(\w+);/g, (_m, n) => ENT[n]);
@@ -173,7 +188,9 @@ export function scanSvg(file: string, text: string): string[] {
       const v = v1 ?? v2 ?? '';
       if (!SVG_ATTRS.has(an)) return fail('uses an attribute that is not on the allow-list');
       if (an === 'xmlns' && v !== SVG_NS) return fail('declares a foreign namespace');
-      const b = bad(v);
+      const b =
+        bad(v) ??
+        (PAINT.has(an) && !paintOk(v) ? `has a ${an} value outside the allowed grammar` : null);
       if (b) return fail(b);
       i += all.length;
     }
