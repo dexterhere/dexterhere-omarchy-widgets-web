@@ -4,8 +4,8 @@ import { expect, test, type Page } from '@playwright/test';
 // the real stats provider talks to services/stats with an in-memory store.
 const PORT = Number(process.env.PW_PORT ?? 4173);
 const API = `http://127.0.0.1:${PORT + 3}`;
-const CLOCK = 'io.github.dexterhere.concept-clock';
-const BATTERY = 'io.github.dexterhere.concept-battery';
+const CLOCK = 'io.github.dexterhere.clock';
+const BATTERY = 'io.github.dexterhere.battery';
 
 async function stats(page: Page, id: string) {
   const r = await page.request.get(`${API}/stats?ids=${id}`, {
@@ -46,14 +46,14 @@ test('real counts: a like from a home card is counted by the service and survive
   await card.scrollIntoViewIfNeeded();
   // counts come from the service, so the local-only wording is gone
   await expect(card.getByText('saved on this device')).toHaveCount(0);
-  await expect(card.getByRole('button', { name: 'Like Clock (concept)' })).toContainText('0');
-  await card.getByRole('button', { name: 'Like Clock (concept)' }).click();
-  await expect(card.getByRole('button', { name: 'Unlike Clock (concept)' })).toContainText('1');
+  await expect(card.getByRole('button', { name: 'Like Clock' })).toContainText('0');
+  await card.getByRole('button', { name: 'Like Clock' }).click();
+  await expect(card.getByRole('button', { name: 'Unlike Clock' })).toContainText('1');
   await expect.poll(async () => (await stats(page, CLOCK)).likes).toBe(1);
   await page.reload();
   const again = page.locator(`[data-widget-card="${CLOCK}"]`);
   await again.scrollIntoViewIfNeeded();
-  await expect(again.getByRole('button', { name: 'Unlike Clock (concept)' })).toContainText('1');
+  await expect(again.getByRole('button', { name: 'Unlike Clock' })).toContainText('1');
 });
 
 test('a widget detail page records one view per day per browser', async ({ page }) => {

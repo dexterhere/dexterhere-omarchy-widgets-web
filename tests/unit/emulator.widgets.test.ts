@@ -9,7 +9,7 @@ const B = { w: 1280, h: 704 };
 let n = 0;
 const id = () => `t${++n}`;
 const CLOCK = M.TYPE_REG.clock;
-const DOCKER = 'io.github.dexterhere.concept-docker';
+const DOCKER = 'io.github.dexterhere.docker';
 const add = (s: M.WState, reg: string, b = B, spec: Partial<M.Spec> = {}) =>
   M.addInst(s, M.makeInst({ id: id(), reg, ...spec }, s.items, b), b);
 

@@ -66,10 +66,10 @@ export const emptyState = (): WState => L.initialLayout([]) as WState;
 /* ----------------------------------- identities ----------------------------------- */
 
 export const TYPE_REG: Record<L.WidgetType, string> = {
-  clock: 'io.github.dexterhere.concept-clock',
-  system: 'io.github.dexterhere.concept-system-monitor',
-  battery: 'io.github.dexterhere.concept-battery',
-  github: 'io.github.dexterhere.concept-github-activity'
+  clock: 'io.github.dexterhere.clock',
+  system: 'io.github.dexterhere.system-monitor',
+  battery: 'io.github.dexterhere.battery',
+  github: 'io.github.dexterhere.github-activity'
 };
 const has = (o: object, k: string) => Object.prototype.hasOwnProperty.call(o, k);
 
@@ -362,7 +362,7 @@ export const PRESETS: { id: string; name: string; items: PresetItem[] }[] = [
     name: 'Dev desk',
     items: [
       { reg: TYPE_REG.github, anchor: 'tl', ox: 24, oy: 24 },
-      { reg: TYPE_REG.clock, anchor: 'tr', ox: 24, oy: 24, variant: 'analog', w: 160, h: 160 },
+      { reg: TYPE_REG.clock, anchor: 'tr', ox: 24, oy: 24, variant: 'stacked', w: 160, h: 160 },
       { reg: TYPE_REG.system, anchor: 'br', ox: 24, oy: 24 }
     ]
   }

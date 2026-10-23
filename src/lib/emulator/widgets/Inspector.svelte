@@ -68,7 +68,7 @@
       {#each variants as v (v)}<option value={v}>{v}</option>{/each}
     </select>
     {#if inst.type === 'clock' && !inst.sample}
-      <span class="hint">Digital and analog differ; the others show digital.</span>
+      <span class="hint">The preview draws the digital face for every variant.</span>
     {/if}
   </label>
 
