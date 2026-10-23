@@ -1,4 +1,7 @@
 <script lang="ts">
+  import Seo from '../../../lib/components/Seo.svelte';
+  import { breadcrumbs } from '../../../lib/seo';
+  import { urls } from '../../../lib/site';
   import { resolve } from '$app/paths';
   import Badges from '../../../lib/components/Badges.svelte';
   import CopyButton from '../../../lib/components/CopyButton.svelte';
@@ -72,10 +75,26 @@
         : 'none';
 </script>
 
-<svelte:head>
-  <title>{w.name} - Omarchy Widgets</title>
-  <meta name="description" content={w.summary} />
-</svelte:head>
+<Seo
+  title={w.name}
+  description={w.summary}
+  path={`/widgets/${encodeURIComponent(w.id)}/`}
+  type="article"
+  nodes={[
+    {
+      '@type': 'SoftwareSourceCode',
+      name: w.name,
+      description: w.summary,
+      url: urls.site(`/widgets/${encodeURIComponent(w.id)}/`),
+      ...(repo ? { codeRepository: repo } : {})
+    },
+    breadcrumbs([
+      { name: 'Omarchy Widgets', url: urls.site('/') },
+      { name: 'Widgets', url: urls.site('/widgets/') },
+      { name: w.name, url: urls.site(`/widgets/${encodeURIComponent(w.id)}/`) }
+    ])
+  ]}
+/>
 
 <div class="site-frame page">
   <header class="head">
