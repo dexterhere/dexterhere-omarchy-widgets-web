@@ -9,7 +9,9 @@ Report only what you ran or saw. If you could not run a check, mark it "not run"
 
 ## Ground truth
 
-Exists today: `owd`, the vault, `ow status`, `ow vault ...`, the `system` provider. Planned and not available: `ow check`, preview rendering, the desktop canvas, Widget Center, the QML kit, other providers. The schema is DRAFT v0. Where a check depends on a planned feature, do the manual equivalent below and label it "manual".
+Exists today: `owd`, the vault, `ow status`, `ow vault ...`, the `system` provider, and the registry build in the website repository (`bun run registry`) which validates `manifest.json`, `widget.json` and, for spec widgets, `layout.json`. Planned and not available: `ow check`, `ow new`, `ow publish --listing`, desktop rendering, the QML kit, other providers. The schemas are DRAFT v0. Where a check depends on a planned feature, do the manual equivalent below and label it "manual". The gate scripts in `scripts/gate/` (code widget policy) exist but CI does not run them: say "manual" for those too.
+
+Inputs you need: the widget folder and, if available, a checkout of the website repository. If you have no checkout, mark the registry validation "not run" and say why. Never invent a command.
 
 ## Safe setup
 
@@ -27,12 +29,16 @@ Use a fake secret such as `FAKE-SECRET-12345` for every leak test. Never use a r
 
 ## 1. Static checks
 
-- JSON syntax: `python3 -m json.tool widget.json > /dev/null` and the same for `manifest.json`.
+- JSON syntax: `python3 -m json.tool widget.json > /dev/null` and the same for `manifest.json` and `layout.json`.
 - `omarchy plugin validate .` if Omarchy is installed.
-- Schema: validate `widget.json` against the schema in the code repository `spec/` folder once published; until then compare field by field to the example in the Package reference docs page. Mark it "manual".
-- Ids equal in `manifest.json`, `widget.json` and the listing.
+- Registry validation (this is the real check for a spec widget). Use either the `check-local.ts` helper shown on the "Check and preview" docs page, or, with the commit pushed and a listing file added to a scratch copy of the website repository, `bun run registry -- --skip-reachability`. Pass means the widget is printed in the list and not in `excluded`. Copy the output into the report. Plain `bun run registry` will show `pending maintainer approval` for a new listing: that is expected and says nothing about the files.
+- The website schema files (`registry/schema/widget.schema.json`) are the draft; there is no `spec/` folder in the code repository.
+- manifest.json has `id`, `name`, `version`, `description`, `license`. widget.json has all 12 required keys (schemaVersion, id, tier, category, surfaces, sizeClasses, variants, providers, capabilities, interactiveRegions, settings, compat).
+- layout.json uses only node types stack, row, grid, text, badge, value, bar, ring, sparkline, list, icon, spacer, divider; binds are `{ "topic", "field" }`; colours are accent, foreground, secondary or muted; every bind is declared in `providers` and has `sampleData`.
+- Ids equal in `manifest.json`, `widget.json` and the listing; the id starts with `io.github.<owner>.` where owner is the repository owner.
 - `qmllint qml/*.qml` if available.
 - `ow check`: planned. Do not run or claim it.
+- Code widgets only (manual, not enforced in CI): spawn limited to date, uname, uptime, free, df, sensors, nproc; files only in the widget's own plugin directory; QML imports only QtQuick*, QtQml*, Quickshell, Quickshell.Widgets; no Process, fetch, XMLHttpRequest, WebSocket, eval or Hyprland.dispatch without the matching declared capability; at most 300 files and only allowed extensions; no secrets in the tree.
 
 ```bash
 grep -rnE '#[0-9a-fA-F]{3,8}\b|Qt\.rgba' qml widget.json   # colour literals: expect none
@@ -151,3 +157,5 @@ Each check not run and why (planned feature, missing tool).
 ```
 
 Findings of severity high (secret leak, undeclared access, crash, blank widget on error) block release. Tell the user plainly.
+
+Definition of done: test-report.md exists, the registry validator output is pasted in it (or marked not run with the reason), and every check you skipped is listed under Not run. When the report is done, hand over to the omarchy-widget-submit skill.

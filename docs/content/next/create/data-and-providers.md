@@ -25,6 +25,21 @@ Battery, media, AI usage, GitHub, Docker, Gmail, calendar and tasks providers ar
 
 </Callout>
 
+## Two lists that do not agree yet
+
+There are two separate descriptions of providers, and they disagree today.
+
+- **The daemon** (`owd`) serves what is in the table above: `system.cpu` with `usage_pct`, `system.memory` with `total_mib`, `used_mib`, `used_pct`, and `system.load` with `load1`, `load5`, `load15`.
+- **The listing catalog** `registry/providers.json` in the website repository describes what the project plans to offer, in classes (`local-system`, `personal`, `host-control`, `private-content`; the gate also knows `public`). It lists `system.time` (`hm`, `hms`, `date`, `tz`), `system.cpu` (`load`, `usage_pct`), `system.memory` (`used`, `total`, `used_pct`), `system.temp` (`celsius`), `battery.status`, `github.prs`, `docker.containers`, `ai-usage.sessions` and `tasks.list`. It does not list `system.load`, and it lists many fields the daemon does not serve.
+
+What this means for you:
+
+- The registry build (`bun run registry`) does not check your topics against either list. It only checks that your layout binds match your own `providers` entries and `sampleData`.
+- The catalog check (`scripts/gate/check-providers.ts`) is not run in CI yet. A reviewer applies it by hand: a topic or field that is not in `registry/providers.json` is a review problem, and a widget that uses the daemon's `system.load` would fail it.
+- To be safe on both sides today, use only fields that appear in both lists: `system.cpu` `usage_pct` and `system.memory` `used_pct`. The example in [Your first widget](/docs/next/create/your-first-widget-end-to-end/) does exactly that.
+- A widget that uses a catalog-only topic such as `battery.status` can be listed with status `planned`. It cannot run until the daemon serves it.
+- Only maintainers change the catalog (`registry/providers.json` is a guarded path).
+
 Output is trimmed to the topic's declared fields. A topic accepts only the request parameters it declares, and anything else is rejected.
 
 ## Grants

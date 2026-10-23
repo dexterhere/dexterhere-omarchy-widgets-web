@@ -1,54 +1,51 @@
 ---
 title: Contribute checklist
-description: Every step for a first-time contributor, from fork to merged listing - what you do, what CI checks, what a maintainer reviews, and how updates work.
+description: A tick-box list for listing a widget, from your repository to a published page. Each item links to the page with the detail.
 ---
 
 <script>import Callout from '$lib/docs/Callout.svelte';</script>
 
-Listing a widget means adding one small JSON file to the registry by pull request. This page walks through it in order. The details of each field are in [Submit a widget](/docs/next/publish/submit-a-widget/).
+Use this as a checklist. The explanations, the diagram and the error table are in [Submit a widget](/docs/next/publish/submit-a-widget/).
 
 <Callout type="planned">
 
-`ow new`, `ow check` and `ow publish --listing` do not exist yet. Every step below is done by hand.
+`ow new`, `ow check` and `ow publish --listing` do not exist yet. Every step is done by hand.
 
 </Callout>
 
 ## Before you start
 
-- You have a GitHub account. Your widget id must be `io.github.<your-github-login>.<name>`, lowercase, and never under `omarchy.`.
-- Your widget lives in its own public repository on github.com, under that same account.
-- You read [Trust tiers](/docs/next/publish/trust-tiers/). You do not choose your tier.
+- [ ] You have a GitHub account. Your id will be `io.github.<your-login>.<name>`, lowercase, never under `omarchy.`.
+- [ ] Your widget is in its own public repository under that account.
+- [ ] You read [Trust tiers](/docs/next/publish/trust-tiers/). You do not choose your tier.
 
-## The checklist
+## 1. Widget repository
 
-### 1. Build the widget
-
-- [ ] One `manifest.json` at the repository root, and a `widget.json` next to it. No symlinks.
-- [ ] A `README.md` with install steps, removal steps, the data it reads and any helper programs it needs.
-- [ ] A `LICENSE` file.
+- [ ] `manifest.json` and `widget.json` at the root (spec widgets also `layout.json`). No symlinks.
+- [ ] `manifest.json` has `id`, `name`, `version`, `description` and `license`.
+- [ ] A `LICENSE` file that GitHub detects as MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, MPL-2.0, GPL-3.0, LGPL-3.0, AGPL-3.0, Unlicense or 0BSD, equal to the `license` field.
+- [ ] A `README.md` with install steps, removal steps and the data it reads.
 - [ ] The same id in `manifest.json` and `widget.json`.
-- [ ] No colour literals, and every network host, file path and program declared in `capabilities`.
-- [ ] `omarchy plugin validate <folder>` passes.
-- [ ] Screenshots in `preview/` on one light, one dark and one high-contrast theme.
-- [ ] No secrets, tokens or personal data anywhere, including screenshots.
+- [ ] Every network host, file and program is declared in `capabilities`.
+- [ ] No secrets, tokens or personal data, including screenshots.
 
-Not started yet? See [Your first widget, end to end](/docs/next/create/your-first-widget-end-to-end/).
+```bash
+omarchy plugin validate <folder>
+```
 
-### 2. Pin a commit
+Expected result: no errors. Not started? See [Your first widget, end to end](/docs/next/create/your-first-widget-end-to-end/).
 
-- [ ] Merge what you want listed into your repository's default branch.
-- [ ] Copy the full 40-character commit SHA.
+## 2. Pin a commit
+
+- [ ] The commit is merged into the default branch.
 
 ```bash
 git rev-parse HEAD
 ```
 
-The listing needs the full SHA, not a branch or tag. The commit must be on the default branch, or CI rejects it.
+Expected result: a 40-character hex SHA.
 
-### 3. Fork and branch the website repository
-
-- [ ] Fork the website repository on GitHub.
-- [ ] Create a branch from `develop` named `feat/list-<name>`.
+## 3. Fork the website repository
 
 ```bash
 git clone https://github.com/<you>/dexterhere-omarchy-widgets-web.git && cd dexterhere-omarchy-widgets-web
@@ -56,11 +53,10 @@ git remote add upstream https://github.com/dexterhere/dexterhere-omarchy-widgets
 git switch -c feat/list-my-widget upstream/develop
 ```
 
-The repository's `CONTRIBUTING.md` is the source of truth if these steps differ.
+## 4. Add the listing
 
-### 4. Add the listing
-
-- [ ] Create `registry/widgets/<id>.json`. The file name must equal the id.
+- [ ] File `registry/widgets/<id>.json`, named exactly as the id.
+- [ ] Fields: `id`, `repo`, `commit`, `categories`, `tags`, `summary`, `status`. No others, no tier.
 
 ```json
 {
@@ -74,54 +70,28 @@ The repository's `CONTRIBUTING.md` is the source of truth if these steps differ.
 }
 ```
 
-- [ ] Do not add a tier or review field. Any extra property fails validation.
-- [ ] Categories are one to three of: `system`, `time-calendar`, `productivity`, `dev-git`, `ai-agents`, `media`, `communication`, `network-containers`, `ambient-fun`, `utilities`.
-
-### 5. Check locally
+## 5. Check locally
 
 ```bash
 bun install --frozen-lockfile
-bun run registry
+bun run registry -- --strict
 ```
 
-Expected: the command finishes with no error. It fetches your two JSON files from GitHub at the pinned commit and validates them. Fix any message it prints and run it again.
+Expected result: no excluded line for your id, except `pending maintainer approval: no entry in registry/lock.json`, which is normal before approval. For other messages, see the [error table](/docs/next/publish/submit-a-widget/#common-errors).
 
-### 6. Open the pull request
+## 6. Pull request
 
-- [ ] Open it from your own account against `develop`.
-- [ ] One listing per pull request. Fill in the template checklist.
+- [ ] Open it from your own account against `develop`. One listing per pull request.
+- [ ] CI is green. Fix red CI and push to the same branch.
 
-The author check requires the pull request to come from the owner of `io.github.<owner>`, or from a maintainer. Other id prefixes need a maintainer to approve a namespace first.
+## 7. Wait
 
-### 7. Wait for CI
+- [ ] A maintainer reviews and merges. There is one maintainer and no promised time.
+- [ ] A maintainer adds your repository to `registry/lock.json`. Until then the listing is pending, even after merge.
+- [ ] After the next site build, your page appears. It shows `community` unless a review record exists for your exact commit.
 
-CI validates the listing and your `widget.json`, fetches your files at the pinned commit (no code is run), checks that the commit is on your default branch, and posts a summary of the access you declare. Red CI cannot be merged. Read the message, fix it and push to the same branch.
+## Later
 
-### 8. Review
-
-- Anyone may review a listing pull request.
-- A maintainer reads the pinned commit against the [review checklist](/docs/next/publish/review-checklist/) and may add a review record.
-- Reviews are slow while the project has one maintainer. Say in the pull request if you need something by a date.
-
-### 9. After merge
-
-The widget appears at the next site build. Check its page: tier, access list and preview.
-
-## Tiers in one minute
-
-| You see     | It means                                                               |
-| ----------- | ---------------------------------------------------------------------- |
-| `community` | Passed automated checks only. This is where every new listing starts.  |
-| `spec`      | A maintainer reviewed the pinned commit and confirmed it runs no code. |
-| `verified`  | A maintainer read the pinned commit and recorded the review.           |
-| `core`      | Maintained by the project.                                             |
-
-Ask for review in your pull request. Nobody can set a tier but maintainers.
-
-## Updating later
-
-Open a pull request that changes `commit` in your listing to the new SHA. A reviewed tier applies only to the reviewed commit, so a new commit starts again at `community` until someone reviews it. See [Updating a listing](/docs/next/publish/updating-a-listing/).
-
-## Taking it down
-
-Open an issue or a pull request asking for removal. A maintainer sets `status` to `removed`. If the problem is a vulnerability, report it privately first. See [Security](/docs/next/project/security/).
+- Update: change `commit` in a pull request. See [Updating a listing](/docs/next/publish/updating-a-listing/).
+- Remove: set `status` to `removed` or delete the file, by pull request.
+- Report a vulnerability privately. See [Security](/docs/next/project/security/).

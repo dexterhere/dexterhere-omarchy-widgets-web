@@ -183,6 +183,28 @@ describe('check-review-changes', () => {
   it('passes maintainers, case-insensitively', () => {
     expect(checkReviewChanges({ ...base, changed: review, author: 'DexterHere' }).ok).toBe(true);
   });
+  it('guards fixtures, the provider catalog, CSP config, deploy and the stats service', () => {
+    for (const f of [
+      'registry/fixtures/io.github.mallory.x/widget.json',
+      'registry/providers.json',
+      'vite.config.ts',
+      'deploy/Caddyfile',
+      'services/stats/wrangler.toml',
+      'static/theme-boot.js'
+    ])
+      expect(checkReviewChanges({ ...base, changed: [f], author: 'mallory' }).ok).toBe(false);
+  });
+  it('lets only a maintainer add a source:fixture listing, even in the author namespace', () => {
+    const id = 'io.github.mallory.x';
+    const l = {
+      path: `registry/widgets/${id}.json`,
+      deleted: false,
+      content: JSON.stringify({ id, source: 'fixture' })
+    };
+    const i = { ...base, changed: [l.path], listings: [l] };
+    expect(checkReviewChanges({ ...i, author: 'mallory' }).ok).toBe(false);
+    expect(checkReviewChanges({ ...i, author: 'dexterhere' }).ok).toBe(true);
+  });
 });
 
 describe('listing author binding', () => {

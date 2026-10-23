@@ -13,6 +13,12 @@ const GUARDED = [
   /^registry\/MAINTAINERS\.json$/,
   /^registry\/(lock|reserved|retired)\.json$/,
   /^registry\/schema\//,
+  /^registry\/fixtures\//,
+  /^registry\/providers\.json$/,
+  /^vite\.config\.ts$/,
+  /^deploy\//,
+  /^services\//,
+  /^static\/theme-boot\.js$/,
   /^scripts\//,
   /^\.github\//
 ];
@@ -60,8 +66,9 @@ export function checkReviewChanges(i: {
       let contentOwner: string | null = fileOwner;
       if (!l.deleted) {
         try {
-          const id = (JSON.parse(l.content ?? '') as { id?: unknown } | null)?.id;
-          contentOwner = ownerOf(id);
+          const j = JSON.parse(l.content ?? '') as { id?: unknown; source?: unknown } | null;
+          // source:"fixture" skips the lock, reachability and licence checks: maintainers only.
+          contentOwner = j?.source === 'fixture' ? null : ownerOf(j?.id);
         } catch {
           contentOwner = null;
         }

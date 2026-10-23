@@ -173,8 +173,7 @@
         a widget repository.
       </li>
       <li>
-        Rule: widget Markdown is rendered through a sanitizer, with no raw HTML and no remote images
-        unless the host is allow-listed. Links get <code>rel="noopener noreferrer"</code>.
+        Rule: nothing from a widget is rendered as Markdown or HTML. Listing text is plain text.
       </li>
       <li>Our end-to-end tests fail if a page makes a request to any host other than its own.</li>
     </ul>

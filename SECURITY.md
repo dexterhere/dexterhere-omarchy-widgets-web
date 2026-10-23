@@ -15,9 +15,9 @@ Vulnerabilities in the widget software itself (the daemon, the vault, the CLI or
 
 In scope:
 
-- **Build pipeline.** The registry build, the fetcher that reads listings and pinned commits, and the scripts in `scripts/` and `registry/scripts/`.
+- **Build pipeline.** The registry build, the fetcher that reads listings and pinned commits, and the scripts in `scripts/` and `scripts/gate/`.
 - **Registry fetcher.** Host allow-listing, redirects, size caps, timeouts, and any way a listing could make the build fetch something it should not.
-- **Content Security Policy and page security.** Ways to bypass the planned policy, to load a third-party script or request, or to get an inline script past the hash check.
+- **Content Security Policy and page security.** Ways to bypass the Content Security Policy, to load a third-party script or request, or to get an inline script past the hash check.
 - **XSS through listing content.** Any path where a listing, a widget README, a summary or a Markdown file renders as HTML or runs as script.
 - **Supply chain.** Dependencies, lockfile integrity, GitHub Actions workflows, and anything that lets a change reach `main` without review.
 - **Privacy claims.** Any cookie, analytics call, tracker or third-party request that this site makes without saying so.
@@ -33,13 +33,14 @@ Out of scope:
 ## Honest limits
 
 - The site is static. There is no server, account or database to attack, and that is intended. It also means we cannot revoke a published page instantly; a fix or a takedown reaches visitors at the next build.
-- The planned policy is enforced only on pages that carry it. Browsers that ignore it, and the build's own tools, are outside what the policy can protect.
+- The Content Security Policy is enforced only on pages that carry it (a meta tag). Browsers that ignore it, and the build's own tools, are outside what the policy can protect.
+- The PR guard (`scripts/check-review-changes.ts`) only protects the base branch when GitHub branch protection and code-owner review are enabled. This cannot be verified from the repository.
 - Review is done by a few volunteers reading a pinned commit. It is not a security audit, and a reviewed commit can still contain bugs.
 
 ## Rules the site must keep
 
 - No cookies, no analytics, no third-party scripts, fonts or requests. Fonts are self-hosted.
 - Listings are data. Nothing from a listing or a widget repository is ever executed by the build or the site.
-- Markdown from widgets is sanitized: no raw HTML, no remote images unless the host is allow-listed, and links get `rel="noopener noreferrer"`.
+- Nothing from a widget is rendered as Markdown or HTML. Listing text is plain text.
 - Secrets never appear in the repository, a listing, a fixture, a build log or a preview. Do not paste tokens into an issue or a pull request.
 - Nothing in the site or documentation calls a code widget "sandboxed", "secure" or "safe".
