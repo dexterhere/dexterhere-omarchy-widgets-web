@@ -188,7 +188,7 @@
     padding-block: 20px 12px;
   }
   .hero h1 {
-    max-width: 24ch;
+    max-width: none;
   }
   .cols {
     display: grid;
