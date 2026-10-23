@@ -198,7 +198,7 @@
         </div>
         <p class="tiny muted">
           Sample data, not your machine. The preview follows the page theme: press <kbd>T</kbd> to change
-          it. Only the clock has more than one rendering; other variants show the same one.
+          it. The preview above is one fixed illustration; the layout drawn below follows the variant you pick.
         </p>
       {:else}
         <p class="tiny muted">

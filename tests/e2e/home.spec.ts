@@ -5,7 +5,7 @@ import { gzipSync } from 'node:zlib';
 test.use({ colorScheme: 'dark' });
 
 const PORT = process.env.PW_PORT ?? 4173;
-const DOCKER = 'io.github.dexterhere.concept-docker';
+const DOCKER = 'io.github.dexterhere.docker';
 const emu = (p: Page) => p.locator('[data-home-stage] [data-emulator]');
 const cards = (p: Page) => p.locator('[data-widget-card]');
 const pager = (p: Page) => p.getByRole('navigation', { name: 'Widget pages' });

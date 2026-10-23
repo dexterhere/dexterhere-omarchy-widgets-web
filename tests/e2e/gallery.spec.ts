@@ -501,14 +501,14 @@ test('an unknown id is a 404', async ({ page }) => {
 });
 
 test('similar widgets link to another detail page', async ({ page }) => {
-  await page.goto('/widgets/io.github.dexterhere.concept-battery/');
+  await page.goto('/widgets/io.github.dexterhere.battery/');
   await page.getByRole('link', { name: /^System monitor/ }).click();
-  await expect(page).toHaveURL(/concept-system-monitor\/$/);
+  await expect(page).toHaveURL(/system-monitor\/$/);
   await expect(page.getByRole('heading', { level: 1 })).toContainText('System monitor');
 });
 
 test('the size control stays inside the widget type limits', async ({ page }) => {
-  await page.goto('/widgets/io.github.dexterhere.concept-clock/');
+  await page.goto('/widgets/io.github.dexterhere.clock/');
   const width = page.getByLabel(/^Width /);
   const height = page.getByLabel(/^Height /);
   await expect(page.locator('.pstage [data-preview-mount]')).toBeVisible();
@@ -535,14 +535,16 @@ test('the size control stays inside the widget type limits', async ({ page }) =>
   await height.fill('288');
   await check(200, 360, 160, 288);
   // variants switch the rendering
-  await page.getByRole('button', { name: 'analog', exact: true }).click();
-  await expect(page.locator('.pstage svg').first()).toBeVisible();
+  const drawn = page.getByTestId('layout-render');
+  const before = await drawn.innerText();
+  await page.getByRole('button', { name: 'stacked', exact: true }).click();
+  await expect(drawn).not.toHaveText(before);
 });
 
 test('a widget without a dedicated component gets a generic sample preview and no controls', async ({
   page
 }) => {
-  await page.goto('/widgets/io.github.dexterhere.concept-docker/');
+  await page.goto('/widgets/io.github.dexterhere.docker/');
   const pv = page.getByTestId('detail-preview');
   await expect(pv.locator('[data-preview-mount]')).toBeVisible();
   await expect(pv).not.toContainText('No preview yet');
@@ -550,7 +552,7 @@ test('a widget without a dedicated component gets a generic sample preview and n
 });
 
 test('the detail header shows the preview, author and like control', async ({ page }) => {
-  await page.goto('/widgets/io.github.dexterhere.concept-clock/');
+  await page.goto('/widgets/io.github.dexterhere.clock/');
   await expect(page.getByTestId('detail-preview').locator('[data-preview-mount]')).toBeVisible();
   const head = page.locator('header.head');
   await expect(head.getByRole('link', { name: /^@/ })).toBeVisible();
@@ -596,7 +598,7 @@ test('the layout advertises the feed', async ({ page }) => {
 });
 
 for (const id of ['tokyo-night', 'white', 'catppuccin-latte']) {
-  for (const path of ['/widgets/', '/widgets/io.github.dexterhere.concept-system-monitor/']) {
+  for (const path of ['/widgets/', '/widgets/io.github.dexterhere.system-monitor/']) {
     test(`axe: no serious or critical violations on ${path} in ${id}`, async ({ browser }) => {
       const ctx = await browser.newContext({ reducedMotion: 'reduce' });
       const page = await ctx.newPage();
@@ -657,7 +659,7 @@ test('no horizontal overflow at 360px (gallery, list, detail)', async ({ page })
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
     expect(await overflow(), w.id).toBe(false);
   }
-  await page.goto('/widgets/io.github.dexterhere.concept-github-activity/');
+  await page.goto('/widgets/io.github.dexterhere.github-activity/');
   await page.getByRole('button', { name: 'large', exact: true }).click();
   await page.getByLabel(/^Width /).fill('440');
   expect(await overflow()).toBe(false);
@@ -671,7 +673,7 @@ test('makes no request to any origin other than localhost', async ({ page }) => 
   });
   await gallery(page);
   await search(page).fill('clock');
-  await page.goto('/widgets/io.github.dexterhere.concept-clock/');
+  await page.goto('/widgets/io.github.dexterhere.clock/');
   await expect(page.locator('[data-preview-mount]').first()).toBeVisible();
   expect([...hosts]).toEqual([`localhost:${PORT}`]);
 });
@@ -689,7 +691,7 @@ test('a spec widget detail page draws its pinned layout.json from sample data on
     )
       outside.push(u);
   });
-  await page.goto('/widgets/io.github.dexterhere.concept-docker/');
+  await page.goto('/widgets/io.github.dexterhere.docker/');
   const box = page.getByTestId('layout-render');
   await expect(
     page.getByRole('heading', { level: 2, name: 'Drawn from layout.json' })

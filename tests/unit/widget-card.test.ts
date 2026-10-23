@@ -21,9 +21,9 @@ describe('fitScale', () => {
 
 describe('previewModel', () => {
   it('uses a dedicated component for known ids', () => {
-    const m = previewModel({ id: 'io.github.dexterhere.concept-clock', variants: ['analog'] });
+    const m = previewModel({ id: 'io.github.dexterhere.clock', variants: ['stacked'] });
     expect(m.kind).toBe('clock');
-    expect(m.variant).toBe('analog');
+    expect(m.variant).toBe('stacked');
   });
   it('falls back to the generic renderer for everything else, hostile ids included', () => {
     for (const id of ['io.github.x.docker', '__proto__', 'constructor', '<img onerror=1>']) {
@@ -34,7 +34,7 @@ describe('previewModel', () => {
   });
   it('honours an explicit size', () => {
     const m = previewModel(
-      { id: 'io.github.dexterhere.concept-system-monitor', variants: [] },
+      { id: 'io.github.dexterhere.system-monitor', variants: [] },
       { w: 400, h: 300 }
     );
     expect([m.w, m.h, m.sizeClass]).toEqual([400, 300, 'large']);

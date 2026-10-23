@@ -4,8 +4,8 @@ import { expect, test, type Page } from '@playwright/test';
 // the real stats provider talks to services/stats with an in-memory store.
 const PORT = Number(process.env.PW_PORT ?? 4173);
 const API = `http://127.0.0.1:${PORT + 3}`;
-const CLOCK = 'io.github.dexterhere.concept-clock';
-const BATTERY = 'io.github.dexterhere.concept-battery';
+const CLOCK = 'io.github.dexterhere.clock';
+const BATTERY = 'io.github.dexterhere.battery';
 
 async function stats(page: Page, id: string) {
   const r = await page.request.get(`${API}/stats?ids=${id}`, {
