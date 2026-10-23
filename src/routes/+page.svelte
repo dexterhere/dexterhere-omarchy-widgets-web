@@ -9,7 +9,7 @@
   import LazyEmulator from '../lib/emulator/LazyEmulator.svelte';
   import Seo from '../lib/components/Seo.svelte';
   import { categoryLabels, getAll, type Category } from '../lib/registry';
-  import { docsUrl, sitePath, urls } from '../lib/site';
+  import { docsUrl, sitePath } from '../lib/site';
   import { theme } from '../lib/themes/store.svelte';
 
   const stage = new HomeStage();
@@ -54,45 +54,17 @@
     }
   ];
 
-  // Ideas, not listed widgets: three prompts per registry category.
-  const ideas: Record<Category, string[]> = {
-    system: ['CPU and memory', 'Disk space left', 'Battery and power draw'],
-    'time-calendar': ['World clocks', 'Your next meeting', 'Countdown to a deadline'],
-    productivity: ['Focus timer', 'Habit streak', "Today's tasks"],
-    'dev-git': ['Build monitor', 'Open pull requests', 'Deploy status'],
-    'ai-agents': ['Agent run status', 'Token spend', 'Prompt queue'],
-    media: ['Music deck', 'Podcast progress', 'Recording controls'],
-    communication: ['Unread mail', 'Chat mentions', 'Missed calls'],
-    'network-containers': ['Server status board', 'Container health', 'Ping and bandwidth'],
-    'ambient-fun': ['Weather strip', 'Moon phase', 'Pixel pet'],
-    utilities: ['Quick notes', 'Clipboard history', 'Unit converter']
-  };
+  let { data } = $props();
   const categories = Object.keys(categoryLabels) as Category[];
-
-  const description =
-    'Any widget you can think of, on your Omarchy desktop: build monitors, focus timers, server boards and more. Spec widgets are JSON, code widgets are QML.';
-  const nodes = [
-    { '@type': 'WebSite', name: 'Omarchy Widgets', url: urls.site('/'), description },
-    {
-      '@type': 'SoftwareApplication',
-      name: 'Omarchy Widgets',
-      description:
-        'Open-source toolkit and registry for desktop widgets on Omarchy. Pre-release: the daemon, vault and CLI exist; the desktop canvas and Widget Center are in development.',
-      url: urls.site('/'),
-      applicationCategory: 'DesktopEnhancementApplication',
-      operatingSystem: 'Linux (Omarchy)',
-      license: 'https://opensource.org/licenses/MIT'
-    },
-    {
-      '@type': 'SoftwareSourceCode',
-      name: 'Omarchy Widgets',
-      codeRepository: 'https://github.com/dexterhere/omarchy-widgets',
-      license: 'https://opensource.org/licenses/MIT'
-    }
-  ];
 </script>
 
-<Seo bare title="Omarchy Widgets: any widget you can think of" {description} path="/" {nodes} />
+<Seo
+  bare
+  title="Omarchy Widgets: any widget you can think of"
+  description={data.description}
+  path="/"
+  nodes={data.nodes}
+/>
 
 <div class="site-frame home">
   <section class="hero" aria-labelledby="hero-h">
@@ -105,11 +77,6 @@
           your next meeting, a music deck, a server status board, a weather strip, a habit streak.
           Every widget takes its colours from your theme and sees only the data you allow.
         </p>
-        <p class="small text-2">
-          Spec widgets are JSON with no code and are built from blocks. Code widgets (QML) can do
-          whatever Quickshell can do, and they run as you, so people should read them before
-          installing.
-        </p>
         <div class="row">
           <a class="btn-primary" href={sitePath('/widgets')}>Browse widgets</a>
           <a class="btn" href={docsUrl('/docs')}>Read the docs</a>
@@ -119,6 +86,11 @@
         <p class="status small text-2">
           Pre-release: the daemon, vault and CLI work today; the desktop canvas, Widget Center and
           the widgets are in development.
+        </p>
+        <p class="small text-2">
+          Spec widgets are JSON with no code and are built from blocks. Code widgets (QML) can do
+          whatever Quickshell can do, and they run as you, so people should read them before
+          installing.
         </p>
         <p class="small text-2">
           Press <kbd>T</kbd> to change the theme: every widget follows it.
@@ -159,7 +131,7 @@
         <li>
           <h3>{categoryLabels[c]}</h3>
           <ul class="small text-2">
-            {#each ideas[c] as idea (idea)}<li>{idea}</li>{/each}
+            {#each data.ideas[c] as idea (idea)}<li>{idea}</li>{/each}
           </ul>
           <a href={`${sitePath('/widgets')}?cat=${c}`}
             >Listed in {categoryLabels[c]}<span class="sr-only"> widgets</span></a
@@ -198,7 +170,7 @@
         <h3>Share it by pull request</h3>
         <p class="text-2">
           Listing a widget is a pull request, pinned to a commit.
-          <a href={sitePath('/contribute')}>Read how to contribute it</a>.
+          <a href={sitePath('/contribute')}>Publishing guide</a>.
         </p>
       </li>
     </ol>
