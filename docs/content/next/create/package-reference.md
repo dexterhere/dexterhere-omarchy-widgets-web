@@ -78,7 +78,7 @@ All 12 keys below are required, and no keys other than these and the optional `s
 }
 ```
 
-This illustrates the shape. `github.prs` is a planned topic that the daemon does not serve yet.
+This illustrates the shape. `github.prs` is a planned topic that the daemon does not serve yet. The GitHub widget declares no network of its own (`network`, `files` and `spawn` stay empty): the daemon, not the widget, would contact `api.github.com`, with the token held in the vault.
 
 | Field                | Meaning                                                                                                                                                                                                                                                                                   |
 | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

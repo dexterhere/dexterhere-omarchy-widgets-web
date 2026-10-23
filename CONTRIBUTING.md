@@ -153,7 +153,7 @@ A spec widget has no code, so `layout.json` is how it draws. Version 0 shape: `{
                                                                       the site
 ```
 
-`registry/lock.json` maps each listing id to the numeric GitHub ids of the repository and its owner, which a maintainer records when approving. Renaming your repository is fine. Deleting and re-creating it, or transferring it, excludes the listing until a maintainer approves again. Today `lock.json` is empty, so only the maintainers' `concept-*` fixtures are published and no third-party widget is live yet.
+`registry/lock.json` maps each listing id to the numeric GitHub ids of the repository and its owner, which a maintainer records when approving. Renaming your repository is fine. Deleting and re-creating it, or transferring it, excludes the listing until a maintainer approves again. Today `lock.json` is empty, so only the maintainers' fixture listings are published and no third-party widget is live yet.
 
 ### Who can change a listing
 

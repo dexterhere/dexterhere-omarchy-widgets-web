@@ -12,7 +12,7 @@ registry/
   lock.json                    maintainer approvals: { "<id>": { "repoId": n, "ownerId": n } }
   namespaces.json, MAINTAINERS.json, reserved.json, retired.json   maintainer managed
   providers.json               provider/topic catalog the listing checks use
-  fixtures/<id>/               manifest.json + widget.json + layout.json for CONCEPT entries
+  fixtures/<id>/               manifest.json + widget.json + layout.json for fixture entries (copies of the real widget files; tests/unit/fixtures.gates.test.ts runs the policy gates over each)
   dist/                        generated: index.json and widgets/<id>.json
 ```
 
@@ -70,7 +70,7 @@ Fixture entries keep `manifest.json`, `widget.json` and `layout.json` under `fix
 
 One bad listing never fails the build. It is left out of `dist/widgets/`, recorded in `index.excluded` with a reason, and printed at the end. A listing with no `lock.json` entry is excluded with `pending maintainer approval: no entry in registry/lock.json` and `pending: true`.
 
-`--strict` (used on pull requests) exits non-zero for every exclusion except pending ones. A green pull request therefore does not mean the listing is published. Merge is not publish: a maintainer must record the numeric `repoId` and `ownerId` in `lock.json`. A renamed repo keeps its ids; a deleted and re-created or transferred one does not, and is excluded until re-approved. `lock.json` is `{}` today, so only the `concept-*` fixtures are published.
+`--strict` (used on pull requests) exits non-zero for every exclusion except pending ones. A green pull request therefore does not mean the listing is published. Merge is not publish: a maintainer must record the numeric `repoId` and `ownerId` in `lock.json`. A renamed repo keeps its ids; a deleted and re-created or transferred one does not, and is excluded until re-approved. `lock.json` is `{}` today, so only the fixture listings (`source: "fixture"`, the seven real widgets) are published.
 
 The site loads `dist/index.json` at build time through `src/lib/registry/index.ts` (`import.meta.glob`, so SvelteKit prerendering sees it). `bun run build` runs the registry build first.
 
