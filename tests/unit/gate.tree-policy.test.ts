@@ -2,7 +2,8 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { checkPolicy, canonPath } from '../../scripts/gate/check-policy';
 import { checkProviders, type Catalog } from '../../scripts/gate/check-providers';
-import { scanTree } from '../../scripts/gate/scan-tree';
+import { scanSvg, scanTree } from '../../scripts/gate/scan-tree';
+import { safe } from '../../scripts/gate/safe';
 
 const f = (path: string, over = {}) => ({ path, mode: '100644', type: 'blob', size: 10, ...over });
 const ok = [f('manifest.json'), f('widget.json'), f('layout.json'), f('LICENSE'), f('README.md')];
@@ -27,6 +28,33 @@ describe('scanTree', () => {
     expect(scanTree([f('README.md')]).join()).toMatch(/manifest\.json: missing/);
     const many = Array.from({ length: 301 }, (_, i) => f(`f${i}.json`));
     expect(scanTree([...ok, ...many]).join()).toMatch(/more than/);
+  });
+  it.each([
+    ['missing size', { size: undefined }],
+    ['string size', { size: '5' as unknown as number }],
+    ['NaN size', { size: NaN }],
+    ['negative size', { size: -1 }]
+  ])('a blob with %s is an error', (_n, over) =>
+    expect(scanTree([...ok, f('a.qml', over)]).join()).toMatch(/size/)
+  );
+  it.each([
+    '.git/config',
+    '.GIT/config',
+    'sub/.Git/hooks/x.json',
+    '.github/workflows/x.json',
+    '.env',
+    'a/.hidden.json',
+    'a/.gitignore',
+    'a\\b.json',
+    '.git./x.json',
+    'a/b .json/'
+  ])('rejects path %s', (p) => expect(scanTree([...ok, f(p)]).length).toBeGreaterThan(0));
+  it('allows a root .gitignore only', () => expect(scanTree([...ok, f('.gitignore')])).toEqual([]));
+  it('never echoes workflow-command text or control characters', () => {
+    const msgs = scanTree([...ok, f('::error::pwned/x.exe'), f('a\nb::set-output.sh')]).join('\n');
+    expect(msgs).not.toContain('::');
+    expect(msgs).not.toMatch(/[\x00-\x09\x0b-\x1f]/);
+    expect(msgs.split('\n').every((l) => l.length < 200)).toBe(true);
   });
   it('allows qmldir and LICENSE without extensions', () => {
     expect(scanTree([...ok, f('qmldir')])).toEqual([]);
@@ -185,4 +213,33 @@ describe('checkProviders against registry/providers.json', () => {
       ).problems.join()
     ).toMatch(/not in the catalog/);
   });
+});
+
+describe('safe()', () => {
+  it('neutralises control characters and workflow commands, and truncates', () => {
+    expect(safe('::error::x\n::warning::y')).not.toContain('::');
+    expect(safe('a\r\nb\u202ec')).toBe('a??b?c');
+    expect(safe('x'.repeat(500)).length).toBeLessThanOrEqual(121);
+  });
+});
+
+describe('scanSvg', () => {
+  it('accepts a plain svg', () =>
+    expect(
+      scanSvg('a.svg', '<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0"/></svg>')
+    ).toEqual([]));
+  it.each([
+    ['script', '<svg><script>alert(1)</script></svg>'],
+    ['SCRIPT', '<svg><SCRIPT >x</SCRIPT></svg>'],
+    ['onload', '<svg onload="x()"></svg>'],
+    ['onclick spaced', '<svg><rect ONCLICK = "x()"/></svg>'],
+    ['javascript:', '<svg><a href="javascript:x()"/></svg>'],
+    ['foreignObject', '<svg><foreignObject/></svg>'],
+    ['external href', '<svg><image href="https://evil/x.png"/></svg>'],
+    ['external xlink', '<svg><use xlink:href="//evil/x.svg#a"/></svg>'],
+    ['css url', '<svg><style>a{fill:url(https://evil/x)}</style></svg>'],
+    ['entity', '<!DOCTYPE svg [<!ENTITY a "b">]><svg/>']
+  ])('rejects %s', (_n, s) => expect(scanSvg('a.svg', s).length).toBeGreaterThan(0));
+  it('allows internal references', () =>
+    expect(scanSvg('a.svg', '<svg><use href="#a"/><use xlink:href="#b"/></svg>')).toEqual([]));
 });
