@@ -62,7 +62,7 @@ const B = mk({
   category: 'time-calendar',
   categories: ['time-calendar', 'ambient-fun'],
   status: 'planned',
-  tier: 'community',
+  tier: 'concept',
   tags: ['time'],
   surfaces: ['desktop', 'bar'],
   providers: [{ name: 'clock', topics: ['clock.now'], fields: [] }],

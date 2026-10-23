@@ -222,7 +222,8 @@
             Status: {statusLabels[w.status]}. You can try a preview in the web emulator below. There
             is no install command yet, because the desktop layer and <code>ow install</code> are not
             built. {setupNote[w.id] ?? ''}
-            {#if setupNote[w.id]}<a href={docsUrl('/docs/next/project/security/')}>Security docs</a
+            {#if setupNote[w.id]}<!-- eslint-disable-next-line svelte/no-navigation-without-resolve --><a
+                href={docsUrl('/docs/next/project/security/')}>Security docs</a
               >.{/if}
           </p>
           {#if repo}
