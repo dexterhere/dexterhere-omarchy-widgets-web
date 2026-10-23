@@ -105,3 +105,7 @@ Provider catalog: `providers.json` lists every topic and field a listing may dec
 4. CI validates it. A maintainer reads the pinned commit, merges, and approves the listing in `lock.json`. Only then is it published. To update, open a PR changing `commit`; reviewers compare capabilities by hand. The owner may also set `status: "removed"` or delete the file.
 
 Planned tooling (not available yet): `ow new`, `ow check` and `ow publish --listing`. Until they exist, do these steps by hand.
+
+## Approve a listing (maintainers)
+
+After reading the pinned commit, run `GITHUB_TOKEN=... bun run lock:add <id>` to see the numeric repo and owner id GitHub reports for the listing and to confirm the commit is on the default branch. Add `--write` to put the entry in `registry/lock.json`, then commit it in a maintainer pull request. The tool refuses to run in CI and refuses to overwrite an entry whose ids changed (a deleted and re-created or transferred repo needs a human look).
