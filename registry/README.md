@@ -95,7 +95,7 @@ On pull requests: `check`, `lint`, `themes:check`, `bun run registry -- --strict
 
 `scripts/gate/` (`scan-tree`, `check-policy`, `lint-code`, `scan-secrets`, `check-providers`) implement a listing policy: file and size limits, extension allow-list, capability rules, QML lint, secret scan, provider catalog check. `buildOne` runs them for every non-fixture listing after the existing checks and before the widget is accepted: fetch the tree at the pinned commit (fail closed if truncated), `scanTree`, `checkPolicy`, `checkProviders`, then fetch every code and small text file from raw.githubusercontent.com at that commit (same rules as `fetchJson`, at most 4 at a time, 300 files, 1 MB each, 8 MB total), lint `.qml`/`.js`/`.mjs`, allow-list `.svg`, and scan all text for secrets. Any error excludes that listing (reason: count plus the first three findings, never a secret); warnings go in the widget's `warnings` field. Pending listings (no `lock.json` entry) are skipped before any fetch. To run them on a candidate without a lock entry: `bun scripts/build-registry.ts --local --only <id>` (writes nothing; refuses to run when `GITHUB_ACTIONS=true` or with `--strict`). They are listing policy, not isolation.
 
-Provider catalog caveat: `providers.json` lists system.time, system.cpu, system.memory, system.temp, battery.status, github.prs, docker.containers, ai-usage.sessions and tasks.list, while the daemon serves only `system.cpu`, `system.memory` and `system.load`. The two disagree.
+Provider catalog: `providers.json` lists every topic and field a listing may declare, including planned ones (system.time, system.temp, battery.status, github.prs, docker.containers, ai-usage.sessions, tasks.list). Each provider's `serving` list names the `topic.field` pairs the shipped daemon serves today (system only: `system.cpu`, `system.memory`, `system.load`). A widget can be listed with any catalog field, but it only runs on the daemon today if it sticks to `serving` pairs.
 
 ## Add a listing
 
@@ -105,3 +105,7 @@ Provider catalog caveat: `providers.json` lists system.time, system.cpu, system.
 4. CI validates it. A maintainer reads the pinned commit, merges, and approves the listing in `lock.json`. Only then is it published. To update, open a PR changing `commit`; reviewers compare capabilities by hand. The owner may also set `status: "removed"` or delete the file.
 
 Planned tooling (not available yet): `ow new`, `ow check` and `ow publish --listing`. Until they exist, do these steps by hand.
+
+## Approve a listing (maintainers)
+
+After reading the pinned commit, run the gates on the candidate first: `GITHUB_TOKEN=... bun run registry -- --local --only <id>` (the build skips a listing until it has a lock entry, so CI cannot run them earlier; `--local` is refused in CI and with `--strict`). Then run `GITHUB_TOKEN=... bun run lock:add <id>` to see the numeric repo and owner id GitHub reports for the listing and to confirm the commit is on the default branch. Add `--write` to put the entry in `registry/lock.json`, then commit it in a maintainer pull request. The tool refuses to run in CI and refuses to overwrite an entry whose ids changed (a deleted and re-created or transferred repo needs a human look).

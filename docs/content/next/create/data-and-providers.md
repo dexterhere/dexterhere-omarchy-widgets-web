@@ -25,18 +25,18 @@ Battery, media, AI usage, GitHub, Docker, Gmail, calendar and tasks providers ar
 
 </Callout>
 
-## Two lists that do not agree yet
+## The daemon and the listing catalog
 
-There are two separate descriptions of providers, and they disagree today.
+Two files describe providers, and they are meant to differ: one is what is built, the other is what listings may use.
 
 - **The daemon** (`owd`) serves what is in the table above: `system.cpu` with `usage_pct`, `system.memory` with `total_mib`, `used_mib`, `used_pct`, and `system.load` with `load1`, `load5`, `load15`.
-- **The listing catalog** `registry/providers.json` in the website repository describes what the project plans to offer, in classes (`local-system`, `personal`, `host-control`, `private-content`; the gate also knows `public`). It lists `system.time` (`hm`, `hms`, `date`, `tz`), `system.cpu` (`load`, `usage_pct`), `system.memory` (`used`, `total`, `used_pct`), `system.temp` (`celsius`), `battery.status`, `github.prs`, `docker.containers`, `ai-usage.sessions` and `tasks.list`. It does not list `system.load`, and it lists many fields the daemon does not serve.
+- **The listing catalog** `registry/providers.json` in the website repository lists every topic and field a listing may declare, in classes (`local-system`, `personal`, `host-control`, `private-content`; the gate also knows `public`). It includes planned topics such as `system.time`, `system.temp`, `battery.status`, `github.prs`, `docker.containers`, `ai-usage.sessions` and `tasks.list`. Each provider has a `serving` list: the `topic.field` pairs the shipped daemon serves today. Today only `system` has one, and it matches the daemon exactly (a unit test keeps the list consistent with the catalog).
 
 What this means for you:
 
 - The registry build (`bun run registry`) does not check your topics against either list. It only checks that your layout binds match your own `providers` entries and `sampleData`.
-- The registry build runs the catalog check (`scripts/gate/check-providers.ts`) for approved listings: a provider, topic or field that is not in `registry/providers.json` excludes the listing, and a widget that uses the daemon's `system.load` would fail it.
-- To be safe on both sides today, use only fields that appear in both lists: `system.cpu` `usage_pct` and `system.memory` `used_pct`. The example in [Your first widget](/docs/next/create/your-first-widget-end-to-end/) does exactly that.
+- The registry build runs the catalog check (`scripts/gate/check-providers.ts`) for approved listings: a provider, topic or field that is not in `registry/providers.json` excludes the listing.
+- To run on the real daemon today, use only `serving` pairs, for example `system.cpu` `usage_pct`, `system.memory` `used_pct` or `system.load` `load1`. The example in [Your first widget](/docs/next/create/your-first-widget-end-to-end/) does exactly that.
 - A widget that uses a catalog-only topic such as `battery.status` can be listed with status `planned`. It cannot run until the daemon serves it.
 - Only maintainers change the catalog (`registry/providers.json` is a guarded path).
 

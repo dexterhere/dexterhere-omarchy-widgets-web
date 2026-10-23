@@ -22,7 +22,8 @@
     "themes:gen": "bun scripts/gen-themes.ts",
     "themes:check": "bun scripts/contrast-check.ts",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "lock:add": "bun scripts/lock-add.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
