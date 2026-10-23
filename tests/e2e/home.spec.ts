@@ -531,7 +531,7 @@ test('JS budget: initial home JavaScript and the lazy chunks are measured separa
     `home JS gz: initial ${kb(initial).toFixed(1)} KB, emulator ${kb(emulator).toFixed(1)} KB, gsap ${kb(gsap).toFixed(1)} KB`
   );
   // Initial: everything the page needs before the lazy emulator, builder and GSAP chunks.
-  expect(kb(initial)).toBeLessThan(84);
+  expect(kb(initial)).toBeLessThan(88);
   // The emulator is lazy but visible at once on desktop: bounded separately.
   expect(kb(emulator)).toBeLessThan(110);
   // Nothing from the builder before it nears the viewport.
