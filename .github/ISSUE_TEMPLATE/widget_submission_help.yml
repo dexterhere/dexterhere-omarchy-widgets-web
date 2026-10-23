@@ -17,6 +17,7 @@ body:
         - '5. Publish the widget repository'
         - '6. Submit the listing (pull request)'
         - '7. Review and merge'
+        - 'My listing merged but is not on the site (pending approval)'
         - 'Not sure'
     validations: { required: true }
   - type: dropdown
