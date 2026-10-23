@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Seo from '../../lib/components/Seo.svelte';
   import { onMount } from 'svelte';
   import { replaceState } from '$app/navigation';
   import { watchStuck } from '../../lib/sticky';
@@ -129,13 +130,11 @@
   }
 </script>
 
-<svelte:head>
-  <title>Widgets - Omarchy Widgets</title>
-  <meta
-    name="description"
-    content="Browse desktop widgets listed in the Omarchy Widgets registry, with status, review tier and what each can access."
-  />
-</svelte:head>
+<Seo
+  title="Widget gallery"
+  description="Browse desktop widgets listed in the Omarchy Widgets registry, with status, review tier and what each can access. Filter by category or search."
+  path="/widgets/"
+/>
 
 <svelte:window onkeydown={onWindowKey} />
 

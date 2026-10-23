@@ -339,9 +339,13 @@ describe('no raw HTML rendering', () => {
     });
   const files = walk(join(__dirname, '../../src')).filter((f) => /\.(svelte|ts|js|md)$/.test(f));
   it('scans the source tree', () => expect(files.length).toBeGreaterThan(20));
-  it('has no {@html anywhere in src/', () => {
+  it('has no {@html anywhere in src/, except the JSON-LD script in Seo.svelte', () => {
     const marker = '{@' + 'html';
-    const hits = files.filter((f) => readFileSync(f, 'utf8').includes(marker));
+    // Seo.svelte emits one <script type="application/ld+json"> built by jsonLd(), which escapes
+    // < > & (see seo.test.ts: a `</script>` in a title cannot break out).
+    const hits = files
+      .filter((f) => !f.endsWith('/components/Seo.svelte'))
+      .filter((f) => readFileSync(f, 'utf8').includes(marker));
     expect(hits).toEqual([]);
   });
 });

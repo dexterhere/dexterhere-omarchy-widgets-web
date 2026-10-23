@@ -1,6 +1,12 @@
-<svelte:head>
-  <title>Security - Omarchy Widgets</title>
-</svelte:head>
+<script lang="ts">
+  import Seo from '../../lib/components/Seo.svelte';
+</script>
+
+<Seo
+  title="Security"
+  description="How Omarchy Widgets protects your data, who it defends against, what is still open, and how to report a vulnerability. Code widgets are not sandboxed."
+  path="/security/"
+/>
 
 <div class="site-frame stack page">
   <h1>Security</h1>

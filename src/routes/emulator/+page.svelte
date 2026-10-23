@@ -1,15 +1,14 @@
 <script lang="ts">
+  import Seo from '../../lib/components/Seo.svelte';
   import Emulator from '../../lib/emulator/widgets/WidgetEmulator.svelte';
   import { theme } from '../../lib/themes/store.svelte';
 </script>
 
-<svelte:head>
-  <title>Emulated desktop - Omarchy Widgets</title>
-  <meta
-    name="description"
-    content="An emulated Omarchy desktop in your browser: top bar, tiled windows, workspaces and the real default keybindings. Sample data only."
-  />
-</svelte:head>
+<Seo
+  title="Emulated desktop"
+  description="An emulated Omarchy desktop in your browser: top bar, tiled windows, workspaces and the real default keybindings. Sample data only."
+  path="/emulator/"
+/>
 
 <div class="wrap">
   <h1>Emulated desktop</h1>
