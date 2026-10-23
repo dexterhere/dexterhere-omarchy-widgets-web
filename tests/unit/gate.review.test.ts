@@ -125,7 +125,9 @@ describe('F3: normaliser and rule gaps', () => {
   });
   it('still accepts ordinary division and index access', () => {
     clean('Item { property real x: (a + b) / 2; property real y: w / 3 / 4 }');
-    clean('Item { function f(a, i) { return a[i] + a[i - 1] + a[0] + a[a.length - 1] } }');
+    clean(
+      'Item { function f(a) { var s = 0; for (var i = 1; i < 3; i++) s += a[i] + a[i - 1]; return s + a[0] + a[a.length - 1] } }'
+    );
     clean('Item { function f(s) { return s.replace(/a/g, "b") + 1 } }');
   });
 });
@@ -293,5 +295,56 @@ describe('reviewer re-run: remaining gaps', () => {
     const r = scanTree([{ path: p, mode: '100644', type: 'blob', size: 1 }]);
     expect(performance.now() - t).toBeLessThan(500);
     expect(r.join()).toMatch(/too long/);
+  });
+});
+
+describe('review round 3: ambiguous slash, bracket indexes, command forms', () => {
+  it.each([
+    ['paren then regex hiding a quote', 'x = (1) /"/; Qt.include("x"); var s = "\\""'],
+    ['unbalanced paren variant', 'a = b) /"/; Qt.include("x"); var s = "\\""'],
+    ['brace then regex', 'if (a) { } /"/.test(b); Qt.include("x"); var s = "\\""'],
+    ['brace then slash, no quote', 'var f = function(){ } / 2'],
+    ['paren, division by a string pair', 'var y = (a) / 2 + "/" + Qt.include("x")']
+  ])('refuses %s', (_n, src) => expect(errs(src).map((f) => f.rule)).toContain('unparseable-js'));
+  it('plain division stays fine', () => {
+    clean(
+      'Item { property real a: (b + c) / 2; property real d: (b) / c; property real e: arr[1] / 3 }'
+    );
+    clean('Item { property real a: (b + c) / (d - 1) }');
+  });
+  it.each([
+    ['variable holding a built name', 'var k = "constr" + "uctor"; var o = a[k]'],
+    ['plain variable index', 'function f(a, k) { return a[k] }'],
+    ['loop var assigned later', 'for (var i = 0; i < 3; i++) {} var j = 0; a[j]']
+  ])('rejects index: %s', (_n, src) => caught(src));
+  it.each([
+    'function f(a) { for (var i = 0; i < a.length; i++) s += a[i] + a[i + 1] + a[i - 1] }',
+    'function f(a) { for (let i = 0; i < 3; ++i) s += a[i] }',
+    'function f(a) { return a[a.length - 1] + a[0] + a[2] }',
+    'Item { Text { text: names[index]; textFormat: Text.PlainText } }',
+    'Item { Text { text: names[model.index]; textFormat: Text.PlainText } }'
+  ])('accepts index: %s', (src) => clean(src));
+  it('names the workaround for a bad index', () =>
+    expect(errs('a[k]')[0].message).toMatch(/for-loop index|dot access/));
+  const d = { spawn: true, spawnList: ['date'], network: false, networkList: [] as string[] };
+  it.each([
+    ['variable', 'Process { command: cmdVar }'],
+    ['array with variable first', 'Process { command: [cmdVar, "x"] }'],
+    ['spread', 'Process { command: [...parts] }'],
+    ['function call', 'Process { command: build() }'],
+    ['template literal', 'Process { command: [`date`] }'],
+    ['runtime assignment from var', 'function f() { proc.command = c }'],
+    ['array built elsewhere', 'Process { command: a.concat(b) }'],
+    ['execDetached variable', 'Quickshell.execDetached(args)'],
+    ['execDetached template', 'Quickshell.execDetached([`sh`])']
+  ])('command must be an inline literal array: %s', (_n, src) => {
+    const r = errs(src, d);
+    expect(r.map((f) => f.rule)).toContain('spawn-command');
+    expect(r.map((f) => f.message).join()).toMatch(/inline array/);
+  });
+  it('accepts the declared inline forms', () => {
+    expect(errs('Process { command: ["date", "+%H"] }', d)).toEqual([]);
+    expect(errs('Quickshell.execDetached(["date"])', d)).toEqual([]);
+    expect(errs('Quickshell.execDetached({ command: ["date"] })', d)).toEqual([]);
   });
 });

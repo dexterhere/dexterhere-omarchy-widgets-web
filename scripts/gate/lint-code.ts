@@ -229,7 +229,7 @@ export interface Declared {
 const isNL = (c: string) => c === '\n' || c === '\r' || c === '\u2028' || c === '\u2029';
 const NL_RE = /\r\n|[\n\r\u2028\u2029]/g;
 const WORD = /[\w$]/;
-const REGEX_AFTER = new Set('(,=:[!&|?{};+-*%<>~^'.split(''));
+const REGEX_AFTER = new Set('(,=:[!&|?{;+-*%<>~^'.split(''));
 const REGEX_KW = new Set([
   'return',
   'typeof',
@@ -333,11 +333,16 @@ export function normalise(src: string): {
       const tok = WORD.test(word[0] ?? '') ? word : prev;
       let regex = tok === '' || REGEX_AFTER.has(tok) || REGEX_KW.has(tok);
       if (!regex && (tok === ')' || tok === '}')) {
-        // Division or a regex statement? If a quote follows on the line it could desync the string
-        // tracking, so refuse rather than guess.
-        let j = i + 1;
-        while (j < n && !isNL(src[j]) && src[j] !== '"' && src[j] !== "'" && src[j] !== '`') j++;
-        if (j < n && !isNL(src[j]) && unparseable === null) unparseable = i;
+        // Division or a regex statement? Only `)` followed by whitespace, a digit, an identifier or
+        // `(` is clearly division, and even then a quote between this `/` and a later `/` on the
+        // line could mean a regex that hides the quote. Anything else: refuse rather than guess.
+        let amb = tok === '}' || !/[\s\w$(]/.test(src[i + 1] ?? '');
+        if (!amb) {
+          let j = i + 1;
+          while (j < n && !isNL(src[j]) && src[j] !== '/') j++;
+          if (j < n && src[j] === '/' && /["'`]/.test(src.slice(i + 1, j))) amb = true;
+        }
+        if (amb && unparseable === null) unparseable = i;
       }
       if (regex) {
         let j = i + 1;
@@ -486,6 +491,13 @@ export function lintFile(file: string, text: string, declared: Declared): Findin
     }
   }
 
+  // Identifiers allowed as an index: numeric for-loop counters declared in this file, and the delegate `index`.
+  const counters = new Set(['index']);
+  for (const m of scan.matchAll(
+    /\bfor\s{0,20}\(\s{0,20}(?:var|let|const)\s{1,20}([\w$]{1,40})\s{0,20}=\s{0,20}\d/g
+  ))
+    counters.add(m[1]);
+
   // Bracket access: string keys, computed keys and anything after `)` or `]` are errors.
   for (let i = scan.indexOf('['); i >= 0; i = scan.indexOf('[', i + 1)) {
     let p = i - 1;
@@ -502,15 +514,18 @@ export function lintFile(file: string, text: string, declared: Declared): Findin
     const e = body.indexOf(']');
     const idx = e < 0 || body.slice(0, e).includes('[') ? null : body.slice(0, e);
     const num = idx !== null && /^\s*\d+\s*$/.test(idx);
+    const ident = '(?:' + [...counters].join('|') + ')';
     const simple =
       idx !== null &&
-      /^\s*(?:\d+|[\w$]+(?:\s*[-+]\s*\d+)?|[\w$]+\.length(?:\s*-\s*\d+)?)\s*$/.test(idx);
+      new RegExp(
+        `^\\s*(?:\\d+|${ident}(?:\\s*[-+]\\s*\\d+)?|[\\w$.]+\\.length(?:\\s*-\\s*\\d+)?|(?:model|modelData)\\.index)\\s*$`
+      ).test(idx);
     if (!(pc === ')' || pc === ']' ? num : simple))
       add(
         'dynamic-member',
         i,
         'string-keyed, computed or chained member access',
-        'use dot access, or index with a number or a plain variable'
+        'use dot access, or index with a number, a for-loop index (for (var i = 0; ...)), index or model.index'
       );
   }
 
@@ -726,18 +741,22 @@ export function lintFile(file: string, text: string, declared: Declared): Findin
 
   // Declared capabilities against the code.
   if (declared.spawnList) {
-    const cmd =
-      /\bcommand\s*[:=]\s*\[\s*(?:(["'])([^"'\n\r]{0,200})\1)?|\bexecDetached\s*\(\s*\[\s*(?:(["'])([^"'\n\r]{0,200})\3)?/g;
-    for (const m of noc.matchAll(cmd)) {
-      const prog = m[2] ?? m[4];
-      if (prog === undefined)
+    const how =
+      'command must be an inline array whose first element is a string literal listed in capabilities.spawn';
+    const first = /^\s*\[\s*(["'])([^"'\n\r]{0,200})\1/;
+    // Every `command` and every execDetached call: `command: [...]`, `proc.command = ...`, `command: x`.
+    for (const m of noc.matchAll(/\bcommand\b\s*[:=](?!=)|\bexecDetached\s*\(/g)) {
+      const rest = noc.slice(m.index! + m[0].length, m.index! + m[0].length + MAX_LINE + 2);
+      if (m[0].startsWith('execDetached') && /^\s*\{/.test(rest)) continue; // its `command:` is checked on its own
+      const f = first.exec(rest);
+      if (!f)
         add(
           'spawn-command',
           m.index!,
-          'the program must be a string literal',
-          'start the array with the program name in quotes'
+          how,
+          'write the program name in quotes as the first array element'
         );
-      else if (!declared.spawnList.includes(prog))
+      else if (!declared.spawnList.includes(f[2]))
         add(
           'spawn-command',
           m.index!,
