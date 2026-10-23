@@ -1,17 +1,20 @@
 <script lang="ts">
   import Seo from '../../lib/components/Seo.svelte';
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { replaceState } from '$app/navigation';
   import { watchStuck } from '../../lib/sticky';
   import SearchBar from '../../lib/components/gallery/SearchBar.svelte';
   import WidgetCard from '../../lib/components/gallery/WidgetCard.svelte';
   import DateField from '../../lib/components/ui/DateField.svelte';
+  import Pager from '../../lib/components/ui/Pager.svelte';
   import Select from '../../lib/components/ui/Select.svelte';
+  import { PAGE_SIZES, showing, slicePage } from '../../lib/paging';
   import { formatRange, userLocale } from '../../lib/date';
   import { categoryLabels, statusLabels, tierLabels } from '../../lib/registry';
   import {
     DEFAULT_QUERY,
     categoryCounts,
+    clampQueryPage,
     clearFilters,
     facets,
     filterWidgets,
@@ -60,6 +63,26 @@
 
   const options = $derived(facets(data.widgets));
   const results = $derived(filterWidgets(data.widgets, query));
+  const shown = $derived(slicePage(results, query.page, query.per));
+  const perOptions = PAGE_SIZES.map((n) => ({ value: String(n), label: String(n) }));
+  let top = $state<HTMLElement>();
+
+  // Any change to a filter, the search, the sort or the page size starts again at page 1; a
+  // page past the end (a stale link, a narrower filter) is pulled back to the last page.
+  let lastKey: string | undefined;
+  $effect(() => {
+    if (!ready) return;
+    const key = serializeQuery({ ...query, page: 1, view: 'cards' });
+    untrack(() => {
+      if (lastKey !== undefined && key !== lastKey) query.page = 1;
+      lastKey = key;
+    });
+  });
+  $effect(() => {
+    if (!ready) return;
+    const p = clampQueryPage(query, results.length).page;
+    if (p !== query.page) query.page = p;
+  });
   const counts = $derived(categoryCounts(data.widgets, query));
   const tokens = $derived(tokenize(query.q));
   const active = $derived(hasFilters(query));
@@ -291,12 +314,20 @@
 
   <div class="bar">
     <p class="small count" role="status" aria-live="polite" data-testid="count">
-      {#if active}{results.length} of {data.widgets.length} widgets{:else}{data.widgets.length} widgets{/if}
+      {#if results.length}{showing(results.length, query.page, query.per)}{:else}No widgets{/if}
     </p>
     <div class="row actions">
       {#if active}
         <button class="btn small" type="button" onclick={reset}>Clear all</button>
       {/if}
+      <Select
+        id="per"
+        label="Per page"
+        inline
+        value={String(query.per)}
+        onchange={(v) => (query.per = Number(v))}
+        options={perOptions}
+      />
       <Select
         id="sort"
         label="Sort"
@@ -362,8 +393,8 @@
       <button class="btn-primary small" type="button" onclick={reset}>Clear all</button>
     </div>
   {:else if query.view === 'list'}
-    <ul class="list" data-testid="list">
-      {#each results as w (w.id)}
+    <ul class="list" data-testid="list" bind:this={top}>
+      {#each shown as w (w.id)}
         <li>
           <WidgetCard
             widget={w}
@@ -376,8 +407,8 @@
       {/each}
     </ul>
   {:else}
-    <ul class="cards" data-testid="cards">
-      {#each results as w (w.id)}
+    <ul class="cards" data-testid="cards" bind:this={top}>
+      {#each shown as w (w.id)}
         <li>
           <WidgetCard
             widget={w}
@@ -389,6 +420,17 @@
         </li>
       {/each}
     </ul>
+  {/if}
+
+  {#if results.length > query.per}
+    <Pager
+      bind:page={query.page}
+      total={results.length}
+      per={query.per}
+      anchor={top}
+      label="Widget pages"
+      summary={false}
+    />
   {/if}
 </div>
 
@@ -451,7 +493,6 @@
     overflow-x: auto;
     padding: 4px;
     margin: -4px;
-    scrollbar-width: thin;
   }
   .tools.stuck .chip {
     flex: none;

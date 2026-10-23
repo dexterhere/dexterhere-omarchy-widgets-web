@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { clampPage, pageCount, pageRange, pageWindow, slicePage } from '../../src/lib/paging';
+import {
+  clampPage,
+  pageCount,
+  pageRange,
+  pageWindow,
+  showing,
+  slicePage
+} from '../../src/lib/paging';
 
 describe('paging', () => {
   it('counts pages, at least one', () => {
@@ -21,6 +28,11 @@ describe('paging', () => {
     expect(pageRange(7, 2, 6)).toEqual({ from: 7, to: 7 });
     expect(pageRange(7, 1, 6)).toEqual({ from: 1, to: 6 });
     expect(pageRange(0, 1, 6)).toEqual({ from: 0, to: 0 });
+  });
+  it('words the range', () => {
+    expect(showing(7, 1, 6)).toBe('Showing 1-6 of 7');
+    expect(showing(7, 2, 6)).toBe('Showing 7 of 7');
+    expect(showing(0, 1, 6)).toBe('Showing 0 of 0');
   });
   it('windows with ellipses and a constant length', () => {
     expect(pageWindow(1, 3)).toEqual([1, 2, 3]);

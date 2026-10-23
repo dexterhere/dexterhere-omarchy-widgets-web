@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import { clampPage, pageCount, pageRange, pageWindow } from '../../paging';
+  import { clampPage, pageCount, pageWindow, showing } from '../../paging';
 
   // Page buttons for a list. Controlled: the parent owns `page` (1-based). A move keeps focus on
   // the pager (a button that just became disabled hands it to the current page) and scrolls only
@@ -27,7 +27,6 @@
 
   const pages = $derived(pageCount(total, per));
   const cur = $derived(clampPage(page, pages));
-  const range = $derived(pageRange(total, cur, per));
   let nav = $state<HTMLElement>();
 
   async function go(p: number) {
@@ -49,7 +48,7 @@
 <div class="pager">
   {#if summary}
     <p class="small text-2" role="status" aria-live="polite" data-pager-summary>
-      Showing {range.from}-{range.to} of {total}
+      {showing(total, cur, per)}
     </p>
   {/if}
   {#if pages > 1}

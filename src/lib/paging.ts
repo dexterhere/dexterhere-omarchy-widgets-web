@@ -32,3 +32,9 @@ export function pageWindow(page: number, pages: number): (number | null)[] {
   if (p >= pages - 3) return [1, null, pages - 4, pages - 3, pages - 2, pages - 1, pages];
   return [1, null, p - 1, p, p + 1, null, pages];
 }
+
+/** "Showing 1-6 of 7", or "Showing 7 of 7" for a single item. */
+export function showing(total: number, page: number, per: number) {
+  const { from, to } = pageRange(total, page, per);
+  return `Showing ${from === to ? from : `${from}-${to}`} of ${total}`;
+}
