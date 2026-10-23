@@ -50,7 +50,7 @@ Each of these was stopped mid-work. The last commit on each branch is a `wip(...
 
 ## 3. Website repo: not started
 
-- **Home page rebuild (P9)**: wider layout; sections: hero (kept), the emulator (with Expand), a widgets carousel (GSAP) showing views, likes and `@author`, "Make your own" as an interactive spec-widget builder; the "How your data stays private" section removed. Needs the emulator widgets PR, stats, and categories (done).
+- **Home page rebuild (P9)**: wider layout; sections: hero (kept), the emulator (with Expand), a paged widget grid (6 a page) showing views, likes and `@author`, "Make your own" as an interactive spec-widget builder; the "How your data stays private" section removed. Needs the emulator widgets PR, stats, and categories (done).
 - **Interactive "Make your own" builder** (plan section 5).
 - **Security review of the emulator's input handling and the final accessibility and bundle-size pass (P10).**
 - **Docs updates** for the new pages (picker, footer, emulator), and a docs snapshot when the code repo tags a release.
