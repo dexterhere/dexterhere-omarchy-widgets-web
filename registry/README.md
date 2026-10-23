@@ -89,11 +89,11 @@ The site loads `dist/index.json` at build time through `src/lib/registry/index.t
 
 ## What CI checks
 
-On pull requests: `check`, `lint`, `themes:check`, `bun run registry -- --strict`, `scripts/check-review-changes.ts`, the unit tests (`tests/unit/registry.*.test.ts`: schema, SSRF cases, size and timeout limits, id mismatch, duplicates, removed, stale reviews, sanitization, access summary, layout), `build`, `build:hosts`, Playwright and `bun audit`. CI does not post an access summary, build a PR preview, diff capabilities, check links, enforce a size budget or run the gate scripts.
+On pull requests: `check`, `lint`, `themes:check`, `bun run registry -- --strict`, `scripts/check-review-changes.ts`, the unit tests (`tests/unit/registry.*.test.ts`: schema, SSRF cases, size and timeout limits, id mismatch, duplicates, removed, stale reviews, sanitization, access summary, layout), `build`, `build:hosts`, Playwright and `bun audit`. CI does not post an access summary, build a PR preview, diff capabilities, check links or enforce a size budget. The gate scripts run inside the registry build for approved listings.
 
-### Gate scripts (not wired in yet)
+### Gate scripts
 
-`scripts/gate/` (`scan-tree`, `check-policy`, `lint-code`, `scan-secrets`, `check-providers`) implement a listing policy: file and size limits, extension allow-list, capability rules, QML lint, secret scan, provider catalog check. They are unit-tested but run neither in CI nor in the build. Reviewers apply them by hand. They are listing policy, not isolation.
+`scripts/gate/` (`scan-tree`, `check-policy`, `lint-code`, `scan-secrets`, `check-providers`) implement a listing policy: file and size limits, extension allow-list, capability rules, QML lint, secret scan, provider catalog check. `buildOne` runs them for every non-fixture listing after the existing checks and before the widget is accepted: fetch the tree at the pinned commit (fail closed if truncated), `scanTree`, `checkPolicy`, `checkProviders`, then fetch every code and small text file from raw.githubusercontent.com at that commit (same rules as `fetchJson`, at most 4 at a time, 300 files, 1 MB each, 8 MB total), lint `.qml`/`.js`/`.mjs`, allow-list `.svg`, and scan all text for secrets. Any error excludes that listing (reason: count plus the first three findings, never a secret); warnings go in the widget's `warnings` field. Pending listings (no `lock.json` entry) are skipped before any fetch. To run them on a candidate without a lock entry: `bun scripts/build-registry.ts --local --only <id>` (writes nothing; refuses to run when `GITHUB_ACTIONS=true` or with `--strict`). They are listing policy, not isolation.
 
 Provider catalog caveat: `providers.json` lists system.time, system.cpu, system.memory, system.temp, battery.status, github.prs, docker.containers, ai-usage.sessions and tasks.list, while the daemon serves only `system.cpu`, `system.memory` and `system.load`. The two disagree.
 

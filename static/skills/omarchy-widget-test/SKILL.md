@@ -38,7 +38,7 @@ Use a fake secret such as `FAKE-SECRET-12345` for every leak test. Never use a r
 - Ids equal in `manifest.json`, `widget.json` and the listing; the id starts with `io.github.<owner>.` where owner is the repository owner.
 - `qmllint qml/*.qml` if available.
 - `ow check`: planned. Do not run or claim it.
-- Code widgets only (manual, not enforced in CI): spawn limited to date, uname, uptime, free, df, sensors, nproc; files only in the widget's own plugin directory; QML imports only QtQuick*, QtQml*, Quickshell, Quickshell.Widgets; no Process, fetch, XMLHttpRequest, WebSocket, eval or Hyprland.dispatch without the matching declared capability; at most 300 files and only allowed extensions; no secrets in the tree.
+- Code widgets only (enforced by the registry build for approved listings; also check by hand): spawn limited to date, uname, uptime, free, df, sensors, nproc; files only in the widget's own plugin directory; QML imports only QtQuick (plus Layouts, Controls, Shapes, Window, Templates), QtQml, Quickshell, Quickshell.Widgets; `source` values plain local string literals; `textFormat: Text.PlainText` on every Text; no Process, fetch, XMLHttpRequest, WebSocket, eval or Hyprland.dispatch without the matching declared capability; at most 300 files and only allowed extensions; no secrets in the tree.
 
 ```bash
 grep -rnE '#[0-9a-fA-F]{3,8}\b|Qt\.rgba' qml widget.json   # colour literals: expect none

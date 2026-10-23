@@ -25,7 +25,7 @@ description: Validate your package with bun run registry, check what the registr
 ## What `ow check` will do
 
 - Validate `manifest.json` and `widget.json`.
-- Lint for colour literals, process spawns without a declaration, network hosts you did not declare and file access outside declared paths. This lint is advisory. It cannot prove a code widget is well behaved.
+- Lint for colour literals, process spawns without a declaration, network hosts you did not declare and file access outside declared paths. In the registry build the same lint is an error, not advice, for approved listings. It still cannot prove a code widget is well behaved.
 - Cross-check the declared capabilities against the code.
 - Render previews on three themes: one light, one dark and one high contrast.
 
@@ -83,7 +83,7 @@ Run it with `cd /tmp && WEB=<website checkout> bun check-local.ts <widget folder
 
 What `bun run registry` checks: the listing schema, that the commit is on the default branch, that the owner matches the `io.github.<owner>` namespace, the detected license against the allow-list and your `manifest.json`, `manifest.json` and `widget.json` against their schemas, the same id in all three places, `category` against the listing, and for spec widgets the whole `layout.json`, every binding and every sample value.
 
-What it does not check: code widgets' QML, capabilities, spawn, files, provider catalog membership, secrets in the repository, previews or contrast. The scripts in `scripts/gate/` implement these, but they are not run by CI or the build, so a reviewer checks them by hand. The rules are in [Code widgets](/docs/next/create/code-widgets/).
+For an approved listing (an entry in `registry/lock.json`) the build also runs the gates in `scripts/gate/` on the pinned commit: file tree, capability policy, provider catalog, code lint for QML and JavaScript, SVG allow-list and a secret scan of every text file. Any error excludes the listing, with a reason that never contains the matched secret. A listing that is not approved yet is not fetched. To try the gates on your own candidate first, a maintainer can run `bun scripts/build-registry.ts --local --only <id>` (it writes nothing and refuses to run in CI). The gates do not check previews or contrast, and they cannot prove a widget is well behaved. The rules are in [Code widgets](/docs/next/create/code-widgets/).
 
 Also do by hand:
 

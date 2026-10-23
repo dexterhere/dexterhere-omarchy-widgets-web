@@ -50,7 +50,7 @@ A QML code widget is not sandboxed. It runs as you and can read anything you can
 - Develop against a throwaway directory, not your real configuration or keyring. Use `ow --config-dir` with a short absolute path in `/tmp`.
 - Do not let the assistant edit your real `shell.json` or Hyprland bindings, or run `omarchy plugin add` on code you have not read.
 - Read the `capabilities` and `providers` in `widget.json`. Each host, path, program, topic and field must have a reason you accept.
-- Search the result for colour literals, hard-coded hosts, process spawns and anything that writes to disk. The code-widget gate scripts check these, but CI does not run them yet, so a human must.
+- Search the result for colour literals, hard-coded hosts, process spawns and anything that writes to disk. The registry build runs the code-widget gates on approved listings and excludes a listing on any error, but text rules cannot see everything, so a human still reads the code.
 - Run `git status` before every commit and make sure the assistant has not touched files outside your widget repository.
 - Ask for the minimum grants. Deny by default is the daemon's behaviour; a widget that asks for everything is a warning sign.
 - Do not let the assistant describe a code widget as safe or sandboxed. The wording in the README must be honest.

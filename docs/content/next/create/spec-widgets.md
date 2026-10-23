@@ -92,7 +92,7 @@ A provider that fails pushes the last good data marked stale with its timestamp.
 
 ## Capabilities
 
-A spec widget declares no network, no files and no programs. Anything else makes it a code widget. This is policy. The registry build does not reject a spec widget that declares capabilities today, but the review rules do.
+A spec widget declares no network, no files and no programs. Anything else makes it a code widget. The registry build enforces this for approved listings: a spec widget that declares any, or that contains `.qml`, `.js` or `.mjs` files, is excluded. Its repository is also scanned for hidden paths, disallowed file types, SVG content and secrets.
 
 ## Check it
 
