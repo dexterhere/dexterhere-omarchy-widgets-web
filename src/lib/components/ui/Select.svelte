@@ -153,7 +153,8 @@
         onkeydown={onListKey}
       >
         {#each options as o, i (o.value)}
-          <!-- svelte-ignore a11y_click_events_have_key_events -- keys are handled on the listbox (activedescendant) -->
+          <!-- keys are handled on the listbox (activedescendant) -->
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
           <li
             id={oid(i)}
             role="option"

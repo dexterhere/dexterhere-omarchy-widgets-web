@@ -546,6 +546,11 @@
     gap: 12px;
     padding-top: 12px;
   }
+  @media (min-width: 560px) {
+    .selects > :global(:first-child) {
+      grid-column: span 2; /* room for a formatted range */
+    }
+  }
   .bar {
     display: flex;
     flex-wrap: wrap;

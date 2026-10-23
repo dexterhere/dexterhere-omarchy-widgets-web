@@ -45,7 +45,7 @@
   } = $props();
 
   const today = todayIso();
-  // svelte-ignore state_referenced_locally -- seeds the focused day once
+  // svelte-ignore state_referenced_locally
   let focus = $state(clampIso(from || to || today, min, max));
   let root = $state<HTMLElement>();
 
