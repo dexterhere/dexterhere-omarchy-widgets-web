@@ -485,8 +485,8 @@ for (const w of widgets) {
       'https://github.com/dexterhere/dexterhere-omarchy-widgets-web/issues/new?template=bug_report.yml'
     );
     if (!w.installable) {
-      await expect(page.getByText('Not installable yet.')).toBeVisible();
-      await expect(page.getByText('Planned, not installable yet')).toBeVisible();
+      await expect(page.getByText('Not installable yet.', { exact: true })).toBeVisible();
+      await expect(page.getByText(/Planned, not installable yet/).first()).toBeVisible();
       await expect(page.getByText('are not built')).toBeVisible();
       await expect(page.getByText('omarchy plugin add')).toHaveCount(0);
       await expect(page.getByRole('link', { name: /Read the code on GitHub/ })).toHaveAttribute(
