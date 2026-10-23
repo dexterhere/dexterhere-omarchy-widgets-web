@@ -26,7 +26,14 @@ export const widgetJson = (over: Record<string, unknown> = {}) => ({
   capabilities: { network: ['api.github.com'], files: [], spawn: [] },
   interactiveRegions: [],
   settings: [{ key: 'interval', type: 'int', label: 'Interval', default: 60, min: 30, max: 600 }],
+  sampleData: { 'github.prs': { open: 3 } },
   compat: { omarchy: '>=4.0', widgetsKit: '^1' },
+  ...over
+});
+
+export const layoutJson = (over: Record<string, unknown> = {}) => ({
+  schemaVersion: 0,
+  root: { type: 'value', bind: { topic: 'github.prs', field: 'open' }, color: 'accent' },
   ...over
 });
 
@@ -52,6 +59,7 @@ export function mockFetch(files: Record<string, unknown>) {
   const fn: FetchFn = async (url) => {
     calls.push(url);
     const name = url.split('/').pop()!;
+    if (name === 'layout.json' && !(name in files)) return json(layoutJson());
     return name in files ? json(files[name]) : new Response('nope', { status: 404 });
   };
   return { fn, calls };

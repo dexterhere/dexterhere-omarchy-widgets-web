@@ -56,5 +56,13 @@
   "compat": {
     "omarchy": ">=4.0",
     "widgetsKit": "^1"
+  },
+  "sampleData": {
+    "system.time": {
+      "hm": "10:09",
+      "hms": "10:09:42",
+      "date": "Mon 19 Oct",
+      "tz": "NPT"
+    }
   }
 }

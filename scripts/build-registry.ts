@@ -7,6 +7,14 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
+import {
+  bindsOf,
+  checkBindings,
+  validateLayout,
+  validateSampleData,
+  LAYOUT_LIMITS
+} from '../src/lib/registry/layout';
+import type { Layout, SampleData } from '../src/lib/registry/layout';
 import type {
   Access,
   RegistryIndex,
@@ -433,7 +441,7 @@ export interface BuildInput {
   skipReachability?: boolean;
   /** GitHub token, sent only to api.github.com. */
   token?: string;
-  readFixture: (id: string, name: 'manifest' | 'widget') => unknown;
+  readFixture: (id: string, name: 'manifest' | 'widget' | 'layout') => unknown;
   readReview: (id: string) => unknown;
   /** registry/namespaces.json: namespace prefix -> allowed GitHub repo owners. */
   namespaces?: unknown;
@@ -450,11 +458,13 @@ export interface BuildResult {
 async function buildOne(l: Listing, inp: BuildInput): Promise<RegistryWidget> {
   let manifest: Record<string, unknown>;
   let widget: Record<string, unknown>;
+  let layoutRaw: unknown;
   const fixture = l.source === 'fixture';
   if (fixture) {
     manifest = inp.readFixture(l.id, 'manifest') as Record<string, unknown>;
     widget = inp.readFixture(l.id, 'widget') as Record<string, unknown>;
     if (!manifest || !widget) throw new Error('fixture files missing');
+    layoutRaw = inp.readFixture(l.id, 'layout');
   } else {
     if (inp.offline) throw new Error('needs the network, but --offline was given');
     const [, owner, repo] = /^https:\/\/github\.com\/([^/]+)\/([^/]+)$/.exec(l.repo) ?? [];
@@ -480,6 +490,12 @@ async function buildOne(l: Listing, inp: BuildInput): Promise<RegistryWidget> {
     const base = `https://${RAW_HOST}/${owner}/${repo}/${l.commit}`;
     manifest = await fetchJson(`${base}/manifest.json`, { fetch: inp.fetch });
     widget = await fetchJson(`${base}/widget.json`, { fetch: inp.fetch });
+    // Only spec widgets have a layout; code widgets are never fetched beyond these data files.
+    if (widget.tier === 'spec')
+      layoutRaw = await fetchJson(`${base}/layout.json`, {
+        fetch: inp.fetch,
+        maxBytes: LAYOUT_LIMITS.bytes
+      });
   }
   if (!validateManifest(manifest))
     throw new Error(`manifest.json invalid: ${errText(validateManifest)}`);
@@ -502,6 +518,28 @@ async function buildOne(l: Listing, inp: BuildInput): Promise<RegistryWidget> {
   if (!cats.includes(w.category))
     throw new Error('widget.json category is not one of the listing categories');
   const categories = [w.category, ...cats.filter((c) => c !== w.category).sort()];
+
+  // Spec widgets: validate the view tree and its sample data, and cross-check every binding.
+  let layout: Layout | null = null;
+  let sampleData: SampleData | null = null;
+  if (w.tier === 'spec') {
+    if (layoutRaw === undefined || layoutRaw === null)
+      throw new Error('spec widget needs layout.json');
+    assertPlain(layoutRaw, 'layout.json');
+    const sd = (widget as { sampleData?: unknown }).sampleData ?? {};
+    const sdErr = validateSampleData(sd);
+    if (sdErr.length) throw new Error(`sampleData invalid: ${sdErr.slice(0, 3).join('; ')}`);
+    const r = validateLayout(layoutRaw, w.variants);
+    if (!r.ok) throw new Error(`layout.json invalid: ${r.errors.slice(0, 3).join('; ')}`);
+    const all = [
+      ...bindsOf(r.layout.root),
+      ...Object.values(r.layout.variants ?? {}).flatMap(bindsOf)
+    ];
+    const bErr = checkBindings(all, w.providers, sd as SampleData);
+    if (bErr.length) throw new Error(`layout.json bindings: ${bErr.slice(0, 3).join('; ')}`);
+    layout = r.layout;
+    sampleData = sd as SampleData;
+  }
 
   // The tier is NEVER taken from widget.json (author controlled) or the listing. Only a
   // maintainer review record for this exact commit can grant core, verified or spec.
@@ -561,7 +599,9 @@ async function buildOne(l: Listing, inp: BuildInput): Promise<RegistryWidget> {
         : {})
     })),
     compat: w.compat,
-    access: describeAccess(w)
+    access: describeAccess(w),
+    layout,
+    sampleData
   };
 }
 

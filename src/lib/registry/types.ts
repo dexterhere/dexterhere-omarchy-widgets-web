@@ -1,6 +1,8 @@
 // Shapes of registry/dist/index.json. Written by scripts/build-registry.ts, read by the site.
 // Every string here that came from a widget repo has been sanitised to plain text at build time.
 
+import type { Layout, SampleData } from './layout';
+
 export type Category =
   | 'system'
   | 'time-calendar'
@@ -96,6 +98,9 @@ export interface RegistryWidget {
   settings: Setting[];
   compat: { omarchy: string; widgetsKit: string };
   access: Access;
+  /** Spec widgets only: the validated view tree and its sample data. Null for code widgets. */
+  layout: Layout | null;
+  sampleData: SampleData | null;
 }
 
 export interface RegistryIndex {

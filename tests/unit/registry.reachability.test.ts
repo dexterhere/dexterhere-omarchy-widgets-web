@@ -10,6 +10,7 @@ import {
 import {
   COMMIT,
   json,
+  layoutJson,
   listing,
   manifestJson,
   noFixture,
@@ -112,7 +113,8 @@ describe('commit reachability', () => {
 describe('build integration', () => {
   const files: Record<string, unknown> = {
     'manifest.json': manifestJson(),
-    'widget.json': widgetJson()
+    'widget.json': widgetJson(),
+    'layout.json': layoutJson()
   };
   const build = async (compare: string, skip = false) => {
     const calls: string[] = [];
@@ -135,7 +137,7 @@ describe('build integration', () => {
     const { r, calls } = await build('behind');
     expect(r.errors).toEqual([]);
     expect(calls[0]).toBe(API);
-    expect(calls.findIndex((c) => c.includes('raw.'))).toBe(2);
+    expect(calls.findIndex((c) => c.includes('raw.'))).toBe(2); // after info + compare
   });
   it('does not fetch raw files for an unreachable commit', async () => {
     const { r, calls } = await build('diverged');

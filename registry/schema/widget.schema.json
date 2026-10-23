@@ -122,6 +122,11 @@
         }
       }
     },
+    "sampleData": {
+      "description": "Sample values per topic and field, used by the web emulator. Bounds and plain-text rules are checked by the build.",
+      "type": "object",
+      "maxProperties": 16
+    },
     "interactiveRegions": {
       "type": "array",
       "maxItems": 16,
