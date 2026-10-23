@@ -28,7 +28,6 @@
 html {
   -webkit-text-size-adjust: 100%;
   background: var(--bg);
-  scrollbar-gutter: stable; /* the page does not shift when a scrollbar appears */
   /* Anchors, the skip link target and keyboard focus never end up under the sticky header. */
   scroll-padding-top: calc(var(--header-hs) + 16px);
 }
