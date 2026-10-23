@@ -1,10 +1,9 @@
 {
   "id": "io.github.dexterhere.system-monitor",
   "repo": "https://github.com/dexterhere/omarchy-widget-system-monitor",
-  "commit": "0000000000000000000000000000000000000000",
+  "commit": "dc131190dd13ede867ce098867f17073361d1509",
   "categories": ["system", "utilities"],
   "tags": ["cpu", "memory", "temperature"],
   "summary": "Shows CPU load, memory use and temperature, with a short history graph when the widget is tall enough.",
-  "status": "planned",
-  "source": "fixture"
+  "status": "planned"
 }
