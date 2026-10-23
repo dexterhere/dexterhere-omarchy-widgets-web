@@ -63,9 +63,24 @@
     : undefined}
 />
 <svelte:head>
-  <link rel="alternate" type="application/rss+xml" title="Omarchy Widgets" href={urls.site('/rss.xml')} />
-  <link rel="alternate" type="text/plain" title="Index for language models" href={urls.site('/llms.txt')} />
-  <link rel="alternate" type="application/json" title="Widget registry" href={urls.site('/registry.json')} />
+  <link
+    rel="alternate"
+    type="application/rss+xml"
+    title="Omarchy Widgets"
+    href={urls.site('/rss.xml')}
+  />
+  <link
+    rel="alternate"
+    type="text/plain"
+    title="Index for language models"
+    href={urls.site('/llms.txt')}
+  />
+  <link
+    rel="alternate"
+    type="application/json"
+    title="Widget registry"
+    href={urls.site('/registry.json')}
+  />
 </svelte:head>
 <a class="skip" href="#main">Skip to content</a>
 <Header docsVersion={data.footer?.docsVersion} />
