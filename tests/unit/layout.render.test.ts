@@ -80,10 +80,10 @@ describe('renderer safety', () => {
 });
 
 describe('every fixture renders from its own layout', () => {
-  for (const d of readdirSync('registry/fixtures')) {
+  for (const d of readdirSync('tests/fixtures/widgets')) {
     it(d, () => {
-      const w = JSON.parse(readFileSync(`registry/fixtures/${d}/widget.json`, 'utf8'));
-      const l = JSON.parse(readFileSync(`registry/fixtures/${d}/layout.json`, 'utf8'));
+      const w = JSON.parse(readFileSync(`tests/fixtures/widgets/${d}/widget.json`, 'utf8'));
+      const l = JSON.parse(readFileSync(`tests/fixtures/widgets/${d}/layout.json`, 'utf8'));
       expect(validateSampleData(w.sampleData)).toEqual([]);
       const r = validateLayout(l, w.variants);
       expect(r.ok).toBe(true);
