@@ -11,7 +11,7 @@ test.beforeEach(({ page }) => page.addInitScript(() => localStorage.setItem('ow-
 const PAGES = [
   '/',
   '/widgets/',
-  '/widgets/io.github.dexterhere.concept-clock/',
+  '/widgets/io.github.dexterhere.clock/',
   '/contribute/',
   '/security/',
   '/docs/next/start/what-it-is/',

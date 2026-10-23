@@ -105,7 +105,7 @@ export class WidgetLayerState {
   inst(id: string) {
     return this.st.items.find((i) => i.id === id);
   }
-  /** Instance label for lists and announcements: "Clock" or "Clock (analog)". */
+  /** Instance label for lists and announcements: "Clock" or "Clock (stacked)". */
   instLabel(i: Pick<M.WInst, 'reg' | 'variant'>) {
     const first = getById(i.reg)?.variants[0];
     return i.variant && i.variant !== 'default' && i.variant !== first

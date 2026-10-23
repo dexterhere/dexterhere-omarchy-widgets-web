@@ -5,7 +5,7 @@ import { gzipSync } from 'node:zlib';
 test.use({ colorScheme: 'dark' });
 
 const PORT = process.env.PW_PORT ?? 4173;
-const DOCKER = 'io.github.dexterhere.concept-docker';
+const DOCKER = 'io.github.dexterhere.docker';
 const emu = (p: Page) => p.locator('[data-home-stage] [data-emulator]');
 const cards = (p: Page) => p.locator('[data-widget-card]');
 const pager = (p: Page) => p.getByRole('navigation', { name: 'Widget pages' });
@@ -229,7 +229,7 @@ test.describe('widget cards', () => {
     await expect(first.getByRole('link', { name: '@dexterhere' })).toBeVisible();
     await expect(first.getByText('Concept, not installable').first()).toBeVisible();
     await expect(first.getByRole('button', { name: /^Like / })).toBeVisible();
-    await expect(first.getByRole('link', { name: /concept/i }).first()).toHaveAttribute(
+    await expect(first.locator('a[href*="/widgets/io.github."]').first()).toHaveAttribute(
       'href',
       /\/widgets\/io\.github\./
     );
@@ -368,7 +368,7 @@ test.describe('builder', () => {
     await expect(json(page)).toContainText('"bind": "time.hm"');
     await expect(preview(page)).toContainText('10:09');
 
-    await page.getByLabel('Battery', { exact: true }).check({ force: true });
+    await page.getByRole('radio', { name: 'Battery', exact: true }).check({ force: true });
     await expect(json(page)).toContainText('"block": "ring"');
     await expect(json(page)).toContainText('"bind": "battery.level_pct"');
     await expect(preview(page)).toContainText('72%');
@@ -400,7 +400,7 @@ test.describe('builder', () => {
     while ((await checked.count()) > 1) await checked.first().uncheck({ force: true });
     await expect(checked.first()).toBeDisabled();
     // sizes the template does not have are not offered
-    await page.getByLabel('Battery', { exact: true }).check({ force: true });
+    await page.getByRole('radio', { name: 'Battery', exact: true }).check({ force: true });
     await expect(page.getByLabel('tall', { exact: true })).toHaveCount(0);
   });
 
@@ -420,7 +420,7 @@ test.describe('builder', () => {
   }) => {
     await ready(page);
     await toBuilder(page);
-    await page.getByLabel('Battery', { exact: true }).check({ force: true });
+    await page.getByRole('radio', { name: 'Battery', exact: true }).check({ force: true });
     await page.getByRole('button', { name: 'Place it on the emulated desktop above' }).click();
     const w = page.locator('[data-home-stage] [data-widget][data-reg="spec:custom"]');
     await expect(w).toBeAttached();
