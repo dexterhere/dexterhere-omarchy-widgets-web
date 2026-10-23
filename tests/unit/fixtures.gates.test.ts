@@ -29,9 +29,7 @@ const gate = (id: string, patch: (w: Record<string, any>) => void = () => {}) =>
 
 describe('fixtures obey the policy gates', () => {
   it('there are fixtures to check', () => expect(ids.length).toBeGreaterThan(0));
-  it.each(ids)('%s passes every gate', async (id) =>
-    expect((await gate(id)).errors).toEqual([])
-  );
+  it.each(ids)('%s passes every gate', async (id) => expect((await gate(id)).errors).toEqual([]));
   it.each(['network', 'files', 'spawn'] as const)(
     'fails when a fixture declares %s with a personal provider',
     async (cap) => {

@@ -198,7 +198,8 @@
         </div>
         <p class="tiny muted">
           Sample data, not your machine. The preview follows the page theme: press <kbd>T</kbd> to change
-          it. The preview above is one fixed illustration; the layout drawn below follows the variant you pick.
+          it. The preview above is one fixed illustration; the layout drawn below follows the variant
+          you pick.
         </p>
       {:else}
         <p class="tiny muted">
