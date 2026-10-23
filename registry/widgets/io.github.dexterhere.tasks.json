@@ -2,14 +2,8 @@
   "id": "io.github.dexterhere.tasks",
   "repo": "https://github.com/dexterhere/tasks",
   "commit": "0000000000000000000000000000000000000000",
-  "categories": [
-    "productivity",
-    "time-calendar"
-  ],
-  "tags": [
-    "tasks",
-    "todo"
-  ],
+  "categories": ["productivity", "time-calendar"],
+  "tags": ["tasks", "todo"],
   "summary": "Shows your open tasks and how many are due today, from a local task file.",
   "status": "planned",
   "source": "fixture"

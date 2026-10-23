@@ -2,14 +2,8 @@
   "id": "io.github.dexterhere.battery",
   "repo": "https://github.com/dexterhere/battery",
   "commit": "0000000000000000000000000000000000000000",
-  "categories": [
-    "system",
-    "utilities"
-  ],
-  "tags": [
-    "battery",
-    "power"
-  ],
+  "categories": ["system", "utilities"],
+  "tags": ["battery", "power"],
   "summary": "Shows battery charge, whether it is charging, and the estimated time left.",
   "status": "planned",
   "source": "fixture"
