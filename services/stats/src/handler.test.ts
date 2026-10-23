@@ -555,7 +555,9 @@ describe('errors and logging', () => {
     await call('POST', `/view/${A}`, tk(token, { 'cf-connecting-ip': IP }));
     await call('POST', `/like/${A}`, tk(token, { 'cf-connecting-ip': IP }));
     for (const k of store.keys()) {
-      expect(k).not.toContain('203');
+      // the address and its prefix, not a bare '203': keys carry random hex that can contain it
+      expect(k).not.toContain(IP);
+      expect(k).not.toContain('203.0.113');
       expect(k).not.toContain(token);
       expect(k).not.toContain(token.split('.')[1]);
     }
