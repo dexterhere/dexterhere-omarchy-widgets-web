@@ -28,11 +28,42 @@
 html {
   -webkit-text-size-adjust: 100%;
   background: var(--bg);
+  scrollbar-gutter: stable; /* the page does not shift when a scrollbar appears */
   /* Anchors, the skip link target and keyboard focus never end up under the sticky header. */
   scroll-padding-top: calc(var(--header-hs) + 16px);
 }
 :target {
   scroll-margin-top: 8px;
+}
+
+/* Scrollbars: thin, theme coloured, always visible. The thumb is --muted (4.5:1 or better against
+   every theme's backgrounds, so well over the 3:1 a UI control needs); the track is clear.
+   Standard properties first; Chrome 121+ uses them and ignores ::-webkit-scrollbar when they are
+   set, so the WebKit rules only apply where scrollbar-color is not supported (Safari < 18.2). */
+html,
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--muted) transparent;
+}
+@supports not (scrollbar-color: auto) {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--muted);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+    border-radius: 8px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--text-2);
+    background-clip: padding-box;
+  }
 }
 
 body {
