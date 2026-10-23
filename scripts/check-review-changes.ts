@@ -19,6 +19,7 @@ const GUARDED = [
   /^deploy\//,
   /^services\//,
   /^static\/theme-boot\.js$/,
+  /^src\/lib\/registry\/(layout|links)\.ts$/, // the validator and the link sanitiser the build imports
   /^scripts\//,
   /^\.github\//
 ];
@@ -28,6 +29,8 @@ export interface ListingChange {
   deleted: boolean;
   /** File content at the PR head; null for deletions or when it could not be read. */
   content: string | null;
+  /** Git mode at the PR head ('100644' for a regular file). A symlink is '120000'. */
+  mode?: string;
 }
 
 export const LISTING = /^registry\/widgets\/([^/]+)\.json$/;
@@ -61,7 +64,21 @@ export function checkReviewChanges(i: {
       message: `only maintainers may change: ${touched.join(', ')} (author is not listed in registry/MAINTAINERS.json on the base branch)`
     };
   if (!isMaintainer) {
+    // registry/widgets/ holds one flat <name>.json per listing: nothing else, no sub-paths.
+    const stray = i.changed.filter((f) => f.startsWith('registry/widgets/') && !LISTING.test(f));
+    if (stray.length)
+      return {
+        ok: false,
+        message: `only maintainers may add anything but registry/widgets/<name>.json: ${stray.join(', ')}`
+      };
     for (const l of i.listings ?? []) {
+      // The build reads the file from disk and follows links; `git show` of a symlink returns
+      // the link text, which would hide what is really read. Regular files only.
+      if (!l.deleted && l.mode !== '100644')
+        return {
+          ok: false,
+          message: `${l.path}: a listing must be a regular file (mode 100644), found ${l.mode ?? 'unknown'}`
+        };
       const fileOwner = ownerOf(LISTING.exec(l.path)?.[1]);
       let contentOwner: string | null = fileOwner;
       if (!l.deleted) {
@@ -115,13 +132,15 @@ function main() {
   const base = process.env.GITHUB_BASE_REF ?? '';
   if (!/^[A-Za-z0-9._/-]+$/.test(base)) throw new Error('unexpected base ref');
   const git = (...a: string[]) => execFileSync('git', a, { encoding: 'utf8' });
-  const parts = git('diff', '--name-status', '--no-renames', '-z', `origin/${base}...HEAD`)
+  // --raw gives the new file mode too: `:<old> <new> <sha> <sha> <status>`, then the path.
+  const parts = git('diff', '--raw', '--no-renames', '-z', `origin/${base}...HEAD`)
     .split('\0')
     .filter(Boolean);
   const changed: string[] = [];
   const listings: ListingChange[] = [];
   for (let k = 0; k + 1 < parts.length; k += 2) {
-    const [status, path] = [parts[k], parts[k + 1]];
+    const meta = parts[k].replace(/^:/, '').split(' ');
+    const [mode, status, path] = [meta[1], meta[4], parts[k + 1]];
     changed.push(path);
     if (!LISTING.test(path)) continue;
     const deleted = status === 'D';
@@ -132,7 +151,7 @@ function main() {
       } catch {
         content = null; // unreadable: treated as invalid, so only a maintainer passes
       }
-    listings.push({ path, deleted, content });
+    listings.push({ path, deleted, content, mode });
   }
   const maintainers = maintainersFromBase(() =>
     git('show', `origin/${base}:registry/MAINTAINERS.json`)

@@ -2,7 +2,15 @@
 // everything from them and writes registry/dist. It never executes anything from a widget repo.
 // Usage: bun scripts/build-registry.ts [--offline] [--skip-reachability] [--out registry/dist]
 // --skip-reachability is for local development only; CI must never use it.
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync
+} from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import Ajv2020 from 'ajv/dist/2020.js';
@@ -12,7 +20,11 @@ import {
   checkBindings,
   validateLayout,
   validateSampleData,
-  LAYOUT_LIMITS
+  LAYOUT_LIMITS,
+  HTMLISH,
+  SPOOF,
+  plain,
+  visible
 } from '../src/lib/registry/layout';
 import type { Layout, SampleData } from '../src/lib/registry/layout';
 import type {
@@ -323,8 +335,6 @@ export function checkLock(
 // ---------- plain text ----------
 // SECURITY: no field in the output may ever be rendered with {@html} or innerHTML. Everything
 // here is data from strangers; it is only ever shown as text.
-const SPOOF = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u; // control, bidi/zero-width format, line/paragraph separators
-const HTMLISH = /<\s*\/?\s*[a-z!?]/i;
 const BAD_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
 /** Rejects (never strips) any string or object key that could spoof what a person sees:
@@ -335,6 +345,7 @@ export function assertPlain(value: unknown, path = '$', depth = 0): void {
   if (typeof value === 'string') {
     if (SPOOF.test(value)) throw new Error(`${path}: control or invisible characters not allowed`);
     if (HTMLISH.test(value)) throw new Error(`${path}: looks like HTML, plain text only`);
+    if (!plain(value)) throw new Error(`${path}: not normalised (NFC) or too many combining marks`);
   } else if (Array.isArray(value)) {
     value.forEach((v, i) => assertPlain(v, `${path}[${i}]`, depth + 1));
   } else if (value && typeof value === 'object') {
@@ -350,7 +361,7 @@ export function cleanText(input: unknown, max: number, field: string): string {
   if (typeof input !== 'string') throw new Error(`${field}: must be a string`);
   assertPlain(input, field);
   const s = input.replace(/\s+/g, ' ').trim();
-  if (!s) throw new Error(`${field}: empty`);
+  if (!s || !visible(s)) throw new Error(`${field}: empty`);
   return s.length > max ? s.slice(0, max - 1) + '\u2026' : s;
 }
 
@@ -642,7 +653,10 @@ export async function buildRegistry(inp: BuildInput): Promise<BuildResult> {
       errors.push(`${file}: ${e instanceof Error ? e.message : 'invalid'}`);
       continue;
     }
-    if (file !== `${l.id}.json`) errors.push(`${file}: file name must be <id>.json`);
+    if (file !== `${l.id}.json`) {
+      errors.push(`${file}: file name must be <id>.json`);
+      continue; // a mismatched listing is never published
+    }
     if (seen.has(l.id)) {
       errors.push(`${file}: duplicate id ${l.id}`);
       continue;
@@ -697,9 +711,11 @@ async function main() {
     .filter((f) => f.endsWith('.json'))
     .sort()
     .map((file) => {
-      const raw = readFileSync(join(dir, file), 'utf8');
-      if (raw.length > LIMITS.maxListingBytes) return { file, data: null };
+      // Only regular files: a symlink or directory named *.json is excluded, never followed.
       try {
+        if (!lstatSync(join(dir, file)).isFile()) return { file, data: null };
+        const raw = readFileSync(join(dir, file), 'utf8');
+        if (raw.length > LIMITS.maxListingBytes) return { file, data: null };
         return { file, data: JSON.parse(raw) as unknown };
       } catch {
         return { file, data: null };
