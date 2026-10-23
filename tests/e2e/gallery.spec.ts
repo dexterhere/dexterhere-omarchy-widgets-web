@@ -396,10 +396,10 @@ for (const w of widgets) {
       'Install',
       'What it can access',
       'Trust',
+      'Try it on a desktop',
+      'About',
       'Settings',
-      'Variants',
-      'Source',
-      'Changelog',
+      'Details',
       'Similar widgets'
     ]) {
       await expect(page.getByRole('heading', { level: 2, name: h })).toBeVisible();
@@ -410,7 +410,6 @@ for (const w of widgets) {
       await expect(access.locator('dt', { hasText: new RegExp(`^${label}$`) })).toHaveCount(1);
     const nones = Object.values(w.access).filter((v) => v.length === 1 && v[0] === 'none').length;
     await expect(access.getByText('none', { exact: true })).toHaveCount(nones);
-    await expect(page.getByText('No changelog yet.')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Open a bug report' })).toHaveAttribute(
       'href',
       'https://github.com/dexterhere/dexterhere-omarchy-widgets-web/issues/new?template=bug_report.yml'
@@ -434,7 +433,7 @@ test('an unknown id is a 404', async ({ page }) => {
 
 test('similar widgets link to another detail page', async ({ page }) => {
   await page.goto('/widgets/io.github.dexterhere.concept-battery/');
-  await page.getByRole('link', { name: 'System monitor (concept)' }).click();
+  await page.getByRole('link', { name: /^System monitor/ }).click();
   await expect(page).toHaveURL(/concept-system-monitor\/$/);
   await expect(page.getByRole('heading', { level: 1 })).toContainText('System monitor');
 });
