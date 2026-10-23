@@ -86,7 +86,8 @@ test('discovery files are served', async ({ request }) => {
     ['/robots.txt', 'text/plain', 'Sitemap:'],
     ['/skills/omarchy-widget-plan/SKILL.md', '', 'name: omarchy-widget-plan'],
     ['/skills/omarchy-widget-develop/SKILL.md', '', 'name: omarchy-widget-develop'],
-    ['/skills/omarchy-widget-test/SKILL.md', '', 'name: omarchy-widget-test']
+    ['/skills/omarchy-widget-test/SKILL.md', '', 'name: omarchy-widget-test'],
+    ['/skills/omarchy-widget-submit/SKILL.md', '', 'name: omarchy-widget-submit']
   ] as const) {
     const res = await request.get(p);
     expect(res.status(), p).toBe(200);
