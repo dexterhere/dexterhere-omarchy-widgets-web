@@ -57,6 +57,12 @@ export default defineConfig(({ mode }) => {
       __BUILD_COMMIT__: JSON.stringify(
         loadEnv(mode, process.cwd(), 'PUBLIC_').PUBLIC_BUILD_COMMIT ?? ''
       ),
+      // Absolute origin for canonical URLs, Open Graph and structured data (host mode: the site origin).
+      __CANONICAL_ORIGIN__: JSON.stringify(
+        origins.site ||
+          process.env.SITE_URL ||
+          'https://dexterhere.github.io/dexterhere-omarchy-widgets-web'
+      ),
       __STATS_URL__: JSON.stringify(statsOrigin(rawStatsUrl) ?? ''),
       ...(origins.site
         ? {

@@ -7,10 +7,11 @@ import {
   buildRobots,
   buildSitemap,
   docBodyToText,
-  makeUrls,
   type DocPage
 } from './seo';
-import { origins } from './site';
+import { urls } from './site';
+
+export { urls };
 
 const raw = import.meta.glob<string>('/docs/content/*/*/*.md', {
   query: '?raw',
@@ -22,9 +23,6 @@ const metas = import.meta.glob<{ title: string; description?: string }>('/docs/c
   import: 'metadata'
 });
 
-// Same fallback as the RSS feed: the real domain is the maintainer's to choose (host mode sets it).
-const FALLBACK = 'https://dexterhere.github.io/dexterhere-omarchy-widgets-web';
-export const urls = makeUrls(origins.site || process.env.SITE_URL || FALLBACK, origins.docs);
 
 export function latestPages(): (DocPage & { body: string })[] {
   const v = latest.version;
