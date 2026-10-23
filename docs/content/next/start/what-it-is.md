@@ -37,21 +37,21 @@ widget (QML or JSON spec)  ->  bridge plugin  ->  owd daemon  ->  encrypted vaul
 
 ## What exists and what is planned
 
-| Part                                                                    | State   |
-| ----------------------------------------------------------------------- | ------- |
-| `owd` daemon: socket, grants, audit log, provider hub                   | Exists  |
-| `system` provider (CPU, memory, load)                                   | Exists  |
-| Passphrase vault and `ow vault init/status/list/set/remove/rotate/wipe` | Exists  |
-| `ow status`                                                             | Exists  |
-| `PKGBUILD` (build blocked until a signing key is pinned)                | Exists  |
-| Sandboxed systemd user unit for `owd`                                   | Exists  |
-| QML bridge and widget kit                                               | Planned |
-| Desktop canvas with edit mode                                           | Planned |
-| Widget Center                                                           | Planned |
-| `ow new`, `ow check`, `ow install`, `ow place`, `ow publish`            | Planned |
-| Real widgets, spec-widget renderer                                      | Planned |
-| Keyring and TPM vault modes                                             | Planned |
-| Network providers (GitHub, Gmail and others)                            | Planned |
+| Part                                                                                                   | State   |
+| ------------------------------------------------------------------------------------------------------ | ------- |
+| `owd` daemon: socket, grants, audit log, provider hub                                                  | Exists  |
+| `system` provider (CPU, memory, load)                                                                  | Exists  |
+| Passphrase vault and `ow vault init/status/list/set/remove/rotate/wipe`                                | Exists  |
+| `ow status`                                                                                            | Exists  |
+| `PKGBUILD` (build blocked until a signing key is pinned)                                               | Exists  |
+| Sandboxed systemd user unit for `owd` (verified offline as a transient unit, not as an installed unit) | Exists  |
+| QML bridge and widget kit                                                                              | Planned |
+| Desktop canvas with edit mode                                                                          | Planned |
+| Widget Center                                                                                          | Planned |
+| `ow new`, `ow check`, `ow install`, `ow place`, `ow publish`                                           | Planned |
+| Real widgets, spec-widget renderer                                                                     | Planned |
+| Keyring and TPM vault modes                                                                            | Planned |
+| Network providers (GitHub, Gmail and others)                                                           | Planned |
 
 The roadmap and open questions live in the code repository: `README.md` and `docs/OPEN_QUESTIONS.md`.
 

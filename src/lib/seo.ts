@@ -49,6 +49,10 @@ export const SKILLS = [
   {
     id: 'omarchy-widget-test',
     what: 'test a widget: schema, sizes, themes, failure states, permissions'
+  },
+  {
+    id: 'omarchy-widget-submit',
+    what: 'list a widget: registry listing file, local registry check, pull request rules'
   }
 ];
 

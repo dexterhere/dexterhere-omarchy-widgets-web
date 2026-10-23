@@ -83,8 +83,9 @@ export default defineConfig(({ mode }) => {
             throw new Error(message);
           }
         },
-        // Static CSP as a <meta> tag: same-origin only; the single inline theme bootstrap
-        // script is allowed by hash. No unsafe-inline scripts, no unsafe-eval, no third parties.
+        // Static CSP as a <meta> tag: same-origin only. The theme bootstrap (static/theme-boot.js)
+        // is an external same-origin script; the one hashed inline script is SvelteKit's bootstrap.
+        // No unsafe-inline scripts, no unsafe-eval, no third parties.
         csp: {
           mode: 'hash',
           directives: {
