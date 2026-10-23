@@ -8,7 +8,10 @@ const catalog = JSON.parse(readFileSync('registry/providers.json', 'utf8')) as C
 const FILES = ['manifest.json', 'widget.json', 'layout.json'];
 const ids = readdirSync('registry/fixtures');
 
-const gate = (id: string, patch: (w: Record<string, any>) => void = () => {}) => {
+const gate = (
+  id: string,
+  patch: (w: { capabilities: Record<string, string[]> }) => void = () => {}
+) => {
   const dir = `registry/fixtures/${id}`;
   const widget = JSON.parse(readFileSync(`${dir}/widget.json`, 'utf8'));
   patch(widget);
