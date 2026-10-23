@@ -5,6 +5,7 @@ import {
   buildLlmsFull,
   buildLlmsTxt,
   buildRobots,
+  buildSecurityTxt,
   buildSitemap,
   docBodyToText,
   type DocPage
@@ -22,7 +23,6 @@ const metas = import.meta.glob<{ title: string; description?: string }>('/docs/c
   eager: true,
   import: 'metadata'
 });
-
 
 export function latestPages(): (DocPage & { body: string })[] {
   const v = latest.version;
@@ -58,7 +58,9 @@ export const sitemap = () =>
     urls.site('/widgets/'),
     urls.site('/contribute/'),
     urls.site('/security/'),
+    urls.site('/emulator/'),
     urls.docs('/docs/'),
     ...getAll().map((w) => urls.site(`/widgets/${encodeURIComponent(w.id)}/`)),
     ...latestPages().map((p) => urls.docs(p.path))
   ]);
+export const securityTxt = () => buildSecurityTxt(urls);

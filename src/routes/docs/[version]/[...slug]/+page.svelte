@@ -1,8 +1,7 @@
 <script lang="ts">
   import Seo from '../../../../lib/components/Seo.svelte';
   import { breadcrumbs } from '../../../../lib/seo';
-  import { urls } from '../../../../lib/site';
-  import { docsPath, docsUrl, links } from '../../../../lib/site';
+  import { docsPath, urls } from '../../../../lib/site';
   import { prevNext } from '../../../../lib/docs/content';
   import EditLink from '../../../../lib/docs/EditLink.svelte';
   import PrevNext from '../../../../lib/docs/PrevNext.svelte';
@@ -24,7 +23,10 @@
     breadcrumbs([
       { name: 'Omarchy Widgets', url: urls.site('/') },
       { name: 'Documentation', url: urls.docs('/docs/') },
-      { name: data.kind === 'page' ? data.meta.title : data.section.title, url: urls.docs(`/docs/${params.version}/${data.slug}/`) }
+      {
+        name: data.kind === 'page' ? data.meta.title : data.section.title,
+        url: urls.docs(`/docs/${params.version}/${data.slug}/`)
+      }
     ])
   ]}
 />

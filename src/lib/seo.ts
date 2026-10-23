@@ -127,6 +127,16 @@ export function buildSitemap(urls: string[]): string {
 export const buildRobots = (u: Urls) =>
   `User-agent: *\nAllow: /\n\nSitemap: ${u.site('/sitemap.xml')}\n`;
 
+/** Where SECURITY.md tells people to report (GitHub private vulnerability reporting). */
+export const SECURITY_CONTACT =
+  'https://github.com/dexterhere/dexterhere-omarchy-widgets-web/security/advisories/new';
+
+/** RFC 9116. Expires is required; it is the build time plus a year, so a deployed build never lapses silently. */
+export function buildSecurityTxt(u: Urls, now = new Date()): string {
+  const expires = new Date(now.getTime() + 365 * 864e5).toISOString().replace(/\.\d+Z$/, 'Z');
+  return `Contact: ${SECURITY_CONTACT}\nExpires: ${expires}\nPreferred-Languages: en\nCanonical: ${u.site('/.well-known/security.txt')}\nPolicy: ${u.site('/security/')}\n`;
+}
+
 /** Strip what only makes sense on the website: the script block and Callout tags become plain text. */
 export function docBodyToText(md: string): string {
   return md
@@ -147,6 +157,7 @@ export function docBodyToText(md: string): string {
 
 export const SITE_NAME = 'Omarchy Widgets';
 export const TITLE_MAX = 60;
+export const DESC_MIN = 110;
 export const DESC_MAX = 160;
 export const OG_IMAGE_ALT =
   'Omarchy Widgets: any widget you can think of, on your Omarchy desktop.';
@@ -157,6 +168,13 @@ export function clamp(text: string, max: number): string {
   if (t.length <= max) return t;
   const cut = t.slice(0, max - 1);
   return cut.replace(/\s+\S*$/, '').replace(/[\s,;:.-]+$/, '') + '\u2026';
+}
+
+/** A description from data can be a few words long; short ones get a plain site tail for context. */
+export function pageDescription(text: string): string {
+  const t = one(text);
+  const tail = ' Omarchy Widgets: open-source desktop widgets for Omarchy.';
+  return clamp(t.length < DESC_MIN ? t + tail : t, DESC_MAX);
 }
 
 /** "Page - Omarchy Widgets"; when that is too long the site name is dropped, never the page name. */

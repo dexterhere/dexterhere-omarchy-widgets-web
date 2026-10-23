@@ -1,7 +1,15 @@
 <script lang="ts">
   // The one place a page head is built: title, description, canonical, Open Graph, Twitter card
   // and JSON-LD. Pages pass data; nothing here is hand-written per page.
-  import { DESC_MAX, OG_IMAGE_ALT, SITE_NAME, TITLE_MAX, clamp, jsonLd, pageTitle } from '../seo';
+  import {
+    OG_IMAGE_ALT,
+    SITE_NAME,
+    TITLE_MAX,
+    clamp,
+    jsonLd,
+    pageDescription,
+    pageTitle
+  } from '../seo';
   import { urls } from '../site';
 
   let {
@@ -28,7 +36,7 @@
   } = $props();
 
   const full = $derived(bare ? clamp(title, TITLE_MAX) : pageTitle(title));
-  const desc = $derived(clamp(description, DESC_MAX));
+  const desc = $derived(pageDescription(description));
   const url = $derived(host === 'docs' ? urls.docs(path) : urls.site(path));
   const image = urls.site('/og.png');
   // Built from JSON.stringify with < > & escaped (see jsonLd), so it cannot close the element.
@@ -56,5 +64,6 @@
   <meta name="twitter:description" content={desc} />
   <meta name="twitter:image" content={image} />
   <meta name="twitter:image:alt" content={OG_IMAGE_ALT} />
+  <!-- eslint-disable-next-line svelte/no-at-html-tags -- JSON.stringify output with < > & escaped, never raw strings -->
   {@html ld}
 </svelte:head>
