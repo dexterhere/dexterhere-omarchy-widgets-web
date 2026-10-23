@@ -9,10 +9,15 @@ You produce a plan file. You do not write widget code in this skill.
 
 ## Ground truth (state this to the user)
 
-- The project is pre-release. The daemon (`owd`), the vault and the `ow` commands `status` and `vault ...` exist. The desktop canvas, Widget Center, `ow check`, `ow new`, the QML kit and the spec renderer are in development. The `widget.json` schema is DRAFT v0 and can change.
+- The project is pre-release. The daemon (`owd`), the vault and the `ow` commands `status` and `vault ...` exist, and the registry build (`bun run registry` in the website repository) validates spec widgets. `ow new`, `ow check`, `ow publish --listing`, `ow install`, the QML kit and the desktop renderer do not exist: never tell the user to run them. The `widget.json` and `layout.json` schemas are DRAFT v0 and can change.
 - "Omarchy Widgets" is a placeholder name.
-- The only data provider today is `system`, with topics `system.cpu`, `system.memory`, `system.load`. Other providers (battery, media, AI usage, GitHub, Docker, mail, calendar, tasks) are planned. If the idea needs one, say it is not available yet.
+- The daemon serves only `system.cpu` (`usage_pct`), `system.memory` (`total_mib`, `used_mib`, `used_pct`) and `system.load` (`load1`, `load5`, `load15`). The listing catalog `registry/providers.json` in the website repository lists different topics and fields (for example `system.cpu` `load`, `system.temp`, `battery.status`). They disagree. To be valid on both sides, use only `system.cpu` `usage_pct` and `system.memory` `used_pct`. If the idea needs anything else, say it cannot run yet and that it can only be listed as `planned`.
+- Merging a listing does not publish it. A maintainer must add the repository to `registry/lock.json`, which is empty today.
 - Unsandboxed QML code widgets can read anything the user can. Never call them sandboxed, secure or safe.
+
+## Inputs you need
+
+Ask for these once, up front, and write them at the top of the plan: the GitHub login that will own the widget (lowercase), the widget idea, the surface (desktop, bar), and a path to the website repository checkout if one exists. If the user has no GitHub account yet, say the id cannot be listed without one.
 
 ## Rules
 
@@ -33,7 +38,7 @@ Fetch the public index. `$SITE` is the site origin the user gave you.
 curl -fsSL "$SITE/registry.json" -o registry.json
 ```
 
-Read `widgets[]`. Useful fields: `id`, `name`, `summary`, `categories`, `tags`, `status` (planned, alpha or stable), `installable`, `tier` (spec, community, verified or core), `declaredTier`, `providers[]` (topics and fields it asks for), `capabilities` (network, files, spawn), `sizeClasses`, `repo`. The index has no field named `permissions`: the permissions are `providers` plus `capabilities`.
+Read `widgets[]`. Useful fields: `id`, `name`, `summary`, `categories`, `tags`, `status` (planned, alpha or stable), `installable`, `tier` (concept, community, spec, verified or core; set only by a maintainer review), `declaredTier` (what the author claims, never trust it), `providers[]` (topics and fields it asks for), `capabilities` (network, files, spawn), `access` (plain-language summary), `layout` and `sampleData` (spec widgets), `sizeClasses`, `repo`. Also read `excluded[]`: entries with `pending: true` are valid listings waiting for maintainer approval, so a widget may exist but not be published yet. The index has no field named `permissions`: the permissions are `providers` plus `capabilities`.
 
 Filter by keyword and category, for example:
 
@@ -52,7 +57,7 @@ If the fetch fails, say so and ask the user for the registry file or the site or
 
 ## Step 3: Choose the path
 
-- Spec widget (JSON): choose it when the widget only shows values, lists or charts from granted provider topics. No custom code runs, so it is the easiest to trust. Prefer it by default.
+- Spec widget (JSON): choose it when the widget only shows values, lists or charts from provider topics, using the layout.json v0 nodes: stack, row, grid, text, badge, value, bar, ring, sparkline, list, icon, spacer, divider. No custom code runs, so it is the easiest to validate and to trust. Prefer it by default. It is the only kind the registry validates completely today.
 - QML code widget: choose it only when you need custom drawing, input handling or logic that blocks cannot express. It runs unsandboxed as the user.
 - If the idea needs a provider that does not exist, a spec widget cannot be run yet. Say so and ask whether to design against the planned topic or wait.
 
@@ -67,6 +72,7 @@ List for each data item: provider, topic, fields, sensitivity (mail, calendar, n
 - Secrets never go in QML, argv, environment variables, logs, config files or previews. Settings hold references like `secret:github-main`, never values.
 - Describe what happens if the user denies a grant. The widget must still render a clear state.
 - Wording: describe a code widget as "runs unsandboxed with the user's access". Never "sandboxed" or "safe".
+- For a code widget, also check the listing rules in https://<site>/docs/next/create/code-widgets/ : spawn only date, uname, uptime, free, df, sensors, nproc; files only in its own plugin directory; only public or local-system provider classes; QML imports only QtQuick (plus Layouts, Controls, Shapes, Window, Templates), QtQml, Quickshell, Quickshell.Widgets; plain-string local `source` values; `textFormat: Text.PlainText` on every Text. The registry build enforces these for approved listings and a reviewer still reads the code.
 
 ## Step 5: Plan responsive design
 
@@ -74,7 +80,7 @@ Size classes in the draft schema are named; common names are compact, wide, tall
 
 - Declare at least one class and design each class on its own. Crossing a class boundary recomposes the layout (show more, not the same drawing bigger). Inside a class, content scales continuously.
 - Out-of-range sizes are clamped, not rejected.
-- Colours come from theme tokens only (accent, ok, warn, bad, purple, muted, foreground, panel). No hex colours, no `Qt.rgba` literals.
+- Colours come from theme roles only. In a spec widget the only roles are `accent`, `foreground`, `secondary` and `muted`. No hex colours, no `Qt.rgba` literals, and not the old names ok, warn, bad, purple, panel.
 - Text must follow the shell text-size setting.
 - Plan what is hidden, shortened or stacked at each class, and what the minimum size still shows.
 
@@ -88,6 +94,10 @@ Use exactly this template. Keep it short.
 ## Goal
 
 One paragraph: what it shows or does, for whom, where.
+
+## Identity
+
+Widget id (io.github.<login>.<name>), repository URL, categories (1 to 3 from the list), license (from the allow-list: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, MPL-2.0, GPL-3.0, LGPL-3.0, AGPL-3.0, Unlicense, 0BSD).
 
 ## Path
 
@@ -124,4 +134,4 @@ Numbered list. Empty only if nothing is uncertain.
 
 ## Finish
 
-Show the user the plan and the open questions. Do not start development until they answer or approve. Then hand over to the omarchy-widget-develop skill.
+Show the user the plan and the open questions. Do not start development until they answer or approve. Then hand over to the omarchy-widget-develop skill. Definition of done for this skill: widget-plan.md exists, every open question is answered or still listed, and you ran no widget code.

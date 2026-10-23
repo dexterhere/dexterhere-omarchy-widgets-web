@@ -58,12 +58,12 @@ omarchy-widgets-web/
   PLAN.md  README.md  LICENSE  SECURITY.md  CONTRIBUTING.md  CODE_OF_CONDUCT.md
   package.json  bun.lock  svelte.config.js  vite.config.ts  tsconfig.json
   src/
-    app.html                       inline, hashed bootstrap script: apply saved theme before paint
+    app.html                       loads the external theme-boot.js: apply saved theme before paint
     lib/themes/themes.ts           the 22 themes (single source) and generated tokens CSS
     lib/components/                header, theme picker, desktop, widget components, badges
     lib/registry/                  types and loaders (read dist/index.json at build)
     lib/docs/                      sidebar, table of contents, version switcher, search
-    routes/                        home, widgets/, docs/[version]/, contribute/, security/
+    routes/                        home, widgets/, docs/[version]/, emulator/, contribute/, security/, registry.json, rss.xml, llms.txt
   registry/                        listings, listing and widget schemas, build script
   docs/content/<version>/          documentation pages, one set per version
   docs/reference/                  research data (palette values, sources)
@@ -80,13 +80,13 @@ Widgets are listed here by a pull request that adds one file, `registry/widgets/
 2. Pin the commit you want listed.
 3. Open a pull request here that adds the listing file.
 
-The full steps, the listing example and the review rules are in [CONTRIBUTING.md](CONTRIBUTING.md#submit-a-widget-to-the-registry).
+The full steps, the listing example and the review rules are in [CONTRIBUTING.md](CONTRIBUTING.md#submit-a-widget-to-the-registry). The planned contribution model is in [docs/PLAN-contribution.md](docs/PLAN-contribution.md), and design decisions are recorded in [docs/DECISIONS.md](docs/DECISIONS.md).
 
 ## Security
 
-This is a static site. It sets no cookies, runs no analytics, and makes no requests to third-party hosts. Fonts are self-hosted. The planned Content-Security-Policy allows only our own origin, plus one hashed inline script that applies the saved theme before the page paints.
+This is a static site. It sets no cookies, runs no analytics, and makes no requests to third-party hosts. Fonts are self-hosted. The site ships a Content-Security-Policy meta tag (configured in `vite.config.ts`, described on the security page in `src/routes/security`). It allows only our own origin and one hashed inline script from SvelteKit. The saved theme is applied by an external same-origin script, `static/theme-boot.js`.
 
-Widget listings are data. The build reads them, fetches the metadata they point to, and renders it as text or sanitized Markdown. The build never runs code from a widget repository.
+Widget listings are data. The build reads them, fetches the metadata they point to, and renders it as plain text; nothing from a widget repository is rendered as Markdown or HTML. The build never runs code from a widget repository.
 
 Code widgets (QML) that the code repository supports run as you, with the same access you have. They are not sandboxed, and this site never describes them as safe. Trust tiers describe review, not isolation.
 

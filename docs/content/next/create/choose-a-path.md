@@ -1,51 +1,60 @@
 ---
 title: Choose a path
-description: 'Three ways to make a widget: a JSON spec widget, a QML code widget, or agent-assisted. Which to pick and what exists today.'
+description: 'Spec widget (JSON, no code) or code widget (QML). How to pick, what each one is allowed to do, what is enforced today, and how an AI agent fits in.'
 ---
 
-<script>import Callout from '$lib/docs/Callout.svelte';</script>
+<script>
+  import Callout from '$lib/docs/Callout.svelte';
+  import Flow from '$lib/docs/Flow.svelte';
+  const decide = [
+    { title: 'Does it only show values, lists or charts from provider topics?', text: 'Numbers, short text, a list of strings, a ring, a bar, a sparkline. If yes, go to step 2. If you need custom drawing, clicks, text input or your own logic, go to step 4.', who: 'Author' },
+    { title: 'Do the topics and fields you need exist?', text: 'Check the daemon table and the catalog in Data and providers. If they do not exist, you cannot run the widget yet. You can still list it with status planned.', who: 'Author' },
+    { title: 'Write a spec widget', text: 'manifest.json, widget.json and layout.json. No network, files or spawn. This is the path the registry can validate completely today.', who: 'Author' },
+    { title: 'Write a code widget', text: 'QML plus manifest.json and widget.json. It runs unsandboxed as you. Declare network, files and spawn, and expect a hand review.', who: 'Author' },
+    { title: 'Check, then submit a listing', text: 'bun run registry in the website repository, then a pull request that adds registry/widgets/<id>.json.', who: 'Author' }
+  ];
+</script>
 
-All three paths produce the same thing: a package that installs like any Omarchy plugin. See [Package reference](/docs/next/create/package-reference/).
+All paths produce the same thing: a public GitHub repository that holds `manifest.json`, `widget.json`, a license and a README. Spec widgets also hold `layout.json`. See [Package reference](/docs/next/create/package-reference/).
 
 <Callout type="planned">
 
-The schema is DRAFT v0 and the tooling is not built. `ow new`, `ow check`, the QML kit and the spec-widget renderer are planned. You can write the files by hand today, but you cannot run a widget yet.
+The `widget.json` schema is DRAFT v0. `ow new`, `ow check` and `ow publish --listing` do not exist. The QML kit and the desktop renderer do not exist, so nobody can run a widget on a desktop yet. What does work today: validating a spec widget with `bun run registry`, and previewing it in the website emulator.
 
 </Callout>
 
-## The three paths
+## Decide
 
-| Path           | You write                                                 | Choose it when                                           | Trust                                                             |
-| -------------- | --------------------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------------------------- |
-| Spec widget    | JSON that binds data to layout blocks                     | The widget shows values, lists or charts from a provider | Most trusted tier. No custom code runs, and the boundary is hard. |
-| Code widget    | QML using the widgets kit                                 | You need custom drawing, input or logic                  | Runs unsandboxed as you. Tiers describe review, not isolation.    |
-| Agent-assisted | A description, which an agent turns into one of the above | You want a first draft quickly                           | Same as the result: spec or code                                  |
+<Flow label="Choose a path: spec widget or code widget" steps={decide} />
 
-Start with a spec widget if it can do the job. It is the easiest to list and the easiest to trust.
+## The paths
+
+| Path           | You write                                                 | Choose it when                                           | Trust                                                               |
+| -------------- | --------------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------- |
+| Spec widget    | `layout.json`: a bounded tree of nodes bound to topics    | The widget shows values, lists or charts from a provider | No code runs. It can only read what you declare and the user grants |
+| Code widget    | QML using the widgets kit                                 | You need custom drawing, input or logic                  | Runs unsandboxed as you. Tiers describe review, not isolation       |
+| Agent-assisted | A description, which an agent turns into one of the above | You want a first draft quickly                           | Same as the result: spec or code                                    |
+
+Start with a spec widget if it can do the job. It is the easiest to validate, list and review.
 
 ## Spec widget
 
-A spec widget is a `widget.json` plus a layout. A generic renderer draws it with theme tokens. It cannot run code, so it can only see the fields you request and the user grants. Read [Spec widgets](/docs/next/create/spec-widgets/).
+A spec widget is `widget.json` plus `layout.json` (layout schema version 0). The layout is data: node types such as `stack`, `ring` and `value`, each bound to a `{ "topic", "field" }` pair, coloured by role (`accent`, `foreground`, `secondary`, `muted`). The registry build checks every node and every binding. Read [Spec widgets](/docs/next/create/spec-widgets/).
 
 ## Code widget
 
-A code widget is QML in a standard Omarchy plugin. It gets theme tokens, its size, its settings and data subscriptions, and it can draw anything. It is not sandboxed. Read [Code widgets](/docs/next/create/code-widgets/).
+A code widget is QML in a standard Omarchy plugin. It can draw anything and it is not sandboxed. The listing policy for code widgets is stricter, because reviewers must read the code. Those rules run in the registry build for approved listings. Read [Code widgets](/docs/next/create/code-widgets/).
 
 ## Agent-assisted
 
-<Callout type="planned">
-
-The planned agent skill and an `llms.txt` file that teach an agent the kit, the spec and the `ow check` loop do not exist yet.
-
-</Callout>
-
-Until then, you can give an agent these pages and the draft schema from the code repository, and ask it for a spec widget. Review whatever it writes the same way you would review a stranger's code, and never paste secrets into a prompt.
+Give an agent the skills from [Agent skills](/docs/next/ai/skills/) and the [LLM index](/docs/next/ai/llm-index/). There are four: plan, develop, test and submit. They name the commands that exist and the ones that are only planned. Review what an agent writes the way you would review a stranger's code, and never paste secrets into a prompt.
 
 ## Every path needs the same package
 
-- A standard Omarchy plugin: `manifest.json` plus a `widget.json` sidecar.
-- A reverse-domain id outside `omarchy.*`.
-- A README with install and removal steps, and a license.
+- `manifest.json` with `id`, `name`, `version`, `description` and `license`.
+- `widget.json` with all 12 required fields.
+- A reverse-domain id outside `omarchy.*`. To list it, the id must start with `io.github.<your-github-login>.`.
+- A license from the allow-list that GitHub detects, a README with install and removal steps.
 
 To try the simplest path now, follow [Your first widget, end to end](/docs/next/create/your-first-widget-end-to-end/).
 

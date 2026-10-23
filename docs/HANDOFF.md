@@ -2,6 +2,16 @@
 
 Written 2026-10-17 at the maintainer's request when all work was stopped. Nothing is running: no agents, no local server. Read this first when you resume.
 
+## Status 2026-10-23
+
+- `develop` was promoted to `staging` (PR #33), and `staging` to `main` (PR #34).
+- Merged since 2026-10-17: PRs #15-#31 and #36-#40 (stats, emulator, widget picker, footer, error pages, docs, `lock.json` and per-listing build isolation, registry fetch hardening, gate scripts).
+- PR #41 (layout.json v0 schema) is OPEN. PR #42 (layout renderer) is CLOSED and not merged. Re-check with `gh pr list --state all` before relying on either.
+- The gate scripts (`scripts/gate/`) run in the registry build (`buildOne`) for approved non-fixture listings (see DECISIONS GATES-WIRED). `--local --only <id>` runs them on a candidate without a lock entry; it is refused in CI.
+- `registry/lock.json` is empty (`{}`). No third-party listing is published yet; only the maintainer `concept-*` fixtures are. A merged listing still needs its id in `lock.json`.
+- CI passes `GITHUB_TOKEN` to the registry step, so section 4 item 8 is obsolete.
+- Sections 2 and 3 describe the state on 2026-10-17 and are kept as history.
+
 Repos: code `github.com/dexterhere/omarchy-widgets` (local `omarchy-widgets/`), website `github.com/dexterhere/dexterhere-omarchy-widgets-web` (local `omarchy-widgets-web/`, this repo). Both use `main` (production), `staging` (review), `develop` (integration); every change goes through a PR into `develop`.
 
 ## 1. Website repo: done (merged into `develop`)
@@ -26,7 +36,7 @@ Repos: code `github.com/dexterhere/omarchy-widgets` (local `omarchy-widgets/`), 
 
 State of branches: `develop` has all of the above. **`main` and `staging` of this repo only have the plan commit**: nothing from this list has been promoted yet. Promotion is `develop` -> `staging` -> `main` by PR (the code repo already went through this).
 
-## 2. Website repo: in progress (WIP branches pushed, not reviewed, may not pass checks)
+## 2. Website repo: in progress (historical: WIP branches as of 2026-10-17, not revisited)
 
 Each of these was stopped mid-work. The last commit on each branch is a `wip(...)` commit. To continue: check out the branch, `git rebase origin/develop`, run `bun run check && bun run lint && bunx vitest run && bun run build`, then `PW_PORT=4301 bun run test:e2e`, fix, open or update the PR.
 

@@ -1,12 +1,36 @@
 // Registry build. Validates listings, fetches DATA (two JSON files) at a pinned commit, derives
 // everything from them and writes registry/dist. It never executes anything from a widget repo.
 // Usage: bun scripts/build-registry.ts [--offline] [--skip-reachability] [--out registry/dist]
+//        bun scripts/build-registry.ts --local --only <listing id>   (gates on a candidate, writes nothing)
 // --skip-reachability is for local development only; CI must never use it.
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync
+} from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import Ajv2020 from 'ajv/dist/2020.js';
 import addFormats from 'ajv-formats';
+import {
+  bindsOf,
+  checkBindings,
+  validateLayout,
+  validateSampleData,
+  LAYOUT_LIMITS,
+  HTMLISH,
+  SPOOF,
+  plain,
+  visible
+} from '../src/lib/registry/layout';
+import type { Layout, SampleData } from '../src/lib/registry/layout';
+import { TREE_LIMITS } from './gate/scan-tree';
+import { runGates } from './gate/run';
+import type { Catalog } from './gate/check-providers';
 import type {
   Access,
   RegistryIndex,
@@ -69,14 +93,37 @@ export function assertAllowedUrl(raw: string): URL {
   if (u.port) throw new Error('rejected URL: explicit port');
   if (u.hostname !== RAW_HOST && u.hostname !== API_HOST)
     throw new Error(`rejected URL: host ${u.hostname} not allow-listed`);
-  if (u.search || u.hash) throw new Error('rejected URL: query or fragment');
+  if (u.hash) throw new Error('rejected URL: fragment');
+  if (u.search) {
+    // Per-endpoint allow-list: exactly one named parameter with a strict value, nothing else.
+    const rule = QUERY_ALLOW.find((r) => r.path.test(u.pathname));
+    const keys = [...u.searchParams.keys()];
+    const v = u.searchParams.get(rule?.key ?? '');
+    if (!rule || keys.length !== 1 || keys[0] !== rule.key || v === null || !rule.value.test(v))
+      throw new Error('rejected URL: query not allowed for this endpoint');
+  }
   return u;
 }
 
-export async function fetchJson(
+const QUERY_ALLOW = [
+  { path: /^\/repos\/[^/]+\/[^/]+\/git\/trees\/[0-9a-f]{40}$/, key: 'recursive', value: /^1$/ },
+  { path: /^\/repos\/[^/]+\/[^/]+\/license$/, key: 'ref', value: /^[0-9a-f]{40}$/ }
+];
+
+interface FetchOpts {
+  fetch?: FetchFn;
+  timeoutMs?: number;
+  maxBytes?: number;
+  token?: string;
+}
+
+/** The one place that talks to GitHub: allow-listed URL, no redirects, no cookies, timeout and a
+ *  streaming size cap. fetchJson and fetchText only differ in how they read the bytes. `text`
+ *  files may carry any content type (we only read them as data, never render them). */
+async function fetchBody(
   rawUrl: string,
-  opts: { fetch?: FetchFn; timeoutMs?: number; maxBytes?: number; token?: string } = {}
-): Promise<Record<string, unknown>> {
+  opts: FetchOpts & { text?: boolean } = {}
+): Promise<Uint8Array> {
   const url = assertAllowedUrl(rawUrl);
   const { timeoutMs = LIMITS.timeoutMs, maxBytes = LIMITS.maxBytes } = opts;
   const doFetch: FetchFn = opts.fetch ?? ((u, i) => fetch(u, i));
@@ -96,7 +143,7 @@ export async function fetchJson(
       signal: ctl.signal,
       credentials: 'omit',
       headers: {
-        accept: 'application/json',
+        accept: opts.text ? 'text/plain, */*' : 'application/json',
         ...(opts.token && url.hostname === API_HOST
           ? { authorization: `Bearer ${opts.token}` }
           : {})
@@ -106,11 +153,11 @@ export async function fetchJson(
       throw new Error('rejected: redirect');
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${url.pathname}`);
     const type = res.headers.get('content-type') ?? '';
-    if (/html|xml|javascript/i.test(type))
+    if (!opts.text && /html|xml|javascript/i.test(type))
       throw new Error(`rejected: content-type ${type.split(';')[0]}`);
     const declared = Number(res.headers.get('content-length') ?? 0);
     if (declared > maxBytes) throw new Error(`rejected: body over ${maxBytes} bytes`);
-    if (!res.body) throw new Error('rejected: empty body');
+    if (!res.body) throw new Error('rejected: empty body'); // fail closed, also for text files
     const reader = res.body.getReader();
     const chunks: Uint8Array[] = [];
     let total = 0;
@@ -130,21 +177,39 @@ export async function fetchJson(
       buf.set(c, off);
       off += c.byteLength;
     }
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(buf));
-    } catch {
-      throw new Error(`rejected: not valid JSON: ${url.pathname}`);
-    }
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed))
-      throw new Error('rejected: JSON root must be an object');
-    return parsed as Record<string, unknown>;
+    return buf;
   })();
   work.catch(() => {}); // avoid an unhandled rejection if the timeout wins the race
   try {
     return await Promise.race([work, timeout]);
   } finally {
     clearTimeout(timer);
+  }
+}
+
+export async function fetchJson(
+  rawUrl: string,
+  opts: FetchOpts = {}
+): Promise<Record<string, unknown>> {
+  const buf = await fetchBody(rawUrl, opts);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(buf));
+  } catch {
+    throw new Error(`rejected: not valid JSON: ${new URL(rawUrl).pathname}`);
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed))
+    throw new Error('rejected: JSON root must be an object');
+  return parsed as Record<string, unknown>;
+}
+
+/** A text file from the pinned commit (UTF-8 only), under exactly the rules of fetchJson. */
+export async function fetchText(rawUrl: string, opts: FetchOpts = {}): Promise<string> {
+  const buf = await fetchBody(rawUrl, { ...opts, text: true });
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(buf);
+  } catch {
+    throw new Error('rejected: not valid UTF-8');
   }
 }
 
@@ -165,7 +230,7 @@ export async function assertCommitReachable(
   repo: string,
   commit: string,
   opts: { fetch?: FetchFn; token?: string } = {}
-): Promise<void> {
+): Promise<{ repoId: unknown; ownerId: unknown; committed: string | null }> {
   if (!OWNER_RE.test(owner) || !REPO_RE.test(repo) || !COMMIT_RE.test(commit))
     throw new Error('reachability: invalid owner, repo or commit');
   const api = `https://${API_HOST}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
@@ -184,13 +249,124 @@ export async function assertCommitReachable(
     throw new Error(
       `commit is not reachable from the default branch ${branch} (compare status: ${typeof status === 'string' ? status.slice(0, 20) : 'unknown'})`
     );
+  const ownerObj = own(info, 'owner');
+  // For "behind" and "identical" the merge base is the pinned commit itself, so its committer
+  // date comes from the compare response we already fetched (no extra request).
+  const base = own(cmp, 'merge_base_commit') as { commit?: { committer?: { date?: unknown } } };
+  const when = base?.commit?.committer?.date;
+  const committed =
+    typeof when === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(when) ? when.slice(0, 10) : null;
+  return {
+    committed,
+    repoId: own(info, 'id'),
+    ownerId:
+      ownerObj && typeof ownerObj === 'object'
+        ? own(ownerObj as Record<string, unknown>, 'id')
+        : undefined
+  };
+}
+
+export interface TreeEntry {
+  path: string;
+  mode: string;
+  type: string;
+  size?: number;
+}
+
+/** The full file tree at a commit. Fails closed when GitHub says the list was cut short: an
+ *  incomplete tree must never pass a scan. */
+export async function fetchTree(
+  owner: string,
+  repo: string,
+  commit: string,
+  opts: { fetch?: FetchFn; token?: string } = {}
+): Promise<TreeEntry[]> {
+  if (!OWNER_RE.test(owner) || !REPO_RE.test(repo) || !COMMIT_RE.test(commit))
+    throw new Error('tree: invalid owner, repo or commit');
+  const t = await fetchJson(
+    `https://${API_HOST}/repos/${owner}/${repo}/git/trees/${commit}?recursive=1`,
+    { ...opts, maxBytes: 4 * 1024 * 1024 }
+  );
+  if (own(t, 'truncated') !== false)
+    throw new Error('tree is truncated or unreadable: failing closed');
+  const tree = own(t, 'tree');
+  if (!Array.isArray(tree)) throw new Error('tree: unexpected response');
+  return tree.map((e) => {
+    const o = e as Record<string, unknown>;
+    return {
+      path: String(own(o, 'path')),
+      mode: String(own(o, 'mode')),
+      type: String(own(o, 'type')),
+      size: typeof own(o, 'size') === 'number' ? (own(o, 'size') as number) : undefined
+    };
+  });
+}
+
+/** Licenses a listing may carry. The SPDX id comes from GitHub's detection of the LICENSE blob at
+ *  the pinned commit, never from the author's manifest. */
+export const LICENSE_ALLOW = new Set([
+  'MIT',
+  'Apache-2.0',
+  'BSD-2-Clause',
+  'BSD-3-Clause',
+  'ISC',
+  'MPL-2.0',
+  'GPL-3.0',
+  'LGPL-3.0',
+  'AGPL-3.0',
+  'Unlicense',
+  '0BSD'
+]);
+
+export async function checkLicense(
+  owner: string,
+  repo: string,
+  commit: string,
+  declared: unknown,
+  opts: { fetch?: FetchFn; token?: string } = {}
+): Promise<void> {
+  const r = await fetchJson(
+    `https://${API_HOST}/repos/${owner}/${repo}/license?ref=${commit}`,
+    opts
+  ).catch((e) => {
+    if (e instanceof Error && /HTTP 404/.test(e.message))
+      throw new Error('no LICENSE file found at the pinned commit');
+    throw e;
+  });
+  const lic = own(r, 'license');
+  const spdx =
+    lic && typeof lic === 'object' ? own(lic as Record<string, unknown>, 'spdx_id') : undefined;
+  if (typeof spdx !== 'string' || !LICENSE_ALLOW.has(spdx))
+    throw new Error(
+      `license not recognised or not allowed (detected: ${typeof spdx === 'string' ? spdx.slice(0, 30) : 'none'})`
+    );
+  if (declared !== spdx)
+    throw new Error(
+      `manifest license ${String(declared).slice(0, 30)} differs from the detected ${spdx}`
+    );
+}
+
+/** registry/lock.json: numeric GitHub ids a maintainer recorded when approving a listing. A
+ *  renamed or transferred repo keeps its id; a deleted and re-created one does not. */
+export type Lock = Record<string, { repoId: number; ownerId: number }>;
+export const PENDING = 'pending maintainer approval: no entry in registry/lock.json';
+
+export function checkLock(
+  id: string,
+  lock: Lock,
+  seen: { repoId: unknown; ownerId: unknown }
+): void {
+  const e = Object.hasOwn(lock, id) ? lock[id] : undefined;
+  if (!e) throw new Error(PENDING);
+  if (e.repoId !== seen.repoId || e.ownerId !== seen.ownerId)
+    throw new Error(
+      'repo or owner id differs from registry/lock.json (deleted, re-created or transferred?)'
+    );
 }
 
 // ---------- plain text ----------
 // SECURITY: no field in the output may ever be rendered with {@html} or innerHTML. Everything
 // here is data from strangers; it is only ever shown as text.
-const SPOOF = /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u; // control, bidi/zero-width format, line/paragraph separators
-const HTMLISH = /<\s*\/?\s*[a-z!?]/i;
 const BAD_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
 /** Rejects (never strips) any string or object key that could spoof what a person sees:
@@ -201,6 +377,7 @@ export function assertPlain(value: unknown, path = '$', depth = 0): void {
   if (typeof value === 'string') {
     if (SPOOF.test(value)) throw new Error(`${path}: control or invisible characters not allowed`);
     if (HTMLISH.test(value)) throw new Error(`${path}: looks like HTML, plain text only`);
+    if (!plain(value)) throw new Error(`${path}: not normalised (NFC) or too many combining marks`);
   } else if (Array.isArray(value)) {
     value.forEach((v, i) => assertPlain(v, `${path}[${i}]`, depth + 1));
   } else if (value && typeof value === 'object') {
@@ -216,7 +393,7 @@ export function cleanText(input: unknown, max: number, field: string): string {
   if (typeof input !== 'string') throw new Error(`${field}: must be a string`);
   assertPlain(input, field);
   const s = input.replace(/\s+/g, ' ').trim();
-  if (!s) throw new Error(`${field}: empty`);
+  if (!s || !visible(s)) throw new Error(`${field}: empty`);
   return s.length > max ? s.slice(0, max - 1) + '\u2026' : s;
 }
 
@@ -314,10 +491,14 @@ export interface BuildInput {
   skipReachability?: boolean;
   /** GitHub token, sent only to api.github.com. */
   token?: string;
-  readFixture: (id: string, name: 'manifest' | 'widget') => unknown;
+  readFixture: (id: string, name: 'manifest' | 'widget' | 'layout') => unknown;
   readReview: (id: string) => unknown;
   /** registry/namespaces.json: namespace prefix -> allowed GitHub repo owners. */
   namespaces?: unknown;
+  /** registry/providers.json; defaults to the checked-in catalog. */
+  catalog?: Catalog;
+  /** registry/lock.json. When set, every non-fixture listing needs a matching entry. */
+  lock?: Lock;
 }
 
 export interface BuildResult {
@@ -326,22 +507,56 @@ export interface BuildResult {
   errors: string[];
 }
 
+const DEFAULT_CATALOG = readJson(join(REG, 'providers.json')) as Catalog;
+const FIXTURE_UPDATED = '2026-01-15';
+
 async function buildOne(l: Listing, inp: BuildInput): Promise<RegistryWidget> {
   let manifest: Record<string, unknown>;
   let widget: Record<string, unknown>;
+  let layoutRaw: unknown;
+  let src: { owner: string; repo: string } | null = null;
   const fixture = l.source === 'fixture';
+  // Committer date (yyyy-mm-dd, UTC) of the pinned commit. Fixtures get a fixed date; null when
+  // the reachability check was skipped or GitHub did not return one.
+  let updated: string | null = fixture ? FIXTURE_UPDATED : null;
   if (fixture) {
     manifest = inp.readFixture(l.id, 'manifest') as Record<string, unknown>;
     widget = inp.readFixture(l.id, 'widget') as Record<string, unknown>;
     if (!manifest || !widget) throw new Error('fixture files missing');
+    layoutRaw = inp.readFixture(l.id, 'layout');
   } else {
     if (inp.offline) throw new Error('needs the network, but --offline was given');
     const [, owner, repo] = /^https:\/\/github\.com\/([^/]+)\/([^/]+)$/.exec(l.repo) ?? [];
-    if (!inp.skipReachability)
-      await assertCommitReachable(owner, repo, l.commit, { fetch: inp.fetch, token: inp.token });
+    if (!inp.skipReachability) {
+      const seen = await assertCommitReachable(owner, repo, l.commit, {
+        fetch: inp.fetch,
+        token: inp.token
+      });
+      updated = seen.committed;
+      if (inp.lock) {
+        checkLock(l.id, inp.lock, seen);
+        const m = await fetchJson(
+          `https://${RAW_HOST}/${owner}/${repo}/${l.commit}/manifest.json`,
+          {
+            fetch: inp.fetch
+          }
+        );
+        await checkLicense(owner, repo, l.commit, m.license, {
+          fetch: inp.fetch,
+          token: inp.token
+        });
+      }
+    }
+    src = { owner, repo };
     const base = `https://${RAW_HOST}/${owner}/${repo}/${l.commit}`;
     manifest = await fetchJson(`${base}/manifest.json`, { fetch: inp.fetch });
     widget = await fetchJson(`${base}/widget.json`, { fetch: inp.fetch });
+    // Only spec widgets have a layout; code widgets are never fetched beyond these data files.
+    if (widget.tier === 'spec')
+      layoutRaw = await fetchJson(`${base}/layout.json`, {
+        fetch: inp.fetch,
+        maxBytes: LAYOUT_LIMITS.bytes
+      });
   }
   if (!validateManifest(manifest))
     throw new Error(`manifest.json invalid: ${errText(validateManifest)}`);
@@ -364,6 +579,28 @@ async function buildOne(l: Listing, inp: BuildInput): Promise<RegistryWidget> {
   if (!cats.includes(w.category))
     throw new Error('widget.json category is not one of the listing categories');
   const categories = [w.category, ...cats.filter((c) => c !== w.category).sort()];
+
+  // Spec widgets: validate the view tree and its sample data, and cross-check every binding.
+  let layout: Layout | null = null;
+  let sampleData: SampleData | null = null;
+  if (w.tier === 'spec') {
+    if (layoutRaw === undefined || layoutRaw === null)
+      throw new Error('spec widget needs layout.json');
+    assertPlain(layoutRaw, 'layout.json');
+    const sd = (widget as { sampleData?: unknown }).sampleData ?? {};
+    const sdErr = validateSampleData(sd);
+    if (sdErr.length) throw new Error(`sampleData invalid: ${sdErr.slice(0, 3).join('; ')}`);
+    const r = validateLayout(layoutRaw, w.variants);
+    if (!r.ok) throw new Error(`layout.json invalid: ${r.errors.slice(0, 3).join('; ')}`);
+    const all = [
+      ...bindsOf(r.layout.root),
+      ...Object.values(r.layout.variants ?? {}).flatMap(bindsOf)
+    ];
+    const bErr = checkBindings(all, w.providers, sd as SampleData);
+    if (bErr.length) throw new Error(`layout.json bindings: ${bErr.slice(0, 3).join('; ')}`);
+    layout = r.layout;
+    sampleData = sd as SampleData;
+  }
 
   // The tier is NEVER taken from widget.json (author controlled) or the listing. Only a
   // maintainer review record for this exact commit can grant core, verified or spec.
@@ -392,6 +629,28 @@ async function buildOne(l: Listing, inp: BuildInput): Promise<RegistryWidget> {
     }
   }
 
+  // Gates (G4-G7) on the pinned tree. Fixtures skip them (they have no repo). Any error-level
+  // finding excludes the listing; the reason is secret-free (count plus the first three findings).
+  let warnings: string[] = [];
+  if (src) {
+    const { owner, repo } = src;
+    const entries = await fetchTree(owner, repo, l.commit, { fetch: inp.fetch, token: inp.token });
+    const g = await runGates({
+      id: l.id,
+      widget: w,
+      entries,
+      catalog: inp.catalog ?? DEFAULT_CATALOG,
+      readText: (path) =>
+        fetchText(
+          `https://${RAW_HOST}/${owner}/${repo}/${l.commit}/${path.split('/').map(encodeURIComponent).join('/')}`,
+          { fetch: inp.fetch, maxBytes: TREE_LIMITS.maxFileBytes }
+        )
+    });
+    if (g.errors.length)
+      throw new Error(`gates: ${g.errors.length} problem(s): ${g.errors.slice(0, 3).join(' | ')}`);
+    warnings = g.warnings.slice(0, 10).map((x) => scrub(x).slice(0, 200));
+  }
+
   return {
     id: l.id,
     name: cleanText(manifest.name, 80, 'name'),
@@ -401,6 +660,7 @@ async function buildOne(l: Listing, inp: BuildInput): Promise<RegistryWidget> {
     license: manifest.license as string,
     repo: l.repo,
     commit: l.commit,
+    updated,
     category: categories[0],
     categories,
     tags: l.tags,
@@ -423,9 +683,16 @@ async function buildOne(l: Listing, inp: BuildInput): Promise<RegistryWidget> {
         : {})
     })),
     compat: w.compat,
-    access: describeAccess(w)
+    access: describeAccess(w),
+    layout,
+    sampleData,
+    ...(warnings.length ? { warnings } : {})
   };
 }
+
+/** Author-controlled text in published fields: spoofing characters and markup-looking text become '?'. */
+export const scrub = (e: string) =>
+  e.replace(new RegExp(SPOOF.source, 'gu'), '?').replace(/[<>]/g, '?');
 
 const tally = (xs: string[]) =>
   Object.fromEntries(
@@ -450,7 +717,10 @@ export async function buildRegistry(inp: BuildInput): Promise<BuildResult> {
       errors.push(`${file}: ${e instanceof Error ? e.message : 'invalid'}`);
       continue;
     }
-    if (file !== `${l.id}.json`) errors.push(`${file}: file name must be <id>.json`);
+    if (file !== `${l.id}.json`) {
+      errors.push(`${file}: file name must be <id>.json`);
+      continue; // a mismatched listing is never published
+    }
     if (seen.has(l.id)) {
       errors.push(`${file}: duplicate id ${l.id}`);
       continue;
@@ -476,26 +746,57 @@ export async function buildRegistry(inp: BuildInput): Promise<BuildResult> {
       byTier: tally(widgets.map((w) => w.tier)),
       byCategory: tally(widgets.flatMap((w) => w.categories))
     },
-    widgets
+    widgets,
+    excluded: errors.map((e) => {
+      // Error text can echo author-controlled names (file names, paths): neutralise it before
+      // publishing. Spoofing characters and markup-looking text become '?'.
+      e = scrub(e);
+      const i = e.indexOf(': ');
+      return {
+        ref: (i > 0 ? e.slice(0, i) : 'registry').slice(0, 120),
+        reason: (i > 0 ? e.slice(i + 2) : e).slice(0, 300),
+        pending: e.endsWith(PENDING)
+      };
+    })
   };
   return { index, widgets, errors };
 }
 
 // ---------- CLI ----------
+/** `--local --only <id>`: run the reachability, fetch and gate steps for one candidate listing that
+ *  has no registry/lock.json entry yet, and write nothing. It could skip the maintainer approval, so
+ *  it refuses to run in CI (GITHUB_ACTIONS=true) or together with --strict. Returns the id, or null. */
+export function localMode(args: string[], env: Record<string, string | undefined>): string | null {
+  if (!args.includes('--local')) return null;
+  const ga = (env.GITHUB_ACTIONS ?? '').trim().toLowerCase();
+  if ((ga !== '' && ga !== 'false' && ga !== '0') || (env.CI ?? '') !== '')
+    throw new Error('--local is refused in CI');
+  if (args.includes('--strict')) throw new Error('--local cannot be combined with --strict');
+  const i = args.indexOf('--only');
+  if (i < 0 || !args[i + 1]) throw new Error('--local needs --only <listing id>');
+  if (!/^[A-Za-z0-9][A-Za-z0-9.-]*$/.test(args[i + 1]))
+    throw new Error('--only needs a listing id');
+  return args[i + 1];
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const offline = args.includes('--offline');
   const skipReachability = args.includes('--skip-reachability');
+  const strict = args.includes('--strict'); // CI on pull requests: any problem fails the run
+  const only = localMode(args, process.env);
   const oi = args.indexOf('--out');
   const out = resolve(ROOT, oi >= 0 && args[oi + 1] ? args[oi + 1] : 'registry/dist');
   const dir = join(REG, 'widgets');
   const listings = readdirSync(dir)
-    .filter((f) => f.endsWith('.json'))
+    .filter((f) => f.endsWith('.json') && (only === null || f === `${only}.json`))
     .sort()
     .map((file) => {
-      const raw = readFileSync(join(dir, file), 'utf8');
-      if (raw.length > LIMITS.maxListingBytes) return { file, data: null };
+      // Only regular files: a symlink or directory named *.json is excluded, never followed.
       try {
+        if (!lstatSync(join(dir, file)).isFile()) return { file, data: null };
+        const raw = readFileSync(join(dir, file), 'utf8');
+        if (raw.length > LIMITS.maxListingBytes) return { file, data: null };
         return { file, data: JSON.parse(raw) as unknown };
       } catch {
         return { file, data: null };
@@ -509,6 +810,9 @@ async function main() {
     token: process.env.GITHUB_TOKEN || undefined,
     readFixture: (id, name) => optional(join(REG, 'fixtures', id, `${name}.json`)),
     namespaces: optional(join(REG, 'namespaces.json')),
+    // --local: no lock, so no pending-approval skip. Everything else (gates included) still runs.
+    lock:
+      only === null ? ((optional(join(REG, 'lock.json')) as Lock | undefined) ?? {}) : undefined,
     readReview: (id) =>
       /^[a-z0-9.-]+$/.test(id) ? optional(join(REG, 'review', `${id}.json`)) : undefined
   });
@@ -517,11 +821,18 @@ async function main() {
     console.log(
       `${w.id.padEnd(48)} ${w.status.padEnd(8)} ${w.tier.padEnd(10)} ${w.reviewNote ?? ''}`
     );
+  // One bad listing never blocks the rest: it is excluded, listed in index.json and reported.
+  // Pending approvals are not failures. --strict (pull requests) fails on every other problem.
   if (errors.length) {
-    console.error(`\nregistry: ${errors.length} problem(s)`);
+    console.error(`\nregistry: ${errors.length} listing(s) excluded`);
     for (const e of errors) console.error(`  - ${e}`);
-    process.exit(1);
   }
+  if (only !== null) {
+    for (const w of widgets) for (const x of w.warnings ?? []) console.log(`  warning: ${x}`);
+    console.log(`\nregistry --local: ${widgets.length ? 'passed' : 'excluded'} (nothing written)`);
+    process.exit(widgets.length ? 0 : 1);
+  }
+  if (strict && index.excluded.some((x) => !x.pending)) process.exit(1);
   writeDist(out, index, widgets);
   console.log(`\nregistry: ${widgets.length} widget(s) written to ${out}`);
 }

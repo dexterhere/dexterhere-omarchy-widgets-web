@@ -1,6 +1,8 @@
 // Shapes of registry/dist/index.json. Written by scripts/build-registry.ts, read by the site.
 // Every string here that came from a widget repo has been sanitised to plain text at build time.
 
+import type { Layout, SampleData } from './layout';
+
 export type Category =
   | 'system'
   | 'time-calendar'
@@ -66,6 +68,8 @@ export interface ReviewInfo {
 
 export interface RegistryWidget {
   id: string;
+  /** Gate warnings (declared use of a risky API); present only when there are some. */
+  warnings?: string[];
   name: string;
   version: string;
   description: string;
@@ -73,6 +77,8 @@ export interface RegistryWidget {
   license: string;
   repo: string;
   commit: string;
+  /** Committer date (yyyy-mm-dd, UTC) of the pinned commit; null when it could not be read. */
+  updated: string | null;
   /** Primary category: the first entry of `categories`. */
   category: Category;
   /** 1 to 3 categories, primary first. The gallery lists the widget under each. */
@@ -96,6 +102,9 @@ export interface RegistryWidget {
   settings: Setting[];
   compat: { omarchy: string; widgetsKit: string };
   access: Access;
+  /** Spec widgets only: the validated view tree and its sample data. Null for code widgets. */
+  layout: Layout | null;
+  sampleData: SampleData | null;
 }
 
 export interface RegistryIndex {
@@ -109,4 +118,6 @@ export interface RegistryIndex {
     byCategory: Record<string, number>;
   };
   widgets: RegistryWidget[];
+  /** Listings left out of this build, with the reason. `pending` means awaiting a maintainer. */
+  excluded: { ref: string; reason: string; pending: boolean }[];
 }

@@ -1,11 +1,20 @@
 ---
 title: Agent skills
-description: 'Three Agent Skills for planning, developing and testing a widget with an AI coding assistant. What each does, how to install them and example prompts.'
+description: 'Four Agent Skills for planning, developing, testing and submitting a widget with an AI coding assistant. What each does, how to install them and example prompts.'
 ---
 
-<script>import Callout from '$lib/docs/Callout.svelte';</script>
+<script>
+  import Callout from '$lib/docs/Callout.svelte';
+  import Flow from '$lib/docs/Flow.svelte';
+  const loop = [
+    { title: 'Plan', text: 'widget-plan.md, with open questions answered by you.', who: 'Author' },
+    { title: 'Develop', text: 'The three files, checked until the validator output is clean.', who: 'Author' },
+    { title: 'Test', text: 'test-report.md with every skipped check listed.', who: 'Author' },
+    { title: 'Submit', text: 'Listing file and PR text. You open the PR.', who: 'Author' }
+  ];
+</script>
 
-The site serves three skills as plain files in the Claude Code `SKILL.md` format: a name and description in frontmatter, then instructions. They also work as pasted text in any assistant.
+The site serves four skills as plain files in the Claude Code `SKILL.md` format: a name and description in frontmatter, then instructions. They also work as pasted text in any assistant.
 
 <Callout type="note">
 
@@ -18,6 +27,9 @@ The skills describe the project as it is: pre-release. They tell the assistant w
 | `omarchy-widget-plan`    | `/skills/omarchy-widget-plan/SKILL.md`    | `widget-plan.md`                     |
 | `omarchy-widget-develop` | `/skills/omarchy-widget-develop/SKILL.md` | The widget package and a self-review |
 | `omarchy-widget-test`    | `/skills/omarchy-widget-test/SKILL.md`    | `test-report.md`                     |
+| `omarchy-widget-submit`  | `/skills/omarchy-widget-submit/SKILL.md`  | The listing file and PR text         |
+
+<Flow label="The four skills in order" steps={loop} />
 
 ## What each one does
 
@@ -27,11 +39,15 @@ Asks what you want, then reads `/registry.json` to see whether a widget already 
 
 ### Develop
 
-Follows the plan. Sets rules for the manifest and `widget.json`, spec authoring, QML style, secrets, input validation, daemon errors and stale data, polling and rendering efficiency, and accessibility basics. It lists which `ow` commands exist (`status`, `vault`) and which are planned, and ends with a self-review checklist.
+Follows the plan. Contains a complete valid spec widget (`manifest.json`, `widget.json`, `layout.json`) to start from, the `layout.json` v0 rules, the code-widget listing rules, and rules for secrets, input validation, daemon errors, efficiency and accessibility. It lists which commands exist and which are planned. The definition of done is validator output, not an opinion.
 
 ### Test
 
-Covers schema and manifest checks, previews in a dark and a light theme, loading, empty, error, stale and offline states, permission denial, fake-secret leak searches, hard-coded host checks, resize checks and performance sanity. It ends with a test report template. Checks that need planned features are marked not run.
+Runs the registry validators on the files, and covers previews in a dark and a light theme, loading, empty, error, stale and offline states, permission denial, fake-secret leak searches, hard-coded host checks, resize checks and performance sanity. It ends with a test report template. Checks that need planned features are marked not run.
+
+### Submit
+
+Prepares `registry/widgets/<id>.json`, explains the lock and pending reality, runs the registry build locally, writes the pull request text and stops before anything is pushed or opened. It checks that the pull request author owns the `io.github.<owner>` namespace, and never opens the pull request itself.
 
 ## Install
 
@@ -39,7 +55,7 @@ For Claude Code, copy the three folders into `~/.claude/skills/`. `SITE` is the 
 
 ```bash
 SITE="https://your-site.example"
-for s in omarchy-widget-plan omarchy-widget-develop omarchy-widget-test; do
+for s in omarchy-widget-plan omarchy-widget-develop omarchy-widget-test omarchy-widget-submit; do
   mkdir -p ~/.claude/skills/$s
   curl -fsSL "$SITE/skills/$s/SKILL.md" -o ~/.claude/skills/$s/SKILL.md
 done
@@ -67,5 +83,7 @@ Use the omarchy-widget-test skill on this folder. Use a throwaway config directo
 
 ## Limits
 
-- Today the only provider is `system`, with CPU, memory and load topics. Plans that need other providers will be marked as waiting.
+- The daemon serves `system.cpu`, `system.memory` and `system.load`. The listing catalog lists different topics. The skills tell the assistant to use only fields present in both. Plans that need other providers will be marked as waiting. See [Data and providers](/docs/next/create/data-and-providers/).
+- The validators are in the website repository. The assistant needs a checkout of it and `bun`.
+- The skills are guidance. Nothing in CI checks that an assistant followed them.
 - An assistant can misread a skill. Check the plan before development, and the report before you trust it.

@@ -1,6 +1,12 @@
-<svelte:head>
-  <title>Security - Omarchy Widgets</title>
-</svelte:head>
+<script lang="ts">
+  import Seo from '../../lib/components/Seo.svelte';
+</script>
+
+<Seo
+  title="Security"
+  description="How Omarchy Widgets protects your data, who it defends against, what is still open, and how to report a vulnerability. Code widgets are not sandboxed."
+  path="/security/"
+/>
 
 <div class="site-frame stack page">
   <h1>Security</h1>
@@ -167,8 +173,7 @@
         a widget repository.
       </li>
       <li>
-        Rule: widget Markdown is rendered through a sanitizer, with no raw HTML and no remote images
-        unless the host is allow-listed. Links get <code>rel="noopener noreferrer"</code>.
+        Rule: nothing from a widget is rendered as Markdown or HTML. Listing text is plain text.
       </li>
       <li>Our end-to-end tests fail if a page makes a request to any host other than its own.</li>
     </ul>

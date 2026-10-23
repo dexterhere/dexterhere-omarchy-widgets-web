@@ -1,31 +1,77 @@
 ---
 title: Submit a widget
-description: The steps to list a widget in the registry, the listing file and its fields, what CI checks, and how updates and takedowns work.
+description: Step by step, how to list a widget in the registry - who does what, what CI checks, why a merged listing can still be pending, how long it takes, and the errors you may see.
 ---
 
-<script>import Callout from '$lib/docs/Callout.svelte';</script>
+<script>
+  import Callout from '$lib/docs/Callout.svelte';
+  import Flow from '$lib/docs/Flow.svelte';
+  const steps = [
+    { title: 'Publish the widget', text: 'Put it in your own public GitHub repository. Merge what you want listed into the default branch and copy the full commit SHA.', who: 'Author' },
+    { title: 'Open a pull request', text: 'From your own GitHub account, add registry/widgets/<id>.json to the website repository.', who: 'Author' },
+    { title: 'CI runs', text: 'Validates the listing, fetches your JSON files at the pinned commit, checks the author, runs tests. It runs no code from your repository.', who: 'CI' },
+    { title: 'Review and merge', text: 'A maintainer reads the pinned commit and merges. Nothing merges by itself.', who: 'Maintainer' },
+    { title: 'Approval in lock.json', text: 'A maintainer records your repository and owner ids in registry/lock.json. Until then the listing is pending.', who: 'Maintainer' },
+    { title: 'Site build', text: 'The build runs the registry step again and publishes every listing that is approved and valid.', who: 'Site' },
+    { title: 'Published', text: 'Your widget has a page on the site. Its tier is community until a maintainer records a review.', who: 'Site' }
+  ];
+</script>
 
-Listing a widget does not install anything, and it does not make the widget reviewed or safe. Read [Trust tiers](/docs/next/publish/trust-tiers/) first. For a shorter tick-box version, use the [contribute checklist](/docs/next/publish/contribute-checklist/).
+Listing a widget means adding one small JSON file to the registry by pull request. Listing does not install anything, and it does not make the widget reviewed or safe. Read [Trust tiers](/docs/next/publish/trust-tiers/) first. For a tick-box version, use the [contribute checklist](/docs/next/publish/contribute-checklist/).
 
 <Callout type="planned">
 
-`ow new`, `ow check` and `ow publish --listing` are planned and do not exist yet. Each step shows the manual way, which works today.
+`ow new`, `ow check` and `ow publish --listing` are planned and do not exist yet. Every step below is done by hand, and that works today.
 
 </Callout>
 
-## The seven steps
+## What happens, and who does it
 
-1. **Pick a path.** A spec widget is JSON with no code. It is the easiest to list and the most trusted tier. A code widget is QML with full control, but it is not sandboxed and runs as you. See [Choose a path](/docs/next/create/choose-a-path/).
-2. **Scaffold.** Planned: `ow new <id> --template <name>`. Manual: create a folder with `manifest.json`, `widget.json`, a README, a license and a preview.
-3. **Develop** against a throwaway shell configuration, never your real one.
-4. **Check.** Planned: `ow check`. Manual: validate both JSON files against the schemas in the code repository's `spec/` folder, and check the capabilities by reading your own code. See [Check and preview](/docs/next/create/check-and-preview/).
-5. **Publish your widget** in its own public repository. It needs `manifest.json` at its root, a license (MIT or similar) and a README with install and removal steps. Merge what you want listed into the default branch and note the commit. The commit must be on the default branch.
-6. **Submit the listing.** Open a pull request from the GitHub account that matches your id to the website repository that adds `registry/widgets/<id>.json`. Planned: `ow publish --listing` generates the file. Manual: write it by hand, using the example below. The pull request template is a short checklist.
-7. **Review and merge.** CI validates the listing and your `widget.json`, builds a preview and posts the access summary on the pull request. A maintainer may read the pinned commit and record a review. Without a review the widget is listed as `community`. After merge, the widget appears at the next site build.
+<Flow {steps} label="From your repository to a published listing" />
 
-## Listing file example
+## How long it takes
 
-`registry/widgets/io.github.you.github-activity.json`:
+There is one maintainer. No turnaround is promised. Review and approval happen when the maintainer has time. Say in your pull request if you need something by a date, and expect that it may not be possible.
+
+## Why a merged listing can still be pending
+
+Merge is not publish. Every real listing also needs an entry in `registry/lock.json`, which only a maintainer can add. It holds the numeric GitHub ids of your repository and its owner. Without it the build excludes the listing with this message:
+
+```text
+pending maintainer approval: no entry in registry/lock.json
+```
+
+This is not a CI failure. A green pull request can still be pending. The lock is keyed on the numeric ids, so renaming your repository is fine. Deleting and re-creating it, or transferring it, excludes the listing until a maintainer approves again.
+
+Today `lock.json` is empty, so no third-party widget is published yet. Only the maintainer's `concept-*` fixtures are.
+
+## Steps
+
+### 1. Pick a path
+
+A spec widget is JSON with no code. A code widget is QML that runs as you. It is not sandboxed. See [Choose a path](/docs/next/create/choose-a-path/).
+
+### 2. Publish the widget in your own repository
+
+At the commit you will list, the repository needs:
+
+- `manifest.json` and `widget.json` at the root. Spec widgets also need `layout.json`.
+- A `LICENSE` file that GitHub detects as one of: MIT, Apache-2.0, BSD-2-Clause, BSD-3-Clause, ISC, MPL-2.0, GPL-3.0, LGPL-3.0, AGPL-3.0, Unlicense, 0BSD. The `license` field in `manifest.json` must equal it.
+- A `README.md` with install and removal steps.
+
+Check it with `omarchy plugin validate <folder>`. See [Check and preview](/docs/next/create/check-and-preview/).
+
+Merge to the default branch, then copy the commit:
+
+```bash
+git rev-parse HEAD
+```
+
+Expected result: 40 lowercase hex characters, and that commit is on your default branch.
+
+### 3. Write the listing
+
+Create `registry/widgets/io.github.you.github-activity.json` in a fork of the website repository. The file name must be `<id>.json`.
 
 ```json
 {
@@ -39,41 +85,81 @@ Listing a widget does not install anything, and it does not make the widget revi
 }
 ```
 
-- `id`: reverse-domain form, lowercase, never under `omarchy.`, and the same id as in `manifest.json` and `widget.json`. `io.github.<owner>.<name>` must be listed from a repository owned by `<owner>`.
-- `repo`: `https://github.com/<owner>/<repo>`. Only github.com is accepted.
-- `commit`: the full 40-character lowercase commit SHA to list. Branch names and tags are not accepted. The commit must be on the repository's default branch.
-- `categories`: one to three slugs from `system`, `time-calendar`, `productivity`, `dev-git`, `ai-agents`, `media`, `communication`, `network-containers`, `ambient-fun`, `utilities`. The category in your `widget.json` must be one of them.
-- `status`: `planned`, `alpha` or `stable`, shown on the site. A maintainer can set `removed` to take a listing down.
+| Field        | Rule                                                                                                                                                                                                              |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `id`         | Reverse domain, lowercase, at most 100 characters, never under `omarchy.`. Use `io.github.<your-login>.<name>`. Same id in all files.                                                                             |
+| `repo`       | `https://github.com/<owner>/<repo>`. Only github.com.                                                                                                                                                             |
+| `commit`     | 40 lowercase hex characters, on the default branch. Not a branch or tag.                                                                                                                                          |
+| `categories` | One to three of `system`, `time-calendar`, `productivity`, `dev-git`, `ai-agents`, `media`, `communication`, `network-containers`, `ambient-fun`, `utilities`. The category in `widget.json` must be one of them. |
+| `tags`       | Up to 8, each matching `^[a-z0-9-]{1,24}$`.                                                                                                                                                                       |
+| `summary`    | Up to 140 characters, plain text.                                                                                                                                                                                 |
+| `status`     | `planned`, `alpha`, `stable` or `removed`.                                                                                                                                                                        |
 
-The listing is a pointer, not the widget. The name, version, surfaces, size classes, providers, capabilities, settings and license all come from your own files. The listing never sets the trust tier, so do not add tier or review fields. Listings that do not match the schema fail CI. You can run the same build yourself with `bun run registry` in the website repository.
+No other properties are allowed. Do not add a tier or review field. The listing is a pointer. Name, version, capabilities and the rest come from your own files.
 
-## What CI checks
+### 4. Test it locally
 
-The registry build runs these steps in order:
+In your fork of the website repository:
 
-1. The listing is validated against the listing schema, and the author check confirms the pull request comes from the owner of the id's namespace or from a maintainer.
-2. `manifest.json` and `widget.json` are fetched at the pinned commit only, from github.com raw URLs, with a host allow-list, a size cap and a timeout, and with no redirect to another host. Before that, the build checks that the commit is on the repository's default branch.
-3. `widget.json` is validated against the pinned widget schema, and the ids in the listing, `manifest.json` and `widget.json` must match.
-4. Everything else is derived from your own files. A preview page is built from that data.
-5. The access summary is posted on the pull request: network hosts, files, programs, and providers with their topics and fields.
+```bash
+bun install --frozen-lockfile
+export GITHUB_TOKEN=<a token with no scopes>   # optional, avoids the 60 requests per hour limit
+bun run registry -- --strict
+```
 
-CI never runs code from your repository, and it cannot see what your code does at runtime. Reviewers read the pinned commit.
+Expected result: no `excluded` lines for your id, except possibly the pending message in the [Why a merged listing can still be pending](#why-a-merged-listing-can-still-be-pending) section. Pending is normal before approval. Any other message is a real error, see the table below.
 
-## How tiers work
+### 5. Open the pull request
 
-You do not choose a tier. Every listing is `community` until a maintainer writes a review record for the exact pinned commit. Only a review record can make it `spec`, `verified` or `core`. If your `widget.json` says `tier: "spec"` without a review, the site shows that it declares itself spec and is not reviewed. See [Trust tiers](/docs/next/publish/trust-tiers/).
+Branch from `develop` and open the pull request against `develop` from your own GitHub account. One listing per pull request. The author check requires that the file name and the `id` inside both belong to `io.github.<your-login>` (case-insensitive), or that the author is a maintainer. Other id prefixes need an entry in `registry/namespaces.json`, which is empty today.
 
-## Updating
+### 6. Wait for CI
 
-To update, open a pull request that changes the `commit` value. Reviewers see the difference in declared capabilities. See [Updating a listing](/docs/next/publish/updating-a-listing/).
+CI runs type check, lint, theme check, `bun run registry -- --strict`, the review-changes check, unit tests, the build, host builds, browser tests and a dependency audit. It does not post an access summary and does not build a preview of your widget. Red CI cannot be merged. Read the message, fix it and push to the same branch.
 
-## Taking a listing down
+### 7. Review, merge, approval
 
-A maintainer can remove a listing with one commit that sets `status` to `removed`. That also stops the build from fetching it.
+A maintainer reads the pinned commit against the [review checklist](/docs/next/publish/review-checklist/) and merges. The gate checks (tree, policy, lint, secrets) run in the registry build once the listing is approved, and the reviewer reads the code as well. Then the maintainer adds your ids to `registry/lock.json`.
+
+Expected result: after the next site build, your widget has a page. If it does not, check `index.excluded` in the built registry for the reason.
+
+## Common errors
+
+Messages come from `scripts/build-registry.ts` (shown in the CI log and in `bun run registry`).
+
+| Message                                                                                             | Fix                                                                                                          |
+| --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `pending maintainer approval: no entry in registry/lock.json`                                       | Nothing to fix. A maintainer must approve. Not a CI failure.                                                 |
+| `repo or owner id differs from registry/lock.json (deleted, re-created or transferred?)`            | The repository was re-created or moved. Ask a maintainer to approve again.                                   |
+| `<file>: file name must be <id>.json`                                                               | Rename the file to match `id`.                                                                               |
+| `<file>: duplicate id <id>`                                                                         | Another listing already uses this id. Pick another.                                                          |
+| `id namespace io.github.<owner> must match the repo owner`                                          | Use `io.github.<owner>.<name>` where `<owner>` owns the repository.                                          |
+| `id namespace is not allowed for this repo owner (see registry/namespaces.json)`                    | Use an `io.github.<your-login>` id.                                                                          |
+| `commit not found in this repository (is it from a fork?)`                                          | Use a commit from the listed repository itself.                                                              |
+| `commit is not reachable from the default branch <branch> (compare status: ...)`                    | Merge the commit into the default branch first.                                                              |
+| `no LICENSE file found at the pinned commit`                                                        | Add a `LICENSE` file and use a commit that contains it.                                                      |
+| `license not recognised or not allowed (detected: ...)`                                             | Use a license from the allow-list in step 2.                                                                 |
+| `manifest license X differs from the detected Y`                                                    | Set `license` in `manifest.json` to the detected id.                                                         |
+| `manifest.json invalid: ...` / `widget.json invalid: ...`                                           | Fix the field named in the message. `manifest.json` needs `id`, `name`, `version`, `description`, `license`. |
+| `id mismatch across listing, manifest.json and widget.json`                                         | Make the three ids identical.                                                                                |
+| `categories must hold 1 to 3 slugs`                                                                 | Use one to three categories.                                                                                 |
+| `widget.json category is not one of the listing categories`                                         | Add the widget's category to the listing, or change the widget.                                              |
+| `spec widget needs layout.json`                                                                     | Add `layout.json` at the pinned commit. See [Spec widgets](/docs/next/create/spec-widgets/).                 |
+| `layout.json invalid: ...` / `layout.json bindings: ...` / `sampleData invalid: ...`                | Fix the node or bind named. Every bind needs a provider in `widget.json` and matching `sampleData`.          |
+| `<path>: control or invisible characters not allowed`                                               | Remove hidden characters from that string. Strings are rejected, not cleaned.                                |
+| `<path>: looks like HTML, plain text only`                                                          | Remove tags. Nothing from a widget is shown as HTML or markdown.                                             |
+| `HTTP 404: ...` / `rejected: redirect` / `rejected: body over N bytes` / `rejected: not valid JSON` | The file is missing at that commit, is too large (256 KB cap), or is not JSON.                               |
+
+If the table does not cover your message, search the message text in `scripts/build-registry.ts`.
 
 ## Rules for submissions
 
 - Listings are data. The build never executes anything from them.
-- Markdown from a widget is rendered with a sanitizer: no raw HTML, no remote images unless the host is allow-listed, and links get `rel="noopener noreferrer"`.
+- Nothing from a widget is rendered as markdown or HTML.
 - Do not put secrets, tokens or personal data in a listing, a widget repository, a screenshot or a pull request.
 - Do not write "sandboxed", "secure" or "safe" about a code widget.
+
+## Next
+
+- [Updating a listing](/docs/next/publish/updating-a-listing/) for new versions and takedowns.
+- [Trust tiers](/docs/next/publish/trust-tiers/) for what the label means.

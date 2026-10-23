@@ -45,5 +45,12 @@
   "compat": {
     "omarchy": ">=4.0",
     "widgetsKit": "^1"
+  },
+  "sampleData": {
+    "ai-usage.sessions": {
+      "sessions": 12,
+      "requests": 340,
+      "activeMinutes": 95
+    }
   }
 }

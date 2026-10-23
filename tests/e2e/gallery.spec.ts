@@ -15,6 +15,11 @@ const PORT = process.env.PW_PORT ?? 4173;
 
 const search = (page: Page) => page.getByRole('combobox', { name: 'Search widgets' });
 const count = (page: Page) => page.getByTestId('count');
+/** Custom Select: open the trigger, click the option by its visible text. */
+async function pick(page: Page, label: string, option: string) {
+  await page.locator(`#${label.toLowerCase()}`).click();
+  await page.getByRole('option', { name: option, exact: true }).click();
+}
 async function gallery(page: Page, qs = '') {
   await page.goto(`/widgets/${qs}`);
   await page.waitForFunction(() => document.querySelector('[data-testid="count"]'));
@@ -70,9 +75,11 @@ test('every card has a large unclipped preview, status, author, like and keyboar
     await expect(card.getByRole('link', { name: 'Details' })).toBeVisible();
     await expect(card.locator('.pv')).toHaveAttribute('aria-hidden', 'true');
   }
-  // keyboard order inside one card: Details, then Like
+  // keyboard order inside one card: Details, Source, then Like
   const first = cardEls.first();
   await first.getByRole('link', { name: 'Details' }).focus();
+  await page.keyboard.press('Tab');
+  await expect(first.getByRole('link', { name: 'Source code on GitHub' })).toBeFocused();
   await page.keyboard.press('Tab');
   await expect(first.getByRole('button', { name: /^Like / })).toBeFocused();
 });
@@ -176,9 +183,9 @@ test('active filter chips can be removed and Clear all resets', async ({ page })
 
 test('sort menu changes order and is kept in the URL', async ({ page }) => {
   await gallery(page);
-  await page.getByLabel('Sort').selectOption('status');
+  await pick(page, 'Sort', 'Status, then name');
   await expect(page).toHaveURL(/sort=status/);
-  await page.getByLabel('Sort').selectOption('name');
+  await pick(page, 'Sort', 'Name, A to Z');
   await expect(page).toHaveURL(/sort=name/);
   const names = await cards(page).locator('h2').allTextContents();
   expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
@@ -320,7 +327,7 @@ test('URL state round-trips: query, categories, sort and view', async ({ page })
   await expect(search(page)).toHaveValue('clock');
   await expect(catBtn(page, 'time-calendar')).toHaveAttribute('aria-pressed', 'true');
   await expect(catBtn(page, 'ambient-fun')).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByLabel('Sort')).toHaveValue('status');
+  await expect(page.locator('#sort')).toContainText('Status, then name');
   await expect(page.getByTestId('list')).toBeVisible();
   await page.reload();
   await expect(search(page)).toHaveValue('clock');
@@ -396,10 +403,10 @@ for (const w of widgets) {
       'Install',
       'What it can access',
       'Trust',
+      'Try it on a desktop',
+      'About',
       'Settings',
-      'Variants',
-      'Source',
-      'Changelog',
+      'Details',
       'Similar widgets'
     ]) {
       await expect(page.getByRole('heading', { level: 2, name: h })).toBeVisible();
@@ -410,7 +417,6 @@ for (const w of widgets) {
       await expect(access.locator('dt', { hasText: new RegExp(`^${label}$`) })).toHaveCount(1);
     const nones = Object.values(w.access).filter((v) => v.length === 1 && v[0] === 'none').length;
     await expect(access.getByText('none', { exact: true })).toHaveCount(nones);
-    await expect(page.getByText('No changelog yet.')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Open a bug report' })).toHaveAttribute(
       'href',
       'https://github.com/dexterhere/dexterhere-omarchy-widgets-web/issues/new?template=bug_report.yml'
@@ -434,7 +440,7 @@ test('an unknown id is a 404', async ({ page }) => {
 
 test('similar widgets link to another detail page', async ({ page }) => {
   await page.goto('/widgets/io.github.dexterhere.concept-battery/');
-  await page.getByRole('link', { name: 'System monitor (concept)' }).click();
+  await page.getByRole('link', { name: /^System monitor/ }).click();
   await expect(page).toHaveURL(/concept-system-monitor\/$/);
   await expect(page.getByRole('heading', { level: 1 })).toContainText('System monitor');
 });
@@ -606,4 +612,27 @@ test('makes no request to any origin other than localhost', async ({ page }) => 
   await page.goto('/widgets/io.github.dexterhere.concept-clock/');
   await expect(page.locator('[data-preview-mount]').first()).toBeVisible();
   expect([...hosts]).toEqual([`localhost:${PORT}`]);
+});
+
+test('a spec widget detail page draws its pinned layout.json from sample data only', async ({
+  page
+}) => {
+  const outside: string[] = [];
+  page.on('request', (r) => {
+    const u = r.url();
+    if (
+      !u.startsWith('http://localhost') &&
+      !u.startsWith('http://127.0.0.1') &&
+      !u.startsWith('data:')
+    )
+      outside.push(u);
+  });
+  await page.goto('/widgets/io.github.dexterhere.concept-docker/');
+  const box = page.getByTestId('layout-render');
+  await expect(
+    page.getByRole('heading', { level: 2, name: 'Drawn from layout.json' })
+  ).toBeVisible();
+  await expect(box).toContainText('running');
+  await expect(box.locator('li')).toHaveCount(3);
+  expect(outside).toEqual([]);
 });

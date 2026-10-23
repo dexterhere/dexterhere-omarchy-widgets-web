@@ -46,5 +46,12 @@
   "compat": {
     "omarchy": ">=4.0",
     "widgetsKit": "^1"
+  },
+  "sampleData": {
+    "battery.status": {
+      "percent": 72,
+      "state": "Discharging",
+      "timeLeft": "3h 20m"
+    }
   }
 }

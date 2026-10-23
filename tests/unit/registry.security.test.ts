@@ -155,7 +155,8 @@ describe('hostile fetched JSON and ids', () => {
   });
   it('duplicate ids are rejected even under different file names', async () => {
     const r = await run({ listings: [L(), L(listing(), 'zzz.json')], fetch: ok() });
-    expect(r.errors.join()).toMatch(/duplicate id/);
+    expect(r.errors.join()).toMatch(/file name must be/);
+    expect(r.widgets).toHaveLength(1);
   });
 });
 
@@ -183,6 +184,69 @@ describe('check-review-changes', () => {
   it('passes maintainers, case-insensitively', () => {
     expect(checkReviewChanges({ ...base, changed: review, author: 'DexterHere' }).ok).toBe(true);
   });
+  it('guards fixtures, the provider catalog, CSP config, deploy and the stats service', () => {
+    for (const f of [
+      'registry/fixtures/io.github.mallory.x/widget.json',
+      'registry/providers.json',
+      'vite.config.ts',
+      'deploy/Caddyfile',
+      'services/stats/wrangler.toml',
+      'static/theme-boot.js'
+    ])
+      expect(checkReviewChanges({ ...base, changed: [f], author: 'mallory' }).ok).toBe(false);
+  });
+  it('lets only a maintainer add a source:fixture listing, even in the author namespace', () => {
+    const id = 'io.github.mallory.x';
+    const l = {
+      path: `registry/widgets/${id}.json`,
+      deleted: false,
+      mode: '100644',
+      content: JSON.stringify({ id, source: 'fixture' })
+    };
+    const i = { ...base, changed: [l.path], listings: [l] };
+    expect(checkReviewChanges({ ...i, author: 'mallory' }).ok).toBe(false);
+    expect(checkReviewChanges({ ...i, author: 'dexterhere' }).ok).toBe(true);
+  });
+});
+
+describe('listing shape', () => {
+  const base = { eventName: 'pull_request', maintainers: ['dexterhere'], author: 'alice' };
+  const id = 'io.github.alice.demo';
+  const listing = (mode: string) => ({
+    path: `registry/widgets/${id}.json`,
+    deleted: false,
+    mode,
+    content: JSON.stringify({ id })
+  });
+  it('refuses a symlink or any non-regular file as a listing', () => {
+    for (const mode of ['120000', '160000', '100755', '040000'])
+      expect(
+        checkReviewChanges({ ...base, changed: [listing(mode).path], listings: [listing(mode)] }).ok
+      ).toBe(false);
+    expect(
+      checkReviewChanges({
+        ...base,
+        changed: [listing('100644').path],
+        listings: [listing('100644')]
+      }).ok
+    ).toBe(true);
+  });
+  it('refuses sub-paths and dotfiles under registry/widgets/ from a non-maintainer', () => {
+    for (const f of [
+      'registry/widgets/boom.json/f',
+      'registry/widgets/.json',
+      'registry/widgets/x.txt',
+      'registry/widgets/sub/a.json'
+    ])
+      expect(checkReviewChanges({ ...base, changed: [f] }).ok).toBe(false);
+    expect(
+      checkReviewChanges({ ...base, author: 'dexterhere', changed: ['registry/widgets/x.txt'] }).ok
+    ).toBe(true);
+  });
+  it('guards the validator and link sanitiser the build imports', () => {
+    for (const f of ['src/lib/registry/layout.ts', 'src/lib/registry/links.ts'])
+      expect(checkReviewChanges({ ...base, changed: [f] }).ok).toBe(false);
+  });
 });
 
 describe('listing author binding', () => {
@@ -192,6 +256,7 @@ describe('listing author binding', () => {
     const l = {
       path: `registry/widgets/${id}.json`,
       deleted: false,
+      mode: '100644',
       content: content === undefined ? JSON.stringify({ id }) : content,
       ...over
     };
@@ -267,5 +332,14 @@ describe('maintainer list resolution (fail closed)', () => {
       })
     ).toEqual([]);
     expect(maintainersFromBase(() => 'not json')).toEqual([]);
+  });
+});
+
+describe('ci guard step', () => {
+  it('runs the guard from the base branch, never the copy in the pull request', async () => {
+    const { readFileSync } = await import('node:fs');
+    const ci = readFileSync('.github/workflows/ci.yml', 'utf8');
+    expect(ci).toContain('git show "origin/${BASE}:scripts/check-review-changes.ts"');
+    expect(ci).not.toMatch(/run: bun scripts\/check-review-changes\.ts/);
   });
 });

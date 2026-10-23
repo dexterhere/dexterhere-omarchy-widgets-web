@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { docsPath, docsUrl, links } from '../../../../lib/site';
+  import Seo from '../../../../lib/components/Seo.svelte';
+  import { breadcrumbs } from '../../../../lib/seo';
+  import { docsPath, urls } from '../../../../lib/site';
   import { prevNext } from '../../../../lib/docs/content';
   import EditLink from '../../../../lib/docs/EditLink.svelte';
   import PrevNext from '../../../../lib/docs/PrevNext.svelte';
@@ -9,17 +11,25 @@
   const nav = $derived(prevNext(data.sidebar, data.slug));
 </script>
 
-<svelte:head>
-  {#if links.hosts}
-    <link rel="canonical" href={docsUrl(`/docs/${params.version}/${data.slug}/`)} />
-  {/if}
-  {#if data.kind === 'page'}
-    <title>{data.meta.title} - Docs {data.version.version} - Omarchy Widgets</title>
-    <meta name="description" content={data.meta.description} />
-  {:else}
-    <title>{data.section.title} - Docs {data.version.version} - Omarchy Widgets</title>
-  {/if}
-</svelte:head>
+<Seo
+  title={`${data.kind === 'page' ? data.meta.title : data.section.title} - Docs ${data.version.version}`}
+  description={data.kind === 'page'
+    ? data.meta.description
+    : `All pages in the ${data.section.title} section of the Omarchy Widgets documentation, version ${data.version.version}. Pre-release: pages say what works today and what is planned.`}
+  path={`/docs/${params.version}/${data.slug}/`}
+  host="docs"
+  type="article"
+  nodes={[
+    breadcrumbs([
+      { name: 'Omarchy Widgets', url: urls.site('/') },
+      { name: 'Documentation', url: urls.docs('/docs/') },
+      {
+        name: data.kind === 'page' ? data.meta.title : data.section.title,
+        url: urls.docs(`/docs/${params.version}/${data.slug}/`)
+      }
+    ])
+  ]}
+/>
 
 <div class="page">
   <article

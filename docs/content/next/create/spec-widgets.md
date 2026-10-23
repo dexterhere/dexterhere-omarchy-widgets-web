@@ -1,62 +1,99 @@
 ---
 title: Spec widgets
-description: Write a widget as JSON with no code. Layout blocks, data bindings, semantic colour roles, size classes and variants. Draft schema v0.
+description: Write a widget as JSON with no code. layout.json v0 node types, bindings, colour roles, sample data and the exact limits the registry build enforces.
 ---
 
 <script>import Callout from '$lib/docs/Callout.svelte';</script>
 
 <Callout type="planned">
 
-The spec-widget renderer does not exist yet, and the schema is DRAFT v0. Names and shapes below are illustrative and can change. The final schema will come from the code repository's `spec/` folder.
+The schema is DRAFT v0 and can change. The website emulator and the registry build already read `layout.json`. The desktop renderer does not exist yet, so a spec widget cannot run on a real desktop today.
 
 </Callout>
 
-A spec widget has no code. You describe a layout, bind blocks to fields from a provider, and a trusted renderer draws it. Because only the renderer talks to the daemon, the widget can see only the fields you request and the user grants. That is a hard boundary.
+A spec widget has no code. You describe a tree of nodes, bind nodes to fields from providers, and a trusted renderer draws it with theme colours. Only the renderer talks to the daemon, so the widget can see only the fields it declares and the user grants.
 
-## Layout example
+A spec widget is three files in your repository root: `manifest.json`, `widget.json` and `layout.json`. A complete, validated set is in [Your first widget, end to end](/docs/next/create/your-first-widget-end-to-end/).
+
+## layout.json v0
 
 ```json
 {
-  "layout": [
-    { "block": "value", "bind": "system.cpu.usage_pct", "size": "xl", "color": "accent" },
-    { "block": "label", "bind": "system.cpu.usage_pct", "color": "muted" }
-  ],
-  "providers": ["system.cpu"]
+  "schemaVersion": 0,
+  "root": {
+    "type": "stack",
+    "gap": "sm",
+    "children": [
+      { "type": "text", "text": "CPU", "size": "sm", "color": "muted" },
+      { "type": "ring", "bind": { "topic": "system.cpu", "field": "usage_pct" }, "color": "accent" }
+    ]
+  },
+  "variants": {}
 }
 ```
 
-This shape comes from the project brief. The binding path syntax is not final. The example uses a topic that exists today (`system.cpu`, field `usage_pct`).
+- `schemaVersion` must be `0`. `root` is one node. `variants` is optional: a map from a variant name to a node. Every name must also be listed in `widget.json` `variants`.
+- No other top-level keys are allowed. Unknown properties on a node are errors too.
+- A bind is exactly `{ "topic": "...", "field": "..." }`. There is no `block` key, no `label` node and no path string like `system.cpu.usage_pct`.
 
-## Blocks
+## Node types
 
-| Block       | Shows                                |
-| ----------- | ------------------------------------ |
-| `value`     | One large number or text             |
-| `label`     | A small line of text                 |
-| `ring`      | A value as a ring                    |
-| `bar`       | A value as a bar                     |
-| `sparkline` | Recent history as a small line chart |
-| `list`      | Rows of items                        |
-| `icon`      | An icon                              |
+| Type        | Properties (besides `type`)                     | Notes                                                                                           |
+| ----------- | ----------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `stack`     | `gap`, `children`                               | Vertical. 1 to 20 children.                                                                     |
+| `row`       | `gap`, `children`                               | Horizontal. 1 to 20 children.                                                                   |
+| `grid`      | `columns` (2, 3 or 4), `gap`, `children`        | `columns` is required.                                                                          |
+| `text`      | `text` or `bind` (exactly one), `size`, `color` | `text` is plain, up to 120 characters.                                                          |
+| `badge`     | `text` or `bind` (exactly one), `size`, `color` | Same rules as `text`.                                                                           |
+| `value`     | `bind`, `unit`, `size`, `color`                 | `unit` is plain text up to 4 characters, for example `%`.                                       |
+| `bar`       | `bind`, `color`                                 | Needs a number. No `size`.                                                                      |
+| `ring`      | `bind`, `color`                                 | Needs a number. No `size`.                                                                      |
+| `sparkline` | `bind`, `color`                                 | Needs a list of at least 2 numbers.                                                             |
+| `list`      | `bind`, `max` (1 to 50), `size`, `color`        | Needs a list of strings.                                                                        |
+| `icon`      | `name`, `size`, `color`                         | Names: cpu, memory, battery, clock, list, git, container, disk, network, bolt, calendar, check. |
+| `spacer`    | none                                            |                                                                                                 |
+| `divider`   | none                                            |                                                                                                 |
 
-Each block's full set of properties is undecided. Only `block`, `bind`, `size` and `color` are shown in the brief. Do not rely on others until the schema is published.
+Values: `size` is `sm`, `md`, `lg` or `xl`. `gap` is `sm`, `md` or `lg`.
 
-## Colours are roles, never hex
+## Colour roles, never hex
 
-A block's `color` is a semantic role that the renderer maps to the active theme: accent, ok, warn, bad, purple, muted, foreground or panel. Never write a hex value or a colour name. `ow check` will fail a widget that does. See [Themes](/docs/next/use/themes/).
+`color` is one of four roles that the renderer maps to the active theme: `accent`, `foreground`, `secondary`, `muted`. Anything else, including hex values, colour names and the old role names `ok`, `warn`, `bad`, `purple` and `panel`, fails the build. See [Themes](/docs/next/use/themes/).
 
-## Size classes and size rules
+## Limits
 
-Declare size classes in `widget.json`, for example compact and wide, each with a minimum and maximum size in logical pixels. Content scales continuously inside a class. When the user crosses a class boundary, the renderer recomposes the layout, so design each class to show more or less, not the same layout bigger. Sizes outside your limits are clamped. See [Package reference](/docs/next/create/package-reference/) for the fields.
+| Limit                  | Value          |
+| ---------------------- | -------------- |
+| Tree depth             | 8              |
+| Nodes in total         | 200            |
+| Children per container | 20             |
+| Any string             | 120 characters |
+| `layout.json` size     | 64 KB          |
+| `sampleData` topics    | 16             |
 
-## Variants
+Strings with control, bidi or zero-width characters, or text that looks like HTML, are rejected, not cleaned.
 
-List variant names in `widget.json`, such as `list` and `counts`. A variant is a different layout or skin over the same data, never a different colour.
+## Bindings and sample data
+
+Every bind must satisfy two checks:
+
+1. Its `topic` and `field` appear in a `providers` entry of `widget.json`.
+2. `widget.json` `sampleData` holds a value for it, in the shape the node needs: a number for `bar` and `ring`, at least two numbers for `sparkline`, strings for `list`, a number or a string for `value`, `text` and `badge`.
+
+`sampleData` is `{ "<topic>": { "<field>": value } }`. Values are finite numbers, plain strings, or lists of one type with at most 50 items. It is sample data only. The emulator draws from it and nothing is read from a machine.
+
+## Size classes and variants
+
+Declare size classes in `widget.json`, each with `min` and `max` as `[width, height]`. The layout does not set pixel sizes. A variant is another tree over the same data, chosen by name. Design each size class to show more or less, not the same layout bigger.
 
 ## Empty, loading and error states
 
-Show a useful state when data is missing. A provider that fails pushes the last good data marked stale with its timestamp, so show its age instead of blanking. See [Data and providers](/docs/next/create/data-and-providers/).
+A provider that fails pushes the last good data marked stale with its timestamp. See [Data and providers](/docs/next/create/data-and-providers/).
 
 ## Capabilities
 
-A spec widget declares no network, no files and no programs. Anything else makes it a code widget.
+A spec widget declares no network, no files and no programs. Anything else makes it a code widget. The registry build enforces this for approved listings: a spec widget that declares any, or that contains `.qml`, `.js` or `.mjs` files, is excluded. Its repository is also scanned for hidden paths, disallowed file types, SVG content and secrets.
+
+## Check it
+
+Run `bun run registry` in the website repository once your commit is on GitHub. See [Check and preview](/docs/next/create/check-and-preview/).

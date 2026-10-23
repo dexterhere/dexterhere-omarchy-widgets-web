@@ -94,7 +94,9 @@ test('the two actions are real links and they work', async ({ page }) => {
   await page.goto('/404/');
   await page.getByRole('link', { name: 'Go to the home page' }).click();
   await page.waitForURL((u) => u.pathname === '/');
-  await expect(page.getByRole('heading', { level: 1 })).toContainText('Desktop widgets');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText(
+    'Any widget you can think of'
+  );
 });
 
 test('the 500 page links to the bug report template', async ({ page }) => {

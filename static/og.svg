@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" font-family="JetBrainsMono Nerd Font, JetBrains Mono, monospace">
+  <rect width="1200" height="630" fill="#1a1b26"/>
+  <!-- a desktop of loose widget tiles, tokyo-night tokens; ideas, not real widgets -->
+  <g fill="#1f2230" stroke="#2d3146" stroke-width="2">
+    <rect x="640" y="72" width="228" height="148" rx="4"/>
+    <rect x="892" y="72" width="228" height="148" rx="4"/>
+    <rect x="640" y="244" width="228" height="148" rx="4"/>
+    <rect x="892" y="244" width="228" height="316" rx="4"/>
+    <rect x="640" y="416" width="228" height="144" rx="4"/>
+  </g>
+  <g fill="#8b93b8" font-size="18">
+    <text x="660" y="104">build</text>
+    <text x="912" y="104">focus</text>
+    <text x="660" y="276">next meeting</text>
+    <text x="912" y="276">now playing</text>
+    <text x="660" y="448">server status</text>
+  </g>
+  <g fill="#c0caf5" font-size="32" font-weight="700">
+    <text x="660" y="170">passing</text>
+    <text x="912" y="170">24:10</text>
+    <text x="660" y="342">14:30</text>
+    <text x="660" y="514">3 of 3 up</text>
+  </g>
+  <rect x="660" y="190" width="120" height="6" fill="#9ece6a"/>
+  <rect x="912" y="190" width="150" height="6" fill="#9ece6a"/>
+  <rect x="912" y="300" width="188" height="188" fill="#24283b"/>
+  <rect x="912" y="500" width="120" height="6" fill="#9ece6a"/>
+  <!-- wordmark -->
+  <g fill="#9ece6a">
+    <rect x="72" y="72" width="24" height="24"/><rect x="102" y="72" width="24" height="24"/>
+    <rect x="72" y="102" width="24" height="24"/><rect x="102" y="102" width="24" height="24"/>
+  </g>
+  <text x="144" y="116" fill="#c0caf5" font-size="30" font-weight="700">Omarchy Widgets</text>
+  <g fill="#c0caf5" font-size="56" font-weight="700">
+    <text x="72" y="290">Any widget</text>
+    <text x="72" y="360">you can think of</text>
+  </g>
+  <text x="72" y="424" fill="#a9b1d6" font-size="26">on your Omarchy desktop.</text>
+  <text x="72" y="560" fill="#8b93b8" font-size="18">Pre-release. Tiles are ideas, not real widgets.</text>
+</svg>
