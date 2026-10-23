@@ -75,7 +75,7 @@ export const RULES: Rule[] = [
   },
   {
     id: 'xhr',
-    re: /\bXMLHttpRequest\b|\bfetch\s*\(|\bWebSocket\b/g,
+    re: /\bXMLHttpRequest\b|\bfetch\b|\bWebSocket\b|\bWebView\b|\bWebEngineView\b/g,
     why: 'makes network requests',
     fix: 'declare the host in capabilities.network, or use a provider',
     needs: 'network'
@@ -108,7 +108,7 @@ export const RULES: Rule[] = [
   },
   {
     id: 'eval',
-    re: /\beval\b|\bFunction\b|\bsetSource\b|\bcreateComponent\b|\bcreateObject\b|\bcreateQmlObject\b/g,
+    re: /\beval\b|\bsetTimeout\b|\bsetInterval\b|\bFunction\b|\bsetSource\b|\bcreateComponent\b|\bcreateObject\b|\bcreateQmlObject\b/g,
     why: 'builds or loads code at run time',
     fix: 'write the element in QML (a Component or a Loader on a .qml file) instead'
   },
@@ -161,7 +161,7 @@ export const RULES: Rule[] = [
   },
   {
     id: 'color-literal',
-    re: /#[0-9a-fA-F]{3,8}\b(?![\w-])|\b(?:rgba?|hsla?)\s*\(/g,
+    re: /["']#[0-9a-fA-F]{3,8}["']|\b(?:rgba?|hsla?)\s*\(/g,
     why: 'colour literal',
     fix: 'use a theme token such as Theme.accent',
     view: 'noc'
@@ -562,7 +562,9 @@ export function lintFile(file: string, text: string, declared: Declared): Findin
   for (const m of noc.matchAll(/\bproperty\s+url\s+([\w$]+)/g)) names.add(m[1]);
   const declared_url = new Set([...names].filter((x) => !SOURCE_PROPS.includes(x)));
   const nameRe = [...names].join('|');
-  for (const m of noc.matchAll(new RegExp(`(?<![\\w$])(${nameRe})\\s*(:(?!:)|=(?!=))`, 'g')))
+  for (const m of noc.matchAll(
+    new RegExp(`(?<![\\w$])["']?(${nameRe})["']?\\s*(:(?!:)|=(?!=))`, 'g')
+  ))
     points.push({ pos: m.index!, kind: 'src', name: m[1], sep: m[2], end: m.index! + m[0].length });
   for (const m of code.matchAll(/\btextFormat\s*(:|=(?!=))\s*/g))
     points.push({
@@ -629,6 +631,19 @@ export function lintFile(file: string, text: string, declared: Declared): Findin
           pt.pos,
           'a font source must be .ttf, .otf or .woff2',
           'use a bundled font file'
+        );
+    } else if (type === 'WorkerScript') {
+      if (
+        v.v &&
+        (!/\.m?js$/.test(v.v) ||
+          (declared.tree &&
+            !declared.tree.has(posix.normalize(posix.join(posix.dirname(file), v.v)))))
+      )
+        add(
+          'source-type',
+          pt.pos,
+          'a WorkerScript source must be a .js file in the repository',
+          'point it at a bundled .js file'
         );
     } else if (type !== null && IMAGE_TYPES.has(type)) {
       if (v.v && !IMAGE_EXT.test(v.v))

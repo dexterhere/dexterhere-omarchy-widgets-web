@@ -240,6 +240,10 @@ describe('F7 hardening', () => {
       localMode(['--local', '--only', ID], { CI: '', GITHUB_ACTIONS: '' })
     ).not.toThrow();
   });
+  it('--only must be a listing id, not another flag', () => {
+    expect(() => localMode(['--local', '--only', '--out'], {})).toThrow(/listing id/);
+    expect(() => localMode(['--local', '--only', '../x'], {})).toThrow(/listing id/);
+  });
   it('fetchText fails closed on a null body', async () => {
     const url = `https://raw.githubusercontent.com/someone/demo/${COMMIT}/a.md`;
     await expect(

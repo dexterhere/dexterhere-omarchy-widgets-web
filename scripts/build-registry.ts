@@ -774,6 +774,8 @@ export function localMode(args: string[], env: Record<string, string | undefined
   if (args.includes('--strict')) throw new Error('--local cannot be combined with --strict');
   const i = args.indexOf('--only');
   if (i < 0 || !args[i + 1]) throw new Error('--local needs --only <listing id>');
+  if (!/^[A-Za-z0-9][A-Za-z0-9.-]*$/.test(args[i + 1]))
+    throw new Error('--only needs a listing id');
   return args[i + 1];
 }
 

@@ -257,3 +257,41 @@ describe('F6: secrets evasions', () => {
     expect(scanSecrets('f.md', 'token: <your token goes here>')).toEqual([]);
   });
 });
+
+describe('reviewer re-run: remaining gaps', () => {
+  it.each([
+    ['quoted source key', 'Image { "source": "http://x" }'],
+    ['bare fetch alias', 'var f = fetch; f("x")'],
+    ['WebView', 'WebView { url: "http://x" }'],
+    ['setTimeout string', 'setTimeout("code", 1)']
+  ])('catches %s', (_n, src) => caught(src));
+  it('a hex-looking number inside text is not a colour literal', () =>
+    clean('Text { text: "Item #123456"; textFormat: Text.PlainText }'));
+  it('WorkerScript may point at a js file in the tree', () => {
+    clean('WorkerScript { source: "w.js" }', { tree: new Set(['w.js']) });
+    caught('WorkerScript { source: "w.qml" }', { tree: new Set(['w.qml']) });
+  });
+  it('private key header split over lines', () =>
+    expect(scanSecrets('f', '-----BEGIN\r\nPRIVATE KEY-----').length).toBeGreaterThan(0));
+  it('gcp private_key_id', () =>
+    expect(scanSecrets('f', '"private_key_id": "' + 'a'.repeat(40) + '"').length).toBeGreaterThan(
+      0
+    ));
+  it('tree: a directory and a file that differ only by case', () => {
+    const e = (path: string, type = 'blob') => ({
+      path,
+      mode: type === 'tree' ? '040000' : '100644',
+      type,
+      size: 1
+    });
+    const r = scanTree([e('manifest.json'), e('widget.json'), e('Dir', 'tree'), e('dir/x.qml')]);
+    expect(r.join()).toMatch(/only by case/);
+  });
+  it('tree: a path over 255 characters is rejected quickly', () => {
+    const p = 'a/'.repeat(100_000) + 'x.qml';
+    const t = performance.now();
+    const r = scanTree([{ path: p, mode: '100644', type: 'blob', size: 1 }]);
+    expect(performance.now() - t).toBeLessThan(500);
+    expect(r.join()).toMatch(/too long/);
+  });
+});

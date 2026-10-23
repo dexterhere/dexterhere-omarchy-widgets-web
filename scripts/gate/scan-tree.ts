@@ -54,7 +54,11 @@ export function scanTree(entries: TreeEntry[], opts: { entryPoints?: string[] } 
   const lower = new Map<string, string>();
   for (const e of entries) {
     const p = e.path;
-    const sp = safe(p);
+    const sp = safe(p, 80);
+    if (p.length > 255) {
+      add(`${sp}: path too long`);
+      continue;
+    }
     if (e.mode === SYMLINK) add(`${sp}: symlink`);
     if (e.mode === SUBMODULE || e.type === 'commit') add(`${sp}: submodule`);
     if (CONFUSABLE.test(p)) add(`${sp}: non-ASCII or control characters in the name`);
@@ -70,10 +74,14 @@ export function scanTree(entries: TreeEntry[], opts: { entryPoints?: string[] } 
       segs.some((g) => (g.startsWith('.') && g !== '.' && g !== '..') || /[. ]$|^git~\d/i.test(g))
     )
       add(`${sp}: hidden, .git or oddly named path`);
-    const key = p.toLowerCase();
-    const seen = lower.get(key);
-    if (seen !== undefined && seen !== p) add(`${sp}: differs from ${safe(seen)} only by case`);
-    lower.set(key, p);
+    // Case collisions, also between a directory and the parent folder of another path.
+    for (let at = p.indexOf('/'); at >= -1; at = at < 0 ? -2 : p.indexOf('/', at + 1)) {
+      const part = at < 0 ? p : p.slice(0, at);
+      const seen = lower.get(part.toLowerCase());
+      if (seen !== undefined && seen !== part)
+        add(`${sp}: differs from ${safe(seen, 80)} only by case`);
+      else if (seen === undefined) lower.set(part.toLowerCase(), part);
+    }
     if (e.type !== 'blob') continue;
     const base = p.split('/').pop() ?? '';
     const ext = base.includes('.') ? base.split('.').pop()!.toLowerCase() : '';

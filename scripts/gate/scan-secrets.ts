@@ -5,7 +5,7 @@
 // Every quantifier is bounded and lines are scanned in windows, so a hostile 1 MB file cannot
 // freeze the build. A speed bump: base64, XOR or variable-built secrets are not found.
 const B = '(?<![A-Za-z0-9])'; // prefix boundary: `\b` would miss `_ghp_...` and `=ghp_...` glued to word characters
-const KEY = '(?:api[_-]?key|secret|token|passw(?:or)?d|private[_-]?key|auth(?:orization)?)';
+const KEY = '(?:api[_-]?key|secret|token|passw(?:or)?d|private[_-]?key(?:_id)?|auth(?:orization)?)';
 const PLACEHOLDER = '(?:your|example|placeholder|changeme|xxx|\\*\\*\\*|\\.\\.\\.)';
 
 const PATTERNS: [string, RegExp][] = [
@@ -118,6 +118,13 @@ export function normaliseText(text: string): string {
 export function scanSecrets(file: string, text: string): string[] {
   const out = new Set<string>();
   const clean = text.replace(INVISIBLE, '');
+  // A PEM header split over lines: look at the whole text once (bounded repetition).
+  const pem =
+    /-----BEGIN\s{1,6}(?:[A-Z0-9]+\s{1,6}){0,4}PRIVATE\s{1,6}KEY(?:\s{1,6}BLOCK)?\s{0,6}-----/.exec(
+      clean
+    );
+  if (pem)
+    out.add(`${file}:${clean.slice(0, pem.index).split(LINES).length}: looks like a private-key`);
   for (const t of [clean, normaliseText(clean)])
     t.split(LINES).forEach((line, i) => {
       if (line.length < 12) return; // the shortest pattern needs more than that
