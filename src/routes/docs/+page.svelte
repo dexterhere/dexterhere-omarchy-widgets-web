@@ -1,4 +1,7 @@
 <script lang="ts">
+  import Seo from '../../lib/components/Seo.svelte';
+  import { breadcrumbs } from '../../lib/seo';
+  import { urls } from '../../lib/site';
   import { docsPath } from '../../lib/site';
   let { data } = $props();
 
@@ -16,13 +19,18 @@
   };
 </script>
 
-<svelte:head>
-  <title>Docs - Omarchy Widgets</title>
-  <meta
-    name="description"
-    content="Documentation for the open-source Omarchy widget marketplace: install and set up widgets, create your own, publish them, and build with an AI assistant."
-  />
-</svelte:head>
+<Seo
+  title="Documentation"
+  description="Documentation for the open-source Omarchy widget marketplace: install and set up widgets, create your own, publish them, and build with an AI assistant."
+  path="/docs/"
+  host="docs"
+  nodes={[
+    breadcrumbs([
+      { name: 'Omarchy Widgets', url: urls.site('/') },
+      { name: 'Documentation', url: urls.docs('/docs/') }
+    ])
+  ]}
+/>
 
 <div class="site-frame hub">
   <h1>Documentation</h1>

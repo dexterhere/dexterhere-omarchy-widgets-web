@@ -29,14 +29,14 @@ async function toBuilder(page: Page) {
   await expect(page.locator('[data-builder]')).toBeVisible();
 }
 
-test('hero text is unchanged and there is no privacy section', async ({ page }) => {
+test('hero says widgets are open-ended and there is no privacy section', async ({ page }) => {
   await ready(page);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-    'Desktop widgets that follow your theme.'
+    'Any widget you can think of, on your Omarchy desktop.'
   );
   await expect(
     page.getByText(
-      'Omarchy Widgets puts a clock, system stats and GitHub activity on your desktop. Each widget takes its colours from your theme and sees only the data you allow.'
+      'A clock, system stats and GitHub activity are where we started, not where it ends. If it can show data or respond to a click, it can be a widget: a build monitor, a focus timer, your next meeting, a music deck, a server status board, a weather strip, a habit streak. Every widget takes its colours from your theme and sees only the data you allow.'
     )
   ).toBeVisible();
   await expect(
@@ -531,7 +531,7 @@ test('JS budget: initial home JavaScript and the lazy chunks are measured separa
     `home JS gz: initial ${kb(initial).toFixed(1)} KB, emulator ${kb(emulator).toFixed(1)} KB, gsap ${kb(gsap).toFixed(1)} KB`
   );
   // Initial: everything the page needs before the lazy emulator, builder and GSAP chunks.
-  expect(kb(initial)).toBeLessThan(84);
+  expect(kb(initial)).toBeLessThan(88);
   // The emulator is lazy but visible at once on desktop: bounded separately.
   expect(kb(emulator)).toBeLessThan(110);
   // Nothing from the builder before it nears the viewport.

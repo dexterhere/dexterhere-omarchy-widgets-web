@@ -7,7 +7,8 @@
   import { HomeStage } from '../lib/components/home/stage.svelte';
   import { START_WIDGETS as start, START_ZOOM } from '../lib/emulator/startLayout';
   import LazyEmulator from '../lib/emulator/LazyEmulator.svelte';
-  import { getAll } from '../lib/registry';
+  import Seo from '../lib/components/Seo.svelte';
+  import { categoryLabels, getAll, type Category } from '../lib/registry';
   import { docsUrl, sitePath } from '../lib/site';
   import { theme } from '../lib/themes/store.svelte';
 
@@ -52,24 +53,29 @@
       cta: 'Choose a path'
     }
   ];
+
+  let { data } = $props();
+  const categories = Object.keys(categoryLabels) as Category[];
 </script>
 
-<svelte:head>
-  <title>Omarchy Widgets</title>
-  <meta
-    name="description"
-    content="Desktop widgets for Omarchy that take their colours from your theme and only see the data you allow."
-  />
-</svelte:head>
+<Seo
+  bare
+  title="Omarchy Widgets: any widget you can think of"
+  description={data.description}
+  path="/"
+  nodes={data.nodes}
+/>
 
 <div class="site-frame home">
   <section class="hero" aria-labelledby="hero-h">
-    <h1 id="hero-h">Desktop widgets that follow your theme.</h1>
+    <h1 id="hero-h">Any widget you can think of, on your Omarchy desktop.</h1>
     <div class="cols">
       <div class="copy">
         <p class="text-2">
-          Omarchy Widgets puts a clock, system stats and GitHub activity on your desktop. Each
-          widget takes its colours from your theme and sees only the data you allow.
+          A clock, system stats and GitHub activity are where we started, not where it ends. If it
+          can show data or respond to a click, it can be a widget: a build monitor, a focus timer,
+          your next meeting, a music deck, a server status board, a weather strip, a habit streak.
+          Every widget takes its colours from your theme and sees only the data you allow.
         </p>
         <div class="row">
           <a class="btn-primary" href={sitePath('/widgets')}>Browse widgets</a>
@@ -80,6 +86,11 @@
         <p class="status small text-2">
           Pre-release: the daemon, vault and CLI work today; the desktop canvas, Widget Center and
           the widgets are in development.
+        </p>
+        <p class="small text-2">
+          Spec widgets are JSON with no code and are built from blocks. Code widgets (QML) can do
+          whatever Quickshell can do, and they run as you, so people should read them before
+          installing.
         </p>
         <p class="small text-2">
           Press <kbd>T</kbd> to change the theme: every widget follows it.
@@ -107,6 +118,64 @@
     <TryList {stage} onPickTheme={() => theme.openPicker()} />
   </section>
 
+  <section class="block" aria-labelledby="ideas-h" data-home-ideas>
+    <header class="bhead">
+      <h2 id="ideas-h">What could you build?</h2>
+      <p class="text-2">
+        Ideas for each category, not a list of finished widgets. What is actually listed is in the
+        gallery below.
+      </p>
+    </header>
+    <ul class="ideas">
+      {#each categories as c (c)}
+        <li>
+          <h3>{categoryLabels[c]}</h3>
+          <ul class="small text-2">
+            {#each data.ideas[c] as idea (idea)}<li>{idea}</li>{/each}
+          </ul>
+          <a href={`${sitePath('/widgets')}?cat=${c}`}
+            >Listed in {categoryLabels[c]}<span class="sr-only"> widgets</span></a
+          >
+        </li>
+      {/each}
+    </ul>
+  </section>
+
+  <section class="block" aria-labelledby="how-h" data-home-how>
+    <header class="bhead">
+      <h2 id="how-h">How a widget gets made</h2>
+    </header>
+    <ol class="steps">
+      <li>
+        <h3>Describe it</h3>
+        <p class="text-2">
+          Write down what it shows, where the data comes from and what a click does. Or tell your
+          coding agent: the <a href={docsUrl('/docs/next/ai/overview/')}>agent skills</a> plan, build
+          and test a widget with you.
+        </p>
+      </li>
+      <li>
+        <h3>Build it as a spec or a code widget, or ask your agent</h3>
+        <ul class="paths">
+          {#each paths as p (p.title)}
+            <li>
+              <h4>{p.title}</h4>
+              <p class="small text-2">{p.text}</p>
+              <a class="btn" href={p.href}>{p.cta}</a>
+            </li>
+          {/each}
+        </ul>
+      </li>
+      <li>
+        <h3>Share it by pull request</h3>
+        <p class="text-2">
+          Listing a widget is a pull request, pinned to a commit.
+          <a href={sitePath('/contribute')}>Publishing guide</a>.
+        </p>
+      </li>
+    </ol>
+  </section>
+
   <section class="block" aria-labelledby="widgets-h" data-home-widgets>
     <header class="bhead">
       <h2 id="widgets-h">Widgets</h2>
@@ -124,15 +193,6 @@
     </header>
     <Builder {stage} />
 
-    <ul class="paths">
-      {#each paths as p (p.title)}
-        <li>
-          <h3>{p.title}</h3>
-          <p class="small text-2">{p.text}</p>
-          <a class="btn" href={p.href}>{p.cta}</a>
-        </li>
-      {/each}
-    </ul>
     <p class="text-2 more">
       Finished one? <a href={sitePath('/contribute')}>Read how to contribute it</a> to the gallery,
       or <a href={resolve('/widgets')}>see what is listed</a>.
@@ -244,7 +304,63 @@
   .paths li :global(.btn) {
     margin-top: auto;
   }
+  .ideas {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0 32px;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  }
+  .ideas > li {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding-block: 20px;
+    border-top: 1px solid var(--border);
+  }
+  .ideas ul {
+    margin: 0;
+    padding-left: 1.1em;
+  }
+  .steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    counter-reset: step;
+  }
+  .steps > li {
+    display: grid;
+    gap: 12px;
+    padding-left: 56px;
+    position: relative;
+    counter-increment: step;
+  }
+  .steps > li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    border: 1px solid var(--brand);
+    color: var(--brand);
+    font-family: var(--font-mono);
+  }
+  .paths h4 {
+    font-size: inherit;
+  }
   @media (max-width: 719px) {
+    .steps > li {
+      padding-left: 0;
+      padding-top: 48px;
+    }
     .block {
       padding-block: 48px;
     }

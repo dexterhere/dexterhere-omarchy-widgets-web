@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Seo from '../../lib/components/Seo.svelte';
   import { docsUrl } from '../../lib/site';
   import CopyButton from '../../lib/components/CopyButton.svelte';
 
@@ -21,9 +22,11 @@
   const listingPath = 'registry/widgets/io.github.you.github-activity.json';
 </script>
 
-<svelte:head>
-  <title>Publish a widget - Omarchy Widgets</title>
-</svelte:head>
+<Seo
+  title="Publish a widget"
+  description="Take a widget from an empty folder to a listing: write the spec or QML code, test it and open a pull request. Listing a widget is not a safety review."
+  path="/contribute/"
+/>
 
 <div class="site-frame stack page">
   <h1>Publish a widget</h1>
