@@ -1,6 +1,7 @@
 // Registry build. Validates listings, fetches DATA (two JSON files) at a pinned commit, derives
 // everything from them and writes registry/dist. It never executes anything from a widget repo.
 // Usage: bun scripts/build-registry.ts [--offline] [--skip-reachability] [--out registry/dist]
+//        bun scripts/build-registry.ts --local --only <listing id>   (gates on a candidate, writes nothing)
 // --skip-reachability is for local development only; CI must never use it.
 import {
   existsSync,
@@ -27,6 +28,9 @@ import {
   visible
 } from '../src/lib/registry/layout';
 import type { Layout, SampleData } from '../src/lib/registry/layout';
+import { TREE_LIMITS } from './gate/scan-tree';
+import { runGates } from './gate/run';
+import type { Catalog } from './gate/check-providers';
 import type {
   Access,
   RegistryIndex,
@@ -106,10 +110,20 @@ const QUERY_ALLOW = [
   { path: /^\/repos\/[^/]+\/[^/]+\/license$/, key: 'ref', value: /^[0-9a-f]{40}$/ }
 ];
 
-export async function fetchJson(
+interface FetchOpts {
+  fetch?: FetchFn;
+  timeoutMs?: number;
+  maxBytes?: number;
+  token?: string;
+}
+
+/** The one place that talks to GitHub: allow-listed URL, no redirects, no cookies, timeout and a
+ *  streaming size cap. fetchJson and fetchText only differ in how they read the bytes. `text`
+ *  files may carry any content type (we only read them as data, never render them). */
+async function fetchBody(
   rawUrl: string,
-  opts: { fetch?: FetchFn; timeoutMs?: number; maxBytes?: number; token?: string } = {}
-): Promise<Record<string, unknown>> {
+  opts: FetchOpts & { text?: boolean } = {}
+): Promise<Uint8Array> {
   const url = assertAllowedUrl(rawUrl);
   const { timeoutMs = LIMITS.timeoutMs, maxBytes = LIMITS.maxBytes } = opts;
   const doFetch: FetchFn = opts.fetch ?? ((u, i) => fetch(u, i));
@@ -129,7 +143,7 @@ export async function fetchJson(
       signal: ctl.signal,
       credentials: 'omit',
       headers: {
-        accept: 'application/json',
+        accept: opts.text ? 'text/plain, */*' : 'application/json',
         ...(opts.token && url.hostname === API_HOST
           ? { authorization: `Bearer ${opts.token}` }
           : {})
@@ -139,11 +153,11 @@ export async function fetchJson(
       throw new Error('rejected: redirect');
     if (!res.ok) throw new Error(`HTTP ${res.status}: ${url.pathname}`);
     const type = res.headers.get('content-type') ?? '';
-    if (/html|xml|javascript/i.test(type))
+    if (!opts.text && /html|xml|javascript/i.test(type))
       throw new Error(`rejected: content-type ${type.split(';')[0]}`);
     const declared = Number(res.headers.get('content-length') ?? 0);
     if (declared > maxBytes) throw new Error(`rejected: body over ${maxBytes} bytes`);
-    if (!res.body) throw new Error('rejected: empty body');
+    if (!res.body) throw new Error('rejected: empty body'); // fail closed, also for text files
     const reader = res.body.getReader();
     const chunks: Uint8Array[] = [];
     let total = 0;
@@ -163,21 +177,39 @@ export async function fetchJson(
       buf.set(c, off);
       off += c.byteLength;
     }
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(buf));
-    } catch {
-      throw new Error(`rejected: not valid JSON: ${url.pathname}`);
-    }
-    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed))
-      throw new Error('rejected: JSON root must be an object');
-    return parsed as Record<string, unknown>;
+    return buf;
   })();
   work.catch(() => {}); // avoid an unhandled rejection if the timeout wins the race
   try {
     return await Promise.race([work, timeout]);
   } finally {
     clearTimeout(timer);
+  }
+}
+
+export async function fetchJson(
+  rawUrl: string,
+  opts: FetchOpts = {}
+): Promise<Record<string, unknown>> {
+  const buf = await fetchBody(rawUrl, opts);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(buf));
+  } catch {
+    throw new Error(`rejected: not valid JSON: ${new URL(rawUrl).pathname}`);
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed))
+    throw new Error('rejected: JSON root must be an object');
+  return parsed as Record<string, unknown>;
+}
+
+/** A text file from the pinned commit (UTF-8 only), under exactly the rules of fetchJson. */
+export async function fetchText(rawUrl: string, opts: FetchOpts = {}): Promise<string> {
+  const buf = await fetchBody(rawUrl, { ...opts, text: true });
+  try {
+    return new TextDecoder('utf-8', { fatal: true }).decode(buf);
+  } catch {
+    throw new Error('rejected: not valid UTF-8');
   }
 }
 
@@ -463,6 +495,8 @@ export interface BuildInput {
   readReview: (id: string) => unknown;
   /** registry/namespaces.json: namespace prefix -> allowed GitHub repo owners. */
   namespaces?: unknown;
+  /** registry/providers.json; defaults to the checked-in catalog. */
+  catalog?: Catalog;
   /** registry/lock.json. When set, every non-fixture listing needs a matching entry. */
   lock?: Lock;
 }
@@ -473,12 +507,14 @@ export interface BuildResult {
   errors: string[];
 }
 
+const DEFAULT_CATALOG = readJson(join(REG, 'providers.json')) as Catalog;
 const FIXTURE_UPDATED = '2026-01-15';
 
 async function buildOne(l: Listing, inp: BuildInput): Promise<RegistryWidget> {
   let manifest: Record<string, unknown>;
   let widget: Record<string, unknown>;
   let layoutRaw: unknown;
+  let src: { owner: string; repo: string } | null = null;
   const fixture = l.source === 'fixture';
   // Committer date (yyyy-mm-dd, UTC) of the pinned commit. Fixtures get a fixed date; null when
   // the reachability check was skipped or GitHub did not return one.
@@ -511,6 +547,7 @@ async function buildOne(l: Listing, inp: BuildInput): Promise<RegistryWidget> {
         });
       }
     }
+    src = { owner, repo };
     const base = `https://${RAW_HOST}/${owner}/${repo}/${l.commit}`;
     manifest = await fetchJson(`${base}/manifest.json`, { fetch: inp.fetch });
     widget = await fetchJson(`${base}/widget.json`, { fetch: inp.fetch });
@@ -592,6 +629,28 @@ async function buildOne(l: Listing, inp: BuildInput): Promise<RegistryWidget> {
     }
   }
 
+  // Gates (G4-G7) on the pinned tree. Fixtures skip them (they have no repo). Any error-level
+  // finding excludes the listing; the reason is secret-free (count plus the first three findings).
+  let warnings: string[] = [];
+  if (src) {
+    const { owner, repo } = src;
+    const entries = await fetchTree(owner, repo, l.commit, { fetch: inp.fetch, token: inp.token });
+    const g = await runGates({
+      id: l.id,
+      widget: w,
+      entries,
+      catalog: inp.catalog ?? DEFAULT_CATALOG,
+      readText: (path) =>
+        fetchText(
+          `https://${RAW_HOST}/${owner}/${repo}/${l.commit}/${path.split('/').map(encodeURIComponent).join('/')}`,
+          { fetch: inp.fetch, maxBytes: TREE_LIMITS.maxFileBytes }
+        )
+    });
+    if (g.errors.length)
+      throw new Error(`gates: ${g.errors.length} problem(s): ${g.errors.slice(0, 3).join(' | ')}`);
+    warnings = g.warnings.slice(0, 10).map((x) => scrub(x).slice(0, 200));
+  }
+
   return {
     id: l.id,
     name: cleanText(manifest.name, 80, 'name'),
@@ -626,9 +685,14 @@ async function buildOne(l: Listing, inp: BuildInput): Promise<RegistryWidget> {
     compat: w.compat,
     access: describeAccess(w),
     layout,
-    sampleData
+    sampleData,
+    ...(warnings.length ? { warnings } : {})
   };
 }
+
+/** Author-controlled text in published fields: spoofing characters and markup-looking text become '?'. */
+export const scrub = (e: string) =>
+  e.replace(new RegExp(SPOOF.source, 'gu'), '?').replace(/[<>]/g, '?');
 
 const tally = (xs: string[]) =>
   Object.fromEntries(
@@ -686,7 +750,7 @@ export async function buildRegistry(inp: BuildInput): Promise<BuildResult> {
     excluded: errors.map((e) => {
       // Error text can echo author-controlled names (file names, paths): neutralise it before
       // publishing. Spoofing characters and markup-looking text become '?'.
-      e = e.replace(new RegExp(SPOOF.source, 'gu'), '?').replace(/[<>]/g, '?');
+      e = scrub(e);
       const i = e.indexOf(': ');
       return {
         ref: (i > 0 ? e.slice(0, i) : 'registry').slice(0, 120),
@@ -699,16 +763,33 @@ export async function buildRegistry(inp: BuildInput): Promise<BuildResult> {
 }
 
 // ---------- CLI ----------
+/** `--local --only <id>`: run the reachability, fetch and gate steps for one candidate listing that
+ *  has no registry/lock.json entry yet, and write nothing. It could skip the maintainer approval, so
+ *  it refuses to run in CI (GITHUB_ACTIONS=true) or together with --strict. Returns the id, or null. */
+export function localMode(args: string[], env: Record<string, string | undefined>): string | null {
+  if (!args.includes('--local')) return null;
+  const ga = (env.GITHUB_ACTIONS ?? '').trim().toLowerCase();
+  if ((ga !== '' && ga !== 'false' && ga !== '0') || (env.CI ?? '') !== '')
+    throw new Error('--local is refused in CI');
+  if (args.includes('--strict')) throw new Error('--local cannot be combined with --strict');
+  const i = args.indexOf('--only');
+  if (i < 0 || !args[i + 1]) throw new Error('--local needs --only <listing id>');
+  if (!/^[A-Za-z0-9][A-Za-z0-9.-]*$/.test(args[i + 1]))
+    throw new Error('--only needs a listing id');
+  return args[i + 1];
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const offline = args.includes('--offline');
   const skipReachability = args.includes('--skip-reachability');
   const strict = args.includes('--strict'); // CI on pull requests: any problem fails the run
+  const only = localMode(args, process.env);
   const oi = args.indexOf('--out');
   const out = resolve(ROOT, oi >= 0 && args[oi + 1] ? args[oi + 1] : 'registry/dist');
   const dir = join(REG, 'widgets');
   const listings = readdirSync(dir)
-    .filter((f) => f.endsWith('.json'))
+    .filter((f) => f.endsWith('.json') && (only === null || f === `${only}.json`))
     .sort()
     .map((file) => {
       // Only regular files: a symlink or directory named *.json is excluded, never followed.
@@ -729,7 +810,9 @@ async function main() {
     token: process.env.GITHUB_TOKEN || undefined,
     readFixture: (id, name) => optional(join(REG, 'fixtures', id, `${name}.json`)),
     namespaces: optional(join(REG, 'namespaces.json')),
-    lock: (optional(join(REG, 'lock.json')) as Lock | undefined) ?? {},
+    // --local: no lock, so no pending-approval skip. Everything else (gates included) still runs.
+    lock:
+      only === null ? ((optional(join(REG, 'lock.json')) as Lock | undefined) ?? {}) : undefined,
     readReview: (id) =>
       /^[a-z0-9.-]+$/.test(id) ? optional(join(REG, 'review', `${id}.json`)) : undefined
   });
@@ -743,6 +826,11 @@ async function main() {
   if (errors.length) {
     console.error(`\nregistry: ${errors.length} listing(s) excluded`);
     for (const e of errors) console.error(`  - ${e}`);
+  }
+  if (only !== null) {
+    for (const w of widgets) for (const x of w.warnings ?? []) console.log(`  warning: ${x}`);
+    console.log(`\nregistry --local: ${widgets.length ? 'passed' : 'excluded'} (nothing written)`);
+    process.exit(widgets.length ? 0 : 1);
   }
   if (strict && index.excluded.some((x) => !x.pending)) process.exit(1);
   writeDist(out, index, widgets);

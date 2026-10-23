@@ -186,16 +186,16 @@ layout.json v0 rules (the validator is `src/lib/registry/layout.ts` in the websi
 Item {
   property bool stale: false
   property var data: null
-  Text { text: data ? data.usage_pct + "%" : "..." }
+  Text { text: data ? data.usage_pct + "%" : "..."; textFormat: Text.PlainText }
 }
 ```
 
-## Code widget listing rules (not enforced in CI yet; reviewers check by hand)
+## Code widget listing rules (enforced by the registry build for approved listings)
 
 - Repository: at most 300 files, 1 MB each, 8 MB total; extensions only json, md, txt, qml, js, mjs, png, svg, webp, jpg, jpeg, ttf, otf, woff2, plus LICENSE, qmldir, .gitignore; no symlinks or submodules; ASCII file names; `manifest.json` and `widget.json` present.
 - Providers: only `public` or `local-system` classes from `registry/providers.json`; never combine a non-public provider with your own network, files or spawn.
 - `capabilities.network`: hostnames only (no IPs, localhost, .local, .internal). `files`: absolute paths inside your own plugin directory, no globs, never credential or browser directories. `spawn`: only date, uname, uptime, free, df, sensors, nproc.
-- QML imports: `QtQuick*`, `QtQml*`, `Quickshell`, `Quickshell.Widgets` only. `Process`/`Quickshell.Io` needs `spawn`; `fetch`/`XMLHttpRequest`/`WebSocket` needs `network`; `FileView`/`StandardPaths` needs `files`. Never use `Hyprland.dispatch`, `Qt.openUrlExternally`, `eval`, `Qt.createQmlObject`, rich text, URL imports, or colour literals. Lines at most 400 characters.
+- QML imports: `QtQuick`, `QtQuick.Layouts|Controls|Shapes|Window|Templates`, `QtQml`, `QtQml.Models`, `Quickshell`, `Quickshell.Widgets` only; `import "x"` only for relative paths without `..`. `Process`/`Quickshell.Io` needs `spawn`; `fetch`/`XMLHttpRequest`/`WebSocket` needs `network`; `FileView`/`StandardPaths` needs `files`. Never use `Hyprland.dispatch`, `Quickshell.env`, `Quickshell.clipboardText`, `eval`, `Function`, `constructor`, `globalThis`, `obj["x"]` access, or colour literals. Of `Qt` use only lighter, darker, alpha, tint, point, rect, size, vector2d/3d, binding, callLater, formatDate*, resolvedUrl. `source`/`url` values must be plain string literals naming files inside the widget (no scheme, no `..`, no variables). Every `Text`/`Label` needs `textFormat: Text.PlainText`. Lines at most 400 characters. SVG: plain shapes only. These are errors in the build; they are listing policy, not isolation.
 - No credentials anywhere in the tree.
 
 ## Security rules

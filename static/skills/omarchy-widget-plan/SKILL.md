@@ -72,7 +72,7 @@ List for each data item: provider, topic, fields, sensitivity (mail, calendar, n
 - Secrets never go in QML, argv, environment variables, logs, config files or previews. Settings hold references like `secret:github-main`, never values.
 - Describe what happens if the user denies a grant. The widget must still render a clear state.
 - Wording: describe a code widget as "runs unsandboxed with the user's access". Never "sandboxed" or "safe".
-- For a code widget, also check the listing rules in https://<site>/docs/next/create/code-widgets/ : spawn only date, uname, uptime, free, df, sensors, nproc; files only in its own plugin directory; only public or local-system provider classes; QML imports only QtQuick*, QtQml*, Quickshell, Quickshell.Widgets. These are not enforced in CI yet; reviewers check by hand, so plan for a slower review.
+- For a code widget, also check the listing rules in https://<site>/docs/next/create/code-widgets/ : spawn only date, uname, uptime, free, df, sensors, nproc; files only in its own plugin directory; only public or local-system provider classes; QML imports only QtQuick (plus Layouts, Controls, Shapes, Window, Templates), QtQml, Quickshell, Quickshell.Widgets; plain-string local `source` values; `textFormat: Text.PlainText` on every Text. The registry build enforces these for approved listings and a reviewer still reads the code.
 
 ## Step 5: Plan responsive design
 

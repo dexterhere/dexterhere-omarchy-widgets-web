@@ -7,7 +7,7 @@ Written 2026-10-17 at the maintainer's request when all work was stopped. Nothin
 - `develop` was promoted to `staging` (PR #33), and `staging` to `main` (PR #34).
 - Merged since 2026-10-17: PRs #15-#31 and #36-#40 (stats, emulator, widget picker, footer, error pages, docs, `lock.json` and per-listing build isolation, registry fetch hardening, gate scripts).
 - PR #41 (layout.json v0 schema) is OPEN. PR #42 (layout renderer) is CLOSED and not merged. Re-check with `gh pr list --state all` before relying on either.
-- The gate scripts (`scripts/gate/`) are merged but not wired into CI or the build. Reviewers check those rules by hand for now.
+- The gate scripts (`scripts/gate/`) run in the registry build (`buildOne`) for approved non-fixture listings (see DECISIONS GATES-WIRED). `--local --only <id>` runs them on a candidate without a lock entry; it is refused in CI.
 - `registry/lock.json` is empty (`{}`). No third-party listing is published yet; only the maintainer `concept-*` fixtures are. A merged listing still needs its id in `lock.json`.
 - CI passes `GITHUB_TOKEN` to the registry step, so section 4 item 8 is obsolete.
 - Sections 2 and 3 describe the state on 2026-10-17 and are kept as history.

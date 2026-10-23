@@ -119,7 +119,7 @@ CI runs type check, lint, theme check, `bun run registry -- --strict`, the revie
 
 ### 7. Review, merge, approval
 
-A maintainer reads the pinned commit against the [review checklist](/docs/next/publish/review-checklist/) and merges. Some automated gate checks exist as scripts but do not run in CI yet, so the reviewer does those by hand. Then the maintainer adds your ids to `registry/lock.json`.
+A maintainer reads the pinned commit against the [review checklist](/docs/next/publish/review-checklist/) and merges. The gate checks (tree, policy, lint, secrets) run in the registry build once the listing is approved, and the reviewer reads the code as well. Then the maintainer adds your ids to `registry/lock.json`.
 
 Expected result: after the next site build, your widget has a page. If it does not, check `index.excluded` in the built registry for the reason.
 

@@ -43,7 +43,7 @@ A spec widget is `widget.json` plus `layout.json` (layout schema version 0). The
 
 ## Code widget
 
-A code widget is QML in a standard Omarchy plugin. It can draw anything and it is not sandboxed. The listing policy for code widgets is stricter, because reviewers must read the code. Those rules are written down but are not run in CI yet. Read [Code widgets](/docs/next/create/code-widgets/).
+A code widget is QML in a standard Omarchy plugin. It can draw anything and it is not sandboxed. The listing policy for code widgets is stricter, because reviewers must read the code. Those rules run in the registry build for approved listings. Read [Code widgets](/docs/next/create/code-widgets/).
 
 ## Agent-assisted
 

@@ -10,6 +10,7 @@ import {
   type LayoutNode
 } from '../../src/lib/registry/layout';
 import {
+  codeWidgetJson,
   layoutJson,
   listing,
   manifestJson,
@@ -158,7 +159,7 @@ describe('build integration', () => {
   it('code widgets get no layout and fetch no layout.json', async () => {
     const m = mockFetch({
       'manifest.json': manifestJson(),
-      'widget.json': widgetJson({ tier: 'code' })
+      'widget.json': codeWidgetJson()
     });
     const r = await buildRegistry({
       listings: [{ file: 'io.github.someone.demo.json', data: listing() }],

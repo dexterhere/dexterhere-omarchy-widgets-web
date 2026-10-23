@@ -68,6 +68,8 @@ export interface ReviewInfo {
 
 export interface RegistryWidget {
   id: string;
+  /** Gate warnings (declared use of a risky API); present only when there are some. */
+  warnings?: string[];
   name: string;
   version: string;
   description: string;

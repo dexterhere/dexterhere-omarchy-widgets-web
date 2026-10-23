@@ -8,7 +8,7 @@ Anyone may review a listing pull request. A maintainer reads the pinned commit b
 ## What is automated and what is not
 
 - CI runs the registry build (`bun run registry -- --strict`) and the review-changes check. These validate the files and the author. They do not read your code.
-- Gate scripts exist in the website repository (`scripts/gate/`): tree scan, listing policy, QML lint, secret scan and provider check. They are unit-tested but not wired into CI or the build yet. A reviewer does these checks by hand today.
+- The registry build runs the gate scripts (`scripts/gate/`) on every approved non-fixture listing: tree scan, listing policy, provider check, QML and JavaScript lint, SVG allow-list and secret scan. Any error excludes the listing; warnings (declared use of a risky API) appear on the widget. They are a listing policy, not isolation: bounded text rules that a determined author can still obfuscate past (see the GATES-WIRED entry in DECISIONS), which is why reviewing the pinned commit stays required. The reviewer still reads the code, because text rules miss obfuscation, data-driven behaviour and anything not visible in source. A maintainer can run them before approving with `bun scripts/build-registry.ts --local --only <id>`.
 - Nothing posts an access summary or compares capabilities between commits. The reviewer compares by reading.
 
 ## Capabilities match the code
