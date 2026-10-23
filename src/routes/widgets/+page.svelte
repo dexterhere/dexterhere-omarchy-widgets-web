@@ -5,6 +5,9 @@
   import { watchStuck } from '../../lib/sticky';
   import SearchBar from '../../lib/components/gallery/SearchBar.svelte';
   import WidgetCard from '../../lib/components/gallery/WidgetCard.svelte';
+  import DateField from '../../lib/components/ui/DateField.svelte';
+  import Select from '../../lib/components/ui/Select.svelte';
+  import { formatRange, userLocale } from '../../lib/date';
   import { categoryLabels, statusLabels, tierLabels } from '../../lib/registry';
   import {
     DEFAULT_QUERY,
@@ -19,6 +22,7 @@
     toggleCategory,
     tokenize,
     type Query,
+    type SortKey,
     type Suggestion
   } from '../../lib/registry/filter';
   import { getStatsProvider, type Stats } from '../../lib/stats';
@@ -60,9 +64,30 @@
   const tokens = $derived(tokenize(query.q));
   const active = $derived(hasFilters(query));
   const tags = $derived(popularTags(data.widgets));
+  const all = { value: '', label: 'All' };
+  const sortOptions = [
+    { value: 'relevance', label: 'Best match' },
+    { value: 'name', label: 'Name, A to Z' },
+    { value: 'status', label: 'Status, then name' }
+  ];
+  // Opens when a filter in the panel is active; never closes by itself, so clearing the last one
+  // does not collapse the panel (and drop focus) under the person using it.
+  let more = $state(false);
   const moreOpen = $derived(
-    Boolean(query.status || query.tier || query.surface || query.provider || query.size)
+    Boolean(
+      query.status ||
+      query.tier ||
+      query.surface ||
+      query.provider ||
+      query.size ||
+      query.from ||
+      query.to
+    )
   );
+
+  $effect(() => {
+    if (moreOpen) more = true;
+  });
 
   /** Non-text filters as removable chips. Text search has its own clear button. */
   const chips = $derived.by(() => {
@@ -99,6 +124,15 @@
       });
     if (query.size)
       out.push({ key: 'size', label: `Size: ${query.size}`, remove: () => (query.size = '') });
+    if (query.from || query.to)
+      out.push({
+        key: 'date',
+        label: `Updated: ${formatRange(query.from, query.to, userLocale())}`,
+        remove: () => {
+          query.from = '';
+          query.to = '';
+        }
+      });
     return out;
   });
 
@@ -203,44 +237,40 @@
     </div>
   </form>
 
-  <details class="more" open={moreOpen}>
+  <details class="more" bind:open={more}>
     <summary>More filters</summary>
     <div class="selects">
-      <div class="field">
-        <label for="status">Status</label>
-        <select id="status" bind:value={query.status}>
-          <option value="">All</option>
-          {#each options.statuses as s (s)}<option value={s}>{statusLabels[s]}</option>{/each}
-        </select>
-      </div>
-      <div class="field">
-        <label for="tier">Tier</label>
-        <select id="tier" bind:value={query.tier}>
-          <option value="">All</option>
-          {#each options.tiers as t (t)}<option value={t}>{tierLabels[t].label}</option>{/each}
-        </select>
-      </div>
-      <div class="field">
-        <label for="surface">Surface</label>
-        <select id="surface" bind:value={query.surface}>
-          <option value="">All</option>
-          {#each options.surfaces as s (s)}<option value={s}>{s}</option>{/each}
-        </select>
-      </div>
-      <div class="field">
-        <label for="provider">Data provider</label>
-        <select id="provider" bind:value={query.provider}>
-          <option value="">All</option>
-          {#each options.providers as p (p)}<option value={p}>{p}</option>{/each}
-        </select>
-      </div>
-      <div class="field">
-        <label for="size">Size class</label>
-        <select id="size" bind:value={query.size}>
-          <option value="">All</option>
-          {#each options.sizes as s (s)}<option value={s}>{s}</option>{/each}
-        </select>
-      </div>
+      <DateField id="updated" label="Updated" bind:from={query.from} bind:to={query.to} />
+      <Select
+        id="status"
+        label="Status"
+        bind:value={query.status}
+        options={[all, ...options.statuses.map((v) => ({ value: v, label: statusLabels[v] }))]}
+      />
+      <Select
+        id="tier"
+        label="Tier"
+        bind:value={query.tier}
+        options={[all, ...options.tiers.map((v) => ({ value: v, label: tierLabels[v].label }))]}
+      />
+      <Select
+        id="surface"
+        label="Surface"
+        bind:value={query.surface}
+        options={[all, ...options.surfaces.map((v) => ({ value: v, label: v }))]}
+      />
+      <Select
+        id="provider"
+        label="Data provider"
+        bind:value={query.provider}
+        options={[all, ...options.providers.map((v) => ({ value: v, label: v }))]}
+      />
+      <Select
+        id="size"
+        label="Size class"
+        bind:value={query.size}
+        options={[all, ...options.sizes.map((v) => ({ value: v, label: v }))]}
+      />
     </div>
   </details>
 
@@ -267,14 +297,14 @@
       {#if active}
         <button class="btn small" type="button" onclick={reset}>Clear all</button>
       {/if}
-      <div class="sortf">
-        <label for="sort" class="small text-2">Sort</label>
-        <select id="sort" bind:value={query.sort}>
-          <option value="relevance">Best match</option>
-          <option value="name">Name, A to Z</option>
-          <option value="status">Status, then name</option>
-        </select>
-      </div>
+      <Select
+        id="sort"
+        label="Sort"
+        inline
+        value={query.sort}
+        onchange={(v) => (query.sort = v as SortKey)}
+        options={sortOptions}
+      />
       <div class="seg" role="group" aria-label="View">
         <button
           type="button"
@@ -523,26 +553,10 @@
     gap: 12px;
     padding-top: 12px;
   }
-  .field {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    min-width: 0;
-  }
-  .field label {
-    font-size: 13px;
-    line-height: 20px;
-    color: var(--text-2);
-  }
-  select {
-    width: 100%;
-    min-height: 40px;
-    padding: 0 12px;
-    font: 400 14px / 20px var(--font-mono);
-    color: var(--text);
-    background: var(--bg-deep);
-    border: 1px solid var(--border-strong);
-    border-radius: 0;
+  @media (min-width: 560px) {
+    .selects > :global(:first-child) {
+      grid-column: span 2; /* room for a formatted range */
+    }
   }
   .bar {
     display: flex;
@@ -558,15 +572,6 @@
   }
   .actions {
     align-items: center;
-  }
-  .sortf {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .sortf select {
-    width: auto;
-    min-height: 32px;
   }
   .seg {
     display: inline-flex;

@@ -1,5 +1,6 @@
 // Pure gallery filtering, ranking, suggestion and URL-state helpers. No DOM, no Svelte.
 import { categoryLabels, statusLabels, tierLabels } from './index';
+import { isIso, orderRange } from '../date';
 import type { Category, RegistryWidget, Status, Tier } from './types';
 
 export type SortKey = 'relevance' | 'name' | 'status';
@@ -14,6 +15,9 @@ export interface Query {
   surface: string;
   provider: string;
   size: string;
+  /** Updated-date range, inclusive, yyyy-mm-dd; empty = open ended. */
+  from: string;
+  to: string;
   sort: SortKey;
   view: ViewKey;
 }
@@ -26,6 +30,8 @@ export const DEFAULT_QUERY: Query = {
   surface: '',
   provider: '',
   size: '',
+  from: '',
+  to: '',
   sort: 'relevance',
   view: 'cards'
 };
@@ -50,6 +56,11 @@ export function parseQuery(params: URLSearchParams): Query {
   const status = params.get('status') ?? '';
   const tier = params.get('tier') ?? '';
   const sort = params.get('sort') as SortKey;
+  const f = params.get('from') ?? '';
+  const t = params.get('to') ?? '';
+  let from = isIso(f) ? f : '';
+  let to = isIso(t) ? t : '';
+  if (from && to) [from, to] = orderRange(from, to);
   return {
     q: (params.get('q') ?? '').slice(0, MAX_Q),
     cat: parseCategories(params.getAll('cat').slice(0, 10)),
@@ -58,6 +69,8 @@ export function parseQuery(params: URLSearchParams): Query {
     surface: free(params.get('surface')),
     provider: free(params.get('provider')),
     size: free(params.get('size')),
+    from,
+    to,
     sort: SORTS.includes(sort) ? sort : 'relevance',
     view: params.get('view') === 'list' ? 'list' : 'cards'
   };
@@ -75,7 +88,17 @@ export function serializeQuery(q: Query): string {
 }
 
 export const hasFilters = (q: Query) =>
-  Boolean(q.q.trim() || q.cat.length || q.status || q.tier || q.surface || q.provider || q.size);
+  Boolean(
+    q.q.trim() ||
+    q.cat.length ||
+    q.status ||
+    q.tier ||
+    q.surface ||
+    q.provider ||
+    q.size ||
+    q.from ||
+    q.to
+  );
 
 /** Same query with every filter cleared; sort and view are kept. */
 export const clearFilters = (q: Query): Query => ({
@@ -223,7 +246,9 @@ function passes(w: RegistryWidget, q: Query, skip: Without): boolean {
     (!q.tier || w.tier === q.tier) &&
     (!q.surface || w.surfaces.includes(q.surface)) &&
     (!q.provider || w.providers.some((p) => p.name === q.provider)) &&
-    (!q.size || w.sizeClasses.some((s) => s.name === q.size))
+    (!q.size || w.sizeClasses.some((s) => s.name === q.size)) &&
+    (!(q.from || q.to) ||
+      (Boolean(w.updated) && (!q.from || w.updated! >= q.from) && (!q.to || w.updated! <= q.to)))
   );
 }
 

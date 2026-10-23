@@ -31,6 +31,7 @@ const mk = (o: Partial<RegistryWidget>): RegistryWidget => ({
   license: 'MIT',
   repo: 'https://github.com/a/one',
   commit: 'a'.repeat(40),
+  updated: '2026-03-10',
   category: 'system',
   categories: ['system'],
   tags: ['cpu'],

@@ -198,7 +198,7 @@ export async function assertCommitReachable(
   repo: string,
   commit: string,
   opts: { fetch?: FetchFn; token?: string } = {}
-): Promise<{ repoId: unknown; ownerId: unknown }> {
+): Promise<{ repoId: unknown; ownerId: unknown; committed: string | null }> {
   if (!OWNER_RE.test(owner) || !REPO_RE.test(repo) || !COMMIT_RE.test(commit))
     throw new Error('reachability: invalid owner, repo or commit');
   const api = `https://${API_HOST}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`;
@@ -218,7 +218,14 @@ export async function assertCommitReachable(
       `commit is not reachable from the default branch ${branch} (compare status: ${typeof status === 'string' ? status.slice(0, 20) : 'unknown'})`
     );
   const ownerObj = own(info, 'owner');
+  // For "behind" and "identical" the merge base is the pinned commit itself, so its committer
+  // date comes from the compare response we already fetched (no extra request).
+  const base = own(cmp, 'merge_base_commit') as { commit?: { committer?: { date?: unknown } } };
+  const when = base?.commit?.committer?.date;
+  const committed =
+    typeof when === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(when) ? when.slice(0, 10) : null;
   return {
+    committed,
     repoId: own(info, 'id'),
     ownerId:
       ownerObj && typeof ownerObj === 'object'
@@ -466,11 +473,16 @@ export interface BuildResult {
   errors: string[];
 }
 
+const FIXTURE_UPDATED = '2026-01-15';
+
 async function buildOne(l: Listing, inp: BuildInput): Promise<RegistryWidget> {
   let manifest: Record<string, unknown>;
   let widget: Record<string, unknown>;
   let layoutRaw: unknown;
   const fixture = l.source === 'fixture';
+  // Committer date (yyyy-mm-dd, UTC) of the pinned commit. Fixtures get a fixed date; null when
+  // the reachability check was skipped or GitHub did not return one.
+  let updated: string | null = fixture ? FIXTURE_UPDATED : null;
   if (fixture) {
     manifest = inp.readFixture(l.id, 'manifest') as Record<string, unknown>;
     widget = inp.readFixture(l.id, 'widget') as Record<string, unknown>;
@@ -484,6 +496,7 @@ async function buildOne(l: Listing, inp: BuildInput): Promise<RegistryWidget> {
         fetch: inp.fetch,
         token: inp.token
       });
+      updated = seen.committed;
       if (inp.lock) {
         checkLock(l.id, inp.lock, seen);
         const m = await fetchJson(
@@ -588,6 +601,7 @@ async function buildOne(l: Listing, inp: BuildInput): Promise<RegistryWidget> {
     license: manifest.license as string,
     repo: l.repo,
     commit: l.commit,
+    updated,
     category: categories[0],
     categories,
     tags: l.tags,
