@@ -38,7 +38,7 @@ A listing is a pointer, not the widget:
 - `categories`: 1 to 3 distinct slugs from `system`, `time-calendar`, `productivity`, `dev-git`, `ai-agents`, `media`, `communication`, `network-containers`, `ambient-fun`, `utilities`. The `category` in the widget's own `widget.json` must be one of them and becomes the primary; the gallery lists the widget under every category named here.
 - `tags`: at most 8, `^[a-z0-9-]{1,24}$`. `summary`: at most 140 characters.
 - `status`: `planned`, `alpha`, `stable` or `removed`. `removed` is a takedown: the entry is not fetched and not published. The owner can set it by PR.
-- `source: "fixture"` exists only for maintainers' concept entries and is allowed only with `status: "planned"`.
+- `source: "fixture"` exists only for maintainers' test entries (no network, never installable) and is allowed only with `status: "planned"`.
 - A listing has no trust field. Any extra property fails validation.
 
 ## Widget repository files
@@ -55,7 +55,7 @@ Fixture entries keep `manifest.json`, `widget.json` and `layout.json` under `fix
 
 ## Build
 
-`bun run registry` (flags `--offline`, `--out <dir>`, `--strict`, and `--skip-reachability` for local development only; CI never uses it). Set `GITHUB_TOKEN` to avoid the 60 requests per hour limit of api.github.com.
+`bun run registry` (flags `--offline`, `--out <dir>`, `--strict`, and `--skip-reachability` for local development only; CI never uses it). Listings are fetched from GitHub, so a local build needs network access, and `GITHUB_TOKEN` (read-only, public data, no scopes) is strongly advised to avoid the 60 requests per hour limit of api.github.com. If GitHub is unreachable or rate limited, each affected listing is excluded with the reason printed, `bun run build` still succeeds, and the gallery is then empty or partial. Production builds on Vercel need a `GITHUB_TOKEN` environment variable on the project (mark it sensitive; it only reads public data) so they do not hit the unauthenticated limit. Never commit a token.
 
 1. Validate every listing; reject duplicate ids and file names that are not `<id>.json`.
 2. Skip `removed` listings entirely.
