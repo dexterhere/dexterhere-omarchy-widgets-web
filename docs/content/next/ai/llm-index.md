@@ -39,7 +39,7 @@ These URLs are relative to the site origin. Humans can open them in a browser. A
 | `sizeClasses`, `variants`   | Declared size classes and variant names                                                                                                                            |
 | `repo`, `commit`, `license` | Where the source is and which commit is listed                                                                                                                     |
 
-`excluded` lists listings that did not make it into `widgets`. Each entry has `ref` (the listing), `reason` and `pending`. `pending: true` means the listing is valid so far but no maintainer has recorded it in `registry/lock.json`. It is not an error. Any other entry is a real problem with the listing. A widget that is merged but pending is not published, so look in `excluded` before you tell a user that a widget is missing. Today only the maintainers' seven fixture entries (clock, system-monitor, battery, github-activity, docker, tasks, ai-usage) are in `widgets`.
+`excluded` lists listings that did not make it into `widgets`. Each entry has `ref` (the listing), `reason` and `pending`. `pending: true` means the listing is valid so far but no maintainer has recorded it in `registry/lock.json`. It is not an error. Any other entry is a real problem with the listing. A widget that is merged but pending is not published, so look in `excluded` before you tell a user that a widget is missing. Today only the maintainer's seven widgets (clock, system-monitor, battery, github-activity, docker, tasks, ai-usage) are in `widgets`, all planned and not installable yet.
 
 ```bash
 curl -fsSL "$SITE/registry.json" | jq -r '.widgets[] | [.id, .status, .tier, .summary] | @tsv'

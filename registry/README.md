@@ -12,7 +12,7 @@ registry/
   lock.json                    maintainer approvals: { "<id>": { "repoId": n, "ownerId": n } }
   namespaces.json, MAINTAINERS.json, reserved.json, retired.json   maintainer managed
   providers.json               provider/topic catalog the listing checks use
-  fixtures/<id>/               manifest.json + widget.json + layout.json for fixture entries (copies of the real widget files; tests/unit/fixtures.gates.test.ts runs the policy gates over each)
+  fixtures/<id>/               manifest.json + widget.json + layout.json for `source: "fixture"` entries (none today; sample copies for tests live in tests/fixtures/widgets/)
   dist/                        generated: index.json and widgets/<id>.json
 ```
 

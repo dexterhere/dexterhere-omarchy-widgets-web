@@ -127,7 +127,7 @@ A spec widget has no code, so `layout.json` is how it draws. Version 0 shape: `{
 - Data binds are `{ "topic": "...", "field": "..." }`. Every bind must be declared in `widget.json` `providers` and have `sampleData` of the right shape (`bar` and `ring`: a number, `sparkline`: at least two numbers, `list`: strings).
 - Colour roles are only `accent`, `foreground`, `secondary`, `muted`. Sizes `sm`, `md`, `lg`, `xl`; gaps `sm`, `md`, `lg`. Icons: `cpu`, `memory`, `battery`, `clock`, `list`, `git`, `container`, `disk`, `network`, `bolt`, `calendar`, `check`.
 - Limits: depth 8, 200 nodes, 20 children per node, strings up to 120 characters, file up to 64 KB.
-- Copy a working example from `registry/fixtures/*/layout.json`. The exact rules are in `src/lib/registry/layout.ts`. The web emulator renders spec widgets from this file; the desktop renderer does not exist yet.
+- Copy a working example from a published widget, for example `layout.json` in https://github.com/dexterhere/omarchy-widget-docker. The exact rules are in `src/lib/registry/layout.ts`. The web emulator renders spec widgets from this file; the desktop renderer does not exist yet.
 
 ### From pull request to published
 
