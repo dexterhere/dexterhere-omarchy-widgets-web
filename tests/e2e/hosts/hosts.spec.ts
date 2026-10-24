@@ -61,7 +61,10 @@ test('every header and footer link on the site is absolute and on the right host
       .getByRole('navigation', { name })
       .locator('a')
       .evaluateAll((as) => as.map((a) => a.getAttribute('href')!));
-  expect(await hrefs('Main')).toEqual([
+  const main = await hrefs('Main');
+  // the "Report an issue" link is the one deliberately external item (GitHub, new tab)
+  expect(main).toContain('https://github.com/dexterhere/omarchy-widgets-web/issues/new/choose');
+  expect(main.filter((h) => !h.startsWith('https://github.com/'))).toEqual([
     `${SITE}/widgets/`,
     `${DOCS}/`,
     `${DOCS}/next/create/`,

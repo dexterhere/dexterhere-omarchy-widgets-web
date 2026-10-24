@@ -7,7 +7,7 @@ description: Omarchy Widgets is a data layer and package format for any desktop 
 
 Omarchy Widgets is a project to let you install, place and create desktop widgets on [Omarchy](https://omarchy.org) 4, with your credentials kept out of the widgets. The name is a placeholder.
 
-Widgets are not limited to a clock, system stats or GitHub activity. Anything that can show data or respond to a click can be a widget, such as a build monitor, a focus timer or a server status board. Spec widgets are JSON built from blocks, with no code. Code widgets (QML) can do whatever Quickshell can do and run as you, so read one before you install it.
+Widgets are not limited to a fixed set. Anything that can show data or respond to a click can be a widget. Spec widgets are JSON built from blocks, with no code. Code widgets (QML) can do whatever Quickshell can do and run as you, so read one before you install it.
 
 <Callout type="planned">
 

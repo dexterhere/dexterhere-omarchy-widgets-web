@@ -1,8 +1,11 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Report a vulnerability (private)
+  - name: Problem with the daemon, CLI, vault or installer
+    url: https://github.com/dexterhere/omarchy-widgets/issues/new/choose
+    about: The widget software lives in the code repository. Report it there.
+  - name: Security problem on this site (private)
     url: https://github.com/dexterhere/dexterhere-omarchy-widgets-web/security/advisories/new
-    about: Do not file security issues publicly.
-  - name: Vulnerability in the widget software (daemon, vault, CLI)
+    about: Do not file security issues publicly. This opens a private report.
+  - name: Security problem in the widget software (private)
     url: https://github.com/dexterhere/omarchy-widgets/security/advisories/new
-    about: Report problems in the code repository privately.
+    about: Daemon, vault, CLI or QML bridge. This opens a private report in the code repository.

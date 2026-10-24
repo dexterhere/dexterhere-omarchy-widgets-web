@@ -215,7 +215,7 @@ CI cannot see what your code does at runtime and does not post an access summary
 
 ### Review turnaround
 
-This is a small project and review has no promised turnaround. A listing waits for a maintainer twice: once to merge and once to approve in `lock.json`. If you are stuck, open a "Stuck on a widget submission" issue.
+This is a small project and review has no promised turnaround. A listing waits for a maintainer twice: once to merge and once to approve in `lock.json`. If you are stuck, open a "Widget or listing problem" issue.
 
 ### Trust tiers
 

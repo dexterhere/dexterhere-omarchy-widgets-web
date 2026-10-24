@@ -41,7 +41,9 @@ test('hero is short, says widgets are open-ended, and there is no privacy sectio
       'Clocks, stats, git, music, or anything with data. They follow your theme and see only what you allow.'
     )
   ).toBeVisible();
-  await expect(page.getByText('Pre-release: the daemon, vault and CLI work;')).toBeVisible();
+  await expect(
+    page.locator('#main .status').getByText('every widget is marked Planned.')
+  ).toBeVisible();
   await expect(
     page.getByText('Spec widgets are JSON, no code. Code widgets run as you.')
   ).toBeVisible();
@@ -51,17 +53,16 @@ test('hero is short, says widgets are open-ended, and there is no privacy sectio
   await expect(page.getByText('How a widget gets made')).toHaveCount(0);
 });
 
-test('sections come in order: hero, stage, widgets, ideas, make your own', async ({ page }) => {
+test('sections come in order: hero, stage, widgets, make your own', async ({ page }) => {
   await ready(page);
   const ys = await page.evaluate(() =>
-    ['[data-home-stage]', '[data-home-widgets]', '[data-home-ideas]', '[data-home-make]'].map(
+    ['[data-home-stage]', '[data-home-widgets]', '[data-home-make]'].map(
       (q) => document.querySelector(q)!.getBoundingClientRect().top
     )
   );
   expect(ys).toEqual([...ys].sort((a, b) => a - b));
-  const ideas = page.locator('[data-home-ideas] li a');
-  await expect(ideas).toHaveCount(10);
-  await expect(ideas.first()).toHaveAttribute('href', /\/widgets\/?\?cat=/);
+  await expect(page.locator('[data-home-ideas]')).toHaveCount(0);
+  await expect(page.getByText('What could you build?')).toHaveCount(0);
 });
 
 test('the emulator stage is visible without scrolling and starts with widgets and no windows', async ({
@@ -300,11 +301,71 @@ test.describe('widget cards', () => {
     await ready(page);
     test.skip((await registryCount(page)) <= 6, 'needs more than six widgets');
     const y = () =>
-      page.locator('[data-home-ideas]').evaluate((e) => e.getBoundingClientRect().top + scrollY);
+      page.locator('[data-home-make]').evaluate((e) => e.getBoundingClientRect().top + scrollY);
     const before = await y();
     await next(page).click();
     await expect(shownText(page)).toContainText('Showing 7');
     expect(Math.abs((await y()) - before)).toBeLessThan(2);
+  });
+
+  test('search filters the cards live, resets to page 1, counts, clears and links to the gallery', async ({
+    page
+  }) => {
+    await ready(page);
+    const total = await registryCount(page);
+    const box = page.getByRole('search').getByRole('textbox', { name: 'Search widgets' });
+    const count = page.locator('[data-home-count]');
+    await expect(count).toHaveText(`${total} of ${total} widgets`);
+    if (total > 6) {
+      await next(page).click();
+      await expect(shownText(page)).toContainText('Showing 7');
+    }
+    await box.fill('clock');
+    await expect(cards(page).first()).toBeVisible();
+    const n = await cards(page).count();
+    expect(n).toBeGreaterThan(0);
+    await expect(count).toHaveText(`${n} of ${total} widgets`);
+    await expect(page.locator('[data-home-gallery-link]')).toHaveAttribute(
+      'href',
+      /\/widgets\/?\?q=clock$/
+    );
+    await page.getByRole('button', { name: 'Clear search' }).click();
+    await expect(box).toBeFocused();
+    await expect(box).toHaveValue('');
+    await expect(count).toHaveText(`${total} of ${total} widgets`);
+    await box.fill('zzzz-no-such-widget');
+    await expect(cards(page)).toHaveCount(0);
+    await expect(page.locator('[data-home-empty]')).toContainText('No widgets match');
+    await expect(page.locator('[data-home-gallery-link]')).toHaveCount(0);
+    await expect(count).toHaveText(`0 of ${total} widgets`);
+  });
+
+  test('Enter goes to the gallery with the query; / focuses the search', async ({ page }) => {
+    await ready(page);
+    const box = page.getByRole('textbox', { name: 'Search widgets' });
+    await page.locator('[data-home-widgets]').click({ position: { x: 5, y: 5 } });
+    await page.keyboard.press('/');
+    await expect(box).toBeFocused();
+    await box.fill('clock');
+    await box.press('Enter');
+    await page.waitForURL(/\/widgets\/?\?q=clock/);
+    await expect(page.getByRole('combobox', { name: 'Search widgets' })).toHaveValue('clock');
+  });
+
+  test('the search form works without JavaScript', async ({ browser }) => {
+    const ctx = await browser.newContext({ javaScriptEnabled: false });
+    const page = await ctx.newPage();
+    await page.goto('/');
+    const form = page.getByRole('search');
+    await expect(form).toHaveAttribute('method', 'get');
+    await expect(form.getByRole('textbox', { name: 'Search widgets' })).toHaveAttribute(
+      'name',
+      'q'
+    );
+    await form.getByRole('textbox').fill('clock');
+    await form.getByRole('button', { name: 'Search' }).click();
+    await page.waitForURL(/\/widgets\/?\?q=clock/);
+    await ctx.close();
   });
 
   test('clicking a card opens its detail page', async ({ page }) => {
