@@ -1,0 +1,13 @@
+{
+  "title": "Start",
+  "order": 1,
+  "pages": [
+    "what-it-is",
+    "what-works-today",
+    "try-it-safely",
+    "how-it-works",
+    "install",
+    "browse-and-install",
+    "first-widget"
+  ]
+}
