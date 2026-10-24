@@ -42,6 +42,7 @@ describe('discovery files', () => {
     expect(t).toContain('/skills/omarchy-widget-plan/SKILL.md');
     expect(t).toContain('unsandboxed');
     expect(t).toContain('llms-full.txt');
+    expect(t).toContain('[Make your own widget](https://x.test/make/)');
   });
   it('llms-full.txt joins every page with its source', () => {
     const t = buildLlmsFull(makeUrls('https://x.test', ''), [{ ...page, body: 'Body.' }]);
@@ -65,6 +66,12 @@ describe('discovery files', () => {
     expect(t).not.toContain('Callout');
     expect(t).toContain('Planned:');
     expect(t).toContain('Not built.');
+  });
+});
+
+describe('the sitemap lists /make/', () => {
+  it('is in the generated sitemap', () => {
+    expect(readFileSync('src/lib/seo.server.ts', 'utf8')).toContain("urls.site('/make/')");
   });
 });
 

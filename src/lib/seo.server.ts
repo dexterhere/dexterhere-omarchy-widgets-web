@@ -56,6 +56,7 @@ export const sitemap = () =>
   buildSitemap([
     urls.site('/'),
     urls.site('/widgets/'),
+    urls.site('/make/'),
     urls.site('/contribute/'),
     urls.site('/security/'),
     urls.site('/emulator/'),

@@ -1,7 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { resolve } from '$app/paths';
-  import Builder from '../lib/components/home/LazyBuilder.svelte';
   import WidgetPage from '../lib/components/home/WidgetPage.svelte';
   import TryList from '../lib/components/home/TryList.svelte';
   import { HomeStage } from '../lib/components/home/stage.svelte';
@@ -32,27 +31,6 @@
     io.observe(bar);
     return () => io.disconnect();
   });
-
-  const paths = [
-    {
-      text: 'Spec widget',
-      sub: 'JSON, no code',
-      href: docsUrl('/docs/next/create/spec-widgets/'),
-      cta: 'Spec widget guide'
-    },
-    {
-      text: 'Code widget',
-      sub: 'QML, runs as you',
-      href: docsUrl('/docs/next/create/code-widgets/'),
-      cta: 'Code widget guide'
-    },
-    {
-      text: 'Your agent',
-      sub: 'You review the spec',
-      href: docsUrl('/docs/next/create/choose-a-path/'),
-      cta: 'Choose a path'
-    }
-  ];
 
   let { data } = $props();
   const categories = Object.keys(categoryLabels) as Category[];
@@ -139,44 +117,15 @@
     </ul>
   </section>
 
-  <section class="block" aria-labelledby="make-h" data-home-make>
-    <header class="bhead">
-      <div>
-        <h2 id="make-h">Make your own</h2>
-        <p class="text-2">
-          Build a spec widget from blocks and see it live. The format is a draft.
-        </p>
-      </div>
-    </header>
-    <ol class="steps">
-      <li>
-        <h3>Describe it</h3>
-        <p class="small text-2">
-          What it shows and what a click does, or let an <a
-            href={docsUrl('/docs/next/ai/overview/')}>agent skill</a
-          > plan it.
-        </p>
-      </li>
-      <li>
-        <h3>Build it</h3>
-        <ul class="paths">
-          {#each paths as p (p.cta)}
-            <li>
-              <a class="btn" href={p.href}>{p.cta}</a>
-              <span class="small text-2">{p.sub}</span>
-            </li>
-          {/each}
-        </ul>
-      </li>
-      <li>
-        <h3>Share it</h3>
-        <p class="small text-2">
-          A pull request, pinned to a commit.
-          <a href={sitePath('/contribute')}>Read how to contribute it</a>.
-        </p>
-      </li>
-    </ol>
-    <Builder {stage} />
+  <section class="block make" aria-labelledby="make-h" data-home-make>
+    <h2 id="make-h">Make your own</h2>
+    <p class="text-2">
+      Have an idea for a widget? Answer a few questions, see it live, and get the files to publish.
+    </p>
+    <div class="row">
+      <a class="btn-primary" href={sitePath('/make/')}>Start making a widget</a>
+      <a class="btn" href={docsUrl('/docs/next/create/choose-a-path/')}>Read the create guide</a>
+    </div>
   </section>
 </div>
 
@@ -288,52 +237,6 @@
   }
   .cat {
     font-weight: 700;
-  }
-  .steps {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    gap: 16px 32px;
-    counter-reset: step;
-  }
-  @media (min-width: 900px) {
-    .steps {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-  }
-  .steps > li {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding-left: 44px;
-    position: relative;
-    counter-increment: step;
-  }
-  .steps > li::before {
-    content: counter(step);
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 32px;
-    height: 32px;
-    display: grid;
-    place-items: center;
-    border: 1px solid var(--brand);
-    color: var(--brand);
-    font-family: var(--font-mono);
-  }
-  .paths {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    align-items: flex-start;
-  }
-  .paths li {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px 12px;
   }
   @media (max-width: 719px) {
     .block {
