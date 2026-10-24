@@ -1,5 +1,0 @@
-{
-  "title": "Reference",
-  "order": 6,
-  "pages": ["cli", "protocol", "vault-format", "threat-model", "configuration", "glossary"]
-}
