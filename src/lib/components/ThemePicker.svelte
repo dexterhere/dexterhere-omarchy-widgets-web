@@ -101,6 +101,9 @@
       original = untrack(() => theme.current);
       applied = false;
       dialog.showModal();
+      // showModal focuses the first button (an arrow), where Enter would step instead of apply;
+      // park focus on the dialog until the centre card is ready to take it.
+      dialog.focus();
       void import('../emulator/widgets/WidgetEmulator.svelte').then((m) => (Emu = m.default));
       void loadGsap().then(async (g) => {
         gsap = g;
@@ -110,7 +113,9 @@
         );
         place(false);
         ready = true;
+        // the highlight starts at rest: show the live layer now, not only after the first move
         liveId = active.id;
+        liveOn = true;
         await tick();
         stage?.querySelector<HTMLElement>('.card[data-o="0"]')?.focus();
       });
@@ -216,6 +221,7 @@
   bind:this={dialog}
   class="picker"
   aria-label="Choose a theme"
+  tabindex="-1"
   {onclose}
   {onclick}
   onpointerdown={ondown}

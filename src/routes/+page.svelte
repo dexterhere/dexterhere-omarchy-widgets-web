@@ -7,9 +7,10 @@
   import { START_WIDGETS as start, START_ZOOM } from '../lib/emulator/startLayout';
   import LazyEmulator from '../lib/emulator/LazyEmulator.svelte';
   import Seo from '../lib/components/Seo.svelte';
-  import { categoryLabels, getAll, type Category } from '../lib/registry';
+  import { getAll } from '../lib/registry';
   import { docsUrl, sitePath } from '../lib/site';
   import { theme } from '../lib/themes/store.svelte';
+  import { PRE_RELEASE } from '../lib/status';
 
   const stage = new HomeStage();
   const widgets = getAll();
@@ -33,7 +34,6 @@
   });
 
   let { data } = $props();
-  const categories = Object.keys(categoryLabels) as Category[];
 </script>
 
 <Seo
@@ -60,8 +60,7 @@
         <p class="small text-2">Spec widgets are JSON, no code. Code widgets run as you.</p>
       </div>
       <p class="status small text-2">
-        Pre-release: the daemon, vault and CLI work; the desktop canvas and Widget Center do not
-        yet.
+        {PRE_RELEASE}
       </p>
     </div>
   </section>
@@ -95,26 +94,6 @@
       <a href={resolve('/widgets')}>Search the gallery</a>
     </header>
     <WidgetPage {widgets} onTry={(id) => stage.tryOn(id)} />
-  </section>
-
-  <section class="block" aria-labelledby="ideas-h" data-home-ideas>
-    <header class="bhead">
-      <div>
-        <h2 id="ideas-h">What could you build?</h2>
-        <p class="text-2">Ideas, not finished widgets. Pick a category to see what is listed.</p>
-      </div>
-    </header>
-    <ul class="ideas">
-      {#each categories as c (c)}
-        <li>
-          <a href={`${sitePath('/widgets')}?cat=${c}`}>
-            <span class="cat">{categoryLabels[c]}</span>
-            <span class="text-2 small">{data.ideas[c]}</span>
-            <span class="sr-only"> (listed widgets)</span>
-          </a>
-        </li>
-      {/each}
-    </ul>
   </section>
 
   <section class="block make" aria-labelledby="make-h" data-home-make>
@@ -211,32 +190,6 @@
   .bhead h2 {
     font-size: clamp(24px, 2.5vw, 32px);
     line-height: 1.2;
-  }
-  ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-  .ideas {
-    display: grid;
-    gap: 8px;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 1fr));
-  }
-  .ideas a {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    height: 100%;
-    padding: 12px 16px;
-    text-decoration: none;
-    border: 1px solid var(--border);
-    transition: border-color 140ms ease-out;
-  }
-  .ideas a:hover {
-    border-color: var(--brand);
-  }
-  .cat {
-    font-weight: 700;
   }
   @media (max-width: 719px) {
     .block {
