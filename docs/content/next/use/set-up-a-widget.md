@@ -1,6 +1,6 @@
 ---
 title: Set up a widget
-description: Connect a data source, store a credential in the vault, grant topics, revoke access and troubleshoot. What works today: the daemon, the vault, the grants file and ow install.
+description: Connect a data source, store a credential in the vault, grant topics, revoke access and troubleshoot. What works today is the daemon, the vault, the grants file and ow install.
 ---
 
 <script>import Callout from '$lib/docs/Callout.svelte';</script>
