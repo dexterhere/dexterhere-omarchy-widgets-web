@@ -364,3 +364,68 @@ test('live preview: the centre shows the real emulator with the real widgets, in
   await page.keyboard.press('Enter');
   expect(await theme(page)).toBe('white');
 });
+
+// THEME-PICKER-FIRST-OPEN: the live layer must be shown the moment the picker opens, in the theme
+// the page is using, not only after the first move of the highlight.
+const live = (page: Page) => page.locator('[data-live-preview]');
+const liveLook = (page: Page) =>
+  live(page).evaluate((e) => ({
+    opacity: getComputedStyle(e).opacity,
+    bg: getComputedStyle(e).getPropertyValue('--bg').trim(),
+    page: getComputedStyle(document.documentElement).getPropertyValue('--bg').trim(),
+    id: e.getAttribute('data-theme')
+  }));
+
+async function expectLiveShown(page: Page, id: string) {
+  await expect(live(page)).toHaveClass(/on/);
+  await expect(live(page).getByText('GitHub activity')).toBeVisible();
+  await expect.poll(async () => (await liveLook(page)).opacity).toBe('1');
+  const look = await liveLook(page);
+  expect(look.id).toBe(id);
+  expect(look.bg).not.toBe('');
+  expect(look.bg).toBe(look.page);
+  return look.bg;
+}
+
+for (const [start, scheme] of [
+  ['tokyo-night', 'dark'],
+  ['catppuccin-latte', 'light']
+] as const) {
+  for (const how of ['key', 'mouse'] as const) {
+    test(`live preview shows on first open (${how}, ${start}), then in each theme`, async ({
+      page
+    }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.addInitScript((id) => localStorage.setItem('ow-theme', id), start);
+      await ready(page);
+      if (how === 'key') await page.keyboard.press('t');
+      else await trigger(page).click();
+      await settled(page);
+      const seen = [await expectLiveShown(page, start)];
+      for (let i = 0; i < 2; i++) {
+        await page.keyboard.press('ArrowRight');
+        const id = (await theme(page))!;
+        seen.push(await expectLiveShown(page, id));
+      }
+      expect(new Set(seen).size).toBe(3);
+    });
+  }
+}
+
+test('live preview shows on first open with the CPU 4x slower, and after a reload', async ({
+  page
+}) => {
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  await ready(page);
+  await page.keyboard.press('t');
+  await settled(page);
+  await expectLiveShown(page, 'tokyo-night');
+  await page.keyboard.press('Enter');
+  await page.reload();
+  await expect(hint(page)).toBeHidden();
+  await page.waitForLoadState('networkidle');
+  await page.keyboard.press('t');
+  await settled(page);
+  await expectLiveShown(page, (await theme(page))!);
+});

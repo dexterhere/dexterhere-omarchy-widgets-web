@@ -15,14 +15,14 @@ Order of work: 1) write `manifest.json`, `widget.json`, `layout.json` (spec) or 
 
 Verified in the code repository:
 
-- `owd`, the provider daemon, with the `system` provider: topics `system.cpu` (`usage_pct`), `system.memory` (`total_mib`, `used_mib`, `used_pct`), `system.load` (`load1`, `load5`, `load15`).
-- Provider catalog caveat: the website's `registry/providers.json` lists different topics and fields than the daemon serves. Only `system.cpu` `usage_pct` and `system.memory` `used_pct` are in both. Use only those unless the plan says the widget is `planned`.
-- `ow` commands: `ow [--config-dir DIR] status` and `ow [--config-dir DIR] vault init|status|list|set <name>|remove <name>|rotate|wipe --yes`.
+- `owd`, the provider daemon, with the `system` provider (topics `system.cpu` `usage_pct`; `system.memory` `total_mib`, `used_mib`, `used_pct`; `system.load` `load1`, `load5`, `load15`; `system.time` `hm`, `hms`, `date`, `tz`; `system.temp` `celsius`) and the `battery` provider (`battery.status` `percent`, `state`, `timeLeft`).
+- Provider catalog caveat: the website's `registry/providers.json` lists topics no provider serves (GitHub, Docker, tasks, AI usage), and its `serving` list is behind the daemon. Use only the topics above unless the plan says the widget is `planned`.
+- `ow` commands: `ow [--config-dir DIR] status` and `ow [--config-dir DIR] vault init|status|unlock|lock|list|set <name>|remove <name>|rotate|wipe --yes`, and `ow install <id> [--allow-planned] [--dry-run]`, `ow list`, `ow remove <id>` for spec widgets.
 - The wire protocol and the `grants.toml` format.
 
 Also real: `bun run registry` in the website repository, which validates `manifest.json`, `widget.json` and `layout.json` and reports the result in the printed list and in `index.excluded`.
 
-Planned, not built: `ow new`, `ow check`, `ow install`, `ow place`, `ow publish` (including `--listing`), `ow doctor`, the QML kit and bridge, the desktop renderer, the desktop canvas, Widget Center, other providers. The `widget.json` and `layout.json` schemas are DRAFT v0. Never tell the user to run a planned command as if it works. Before relying on any command, run `ow` with no arguments or read `crates/ow/src/main.rs` in the code repository. If the CLI has changed since this skill was written, trust the source.
+Not built: `ow new`, `ow check`, `ow place`, `ow publish` (including `--listing`), `ow doctor`, the QML kit, edit mode on the desktop, Widget Center, network providers. `ow install` works only for widgets already listed in the registry. The `widget.json` and `layout.json` schemas are DRAFT v0. Never tell the user to run a planned command as if it works. Before relying on any command, run `ow` with no arguments or read `crates/ow/src/main.rs` in the code repository. If the CLI has changed since this skill was written, trust the source.
 
 ## Safe workflow
 

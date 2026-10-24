@@ -1,16 +1,16 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { resolve } from '$app/paths';
-  import Builder from '../lib/components/home/LazyBuilder.svelte';
   import WidgetPage from '../lib/components/home/WidgetPage.svelte';
   import TryList from '../lib/components/home/TryList.svelte';
   import { HomeStage } from '../lib/components/home/stage.svelte';
   import { START_WIDGETS as start, START_ZOOM } from '../lib/emulator/startLayout';
   import LazyEmulator from '../lib/emulator/LazyEmulator.svelte';
   import Seo from '../lib/components/Seo.svelte';
-  import { categoryLabels, getAll, type Category } from '../lib/registry';
+  import { getAll } from '../lib/registry';
   import { docsUrl, sitePath } from '../lib/site';
   import { theme } from '../lib/themes/store.svelte';
+  import { PRE_RELEASE } from '../lib/status';
 
   const stage = new HomeStage();
   const widgets = getAll();
@@ -33,29 +33,7 @@
     return () => io.disconnect();
   });
 
-  const paths = [
-    {
-      text: 'Spec widget',
-      sub: 'JSON, no code',
-      href: docsUrl('/docs/next/create/spec-widgets/'),
-      cta: 'Spec widget guide'
-    },
-    {
-      text: 'Code widget',
-      sub: 'QML, runs as you',
-      href: docsUrl('/docs/next/create/code-widgets/'),
-      cta: 'Code widget guide'
-    },
-    {
-      text: 'Your agent',
-      sub: 'You review the spec',
-      href: docsUrl('/docs/next/create/choose-a-path/'),
-      cta: 'Choose a path'
-    }
-  ];
-
   let { data } = $props();
-  const categories = Object.keys(categoryLabels) as Category[];
 </script>
 
 <Seo
@@ -82,8 +60,7 @@
         <p class="small text-2">Spec widgets are JSON, no code. Code widgets run as you.</p>
       </div>
       <p class="status small text-2">
-        Pre-release: the daemon, vault and CLI work; the desktop canvas and Widget Center do not
-        yet.
+        {PRE_RELEASE}
       </p>
     </div>
   </section>
@@ -119,64 +96,15 @@
     <WidgetPage {widgets} onTry={(id) => stage.tryOn(id)} />
   </section>
 
-  <section class="block" aria-labelledby="ideas-h" data-home-ideas>
-    <header class="bhead">
-      <div>
-        <h2 id="ideas-h">What could you build?</h2>
-        <p class="text-2">Ideas, not finished widgets. Pick a category to see what is listed.</p>
-      </div>
-    </header>
-    <ul class="ideas">
-      {#each categories as c (c)}
-        <li>
-          <a href={`${sitePath('/widgets')}?cat=${c}`}>
-            <span class="cat">{categoryLabels[c]}</span>
-            <span class="text-2 small">{data.ideas[c]}</span>
-            <span class="sr-only"> (listed widgets)</span>
-          </a>
-        </li>
-      {/each}
-    </ul>
-  </section>
-
-  <section class="block" aria-labelledby="make-h" data-home-make>
-    <header class="bhead">
-      <div>
-        <h2 id="make-h">Make your own</h2>
-        <p class="text-2">
-          Build a spec widget from blocks and see it live. The format is a draft.
-        </p>
-      </div>
-    </header>
-    <ol class="steps">
-      <li>
-        <h3>Describe it</h3>
-        <p class="small text-2">
-          What it shows and what a click does, or let an <a
-            href={docsUrl('/docs/next/ai/overview/')}>agent skill</a
-          > plan it.
-        </p>
-      </li>
-      <li>
-        <h3>Build it</h3>
-        <ul class="paths">
-          {#each paths as p (p.cta)}
-            <li>
-              <a class="btn" href={p.href}>{p.cta}</a>
-              <span class="small text-2">{p.sub}</span>
-            </li>
-          {/each}
-        </ul>
-      </li>
-      <li>
-        <h3>Share it</h3>
-        <p class="small text-2">
-          A pull request, pinned to a commit.
-          <a href={sitePath('/contribute')}>Read how to contribute it</a>.
-        </p>
-      </li>
-    </ol>
-    <Builder {stage} />
+  <section class="block make" aria-labelledby="make-h" data-home-make>
+    <h2 id="make-h">Make your own</h2>
+    <p class="text-2">
+      Have an idea for a widget? Answer a few questions, see it live, and get the files to publish.
+    </p>
+    <div class="row">
+      <a class="btn-primary" href={sitePath('/make/')}>Start making a widget</a>
+      <a class="btn" href={docsUrl('/docs/v0.1/create/choose-a-path/')}>Read the create guide</a>
+    </div>
   </section>
 </div>
 
@@ -262,78 +190,6 @@
   .bhead h2 {
     font-size: clamp(24px, 2.5vw, 32px);
     line-height: 1.2;
-  }
-  ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-  .ideas {
-    display: grid;
-    gap: 8px;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 160px), 1fr));
-  }
-  .ideas a {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    height: 100%;
-    padding: 12px 16px;
-    text-decoration: none;
-    border: 1px solid var(--border);
-    transition: border-color 140ms ease-out;
-  }
-  .ideas a:hover {
-    border-color: var(--brand);
-  }
-  .cat {
-    font-weight: 700;
-  }
-  .steps {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: grid;
-    gap: 16px 32px;
-    counter-reset: step;
-  }
-  @media (min-width: 900px) {
-    .steps {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-  }
-  .steps > li {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    padding-left: 44px;
-    position: relative;
-    counter-increment: step;
-  }
-  .steps > li::before {
-    content: counter(step);
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 32px;
-    height: 32px;
-    display: grid;
-    place-items: center;
-    border: 1px solid var(--brand);
-    color: var(--brand);
-    font-family: var(--font-mono);
-  }
-  .paths {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    align-items: flex-start;
-  }
-  .paths li {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 4px 12px;
   }
   @media (max-width: 719px) {
     .block {

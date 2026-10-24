@@ -39,6 +39,7 @@ describe('one page frame', () => {
       'src/routes/widgets/+page.svelte',
       'src/routes/widgets/[id]/+page.svelte',
       'src/routes/contribute/+page.svelte',
+      'src/routes/make/+page.svelte',
       'src/routes/security/+page.svelte',
       'src/routes/docs/+page.svelte',
       'src/routes/docs/[version]/+layout.svelte'

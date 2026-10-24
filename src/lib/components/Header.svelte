@@ -7,6 +7,7 @@
   import { watchStuck } from '../sticky';
   import LogoMark from './LogoMark.svelte';
   import SiteIcon from './SiteIcon.svelte';
+  import { ISSUES_HINT, ISSUES_URL } from '../footer';
 
   // `docsVersion` comes from the layout; without it (an error page) the links go to the docs root.
   let { docsVersion = '' }: { docsVersion?: string } = $props();
@@ -68,6 +69,7 @@
     { href: sitePath('/widgets/'), label: 'Widgets' },
     { href: docsUrl('/docs/'), label: 'Docs' },
     { href: doc('create/'), label: 'Create' },
+    { href: sitePath('/make/'), label: 'Make your own' },
     { href: sitePath('/contribute/'), label: 'Contribute' }
   ]);
   const install = $derived(doc('start/install/'));
@@ -91,6 +93,17 @@
           {#each links as l (l.label)}
             <a href={l.href} onclick={() => menuOpen && setMenu(false)}>{l.label}</a>
           {/each}
+          <a
+            class="ext"
+            href={ISSUES_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-report-issue
+            onclick={() => menuOpen && setMenu(false)}
+            >Report an issue<SiteIcon name="external" size={12} /><span class="sr-only"
+              >{ISSUES_HINT}</span
+            ></a
+          >
         </nav>
         <div class="extra">
           <a class="btn small with-icon" href={GITHUB} rel="noopener noreferrer"
@@ -215,6 +228,9 @@
     min-height: 44px;
     font-size: var(--fs-2);
     text-decoration: none;
+  }
+  .links > a.ext {
+    gap: 6px;
   }
   .extra {
     display: flex;

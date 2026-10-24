@@ -18,7 +18,7 @@ The site serves four skills as plain files in the Claude Code `SKILL.md` format:
 
 <Callout type="note">
 
-The skills describe the project as it is: pre-release. They tell the assistant which commands exist today and which are planned, so it does not invent them. They are instructions, not enforcement. Read them, and review what the assistant produces.
+The skills describe the project as it is: pre-release. They tell the assistant which commands exist today and which are not built, so it does not invent them. They are instructions, not enforcement. Read them, and review what the assistant produces.
 
 </Callout>
 
@@ -83,7 +83,7 @@ Use the omarchy-widget-test skill on this folder. Use a throwaway config directo
 
 ## Limits
 
-- The daemon serves `system.cpu`, `system.memory` and `system.load`. The listing catalog lists different topics. The skills tell the assistant to use only fields present in both. Plans that need other providers will be marked as waiting. See [Data and providers](/docs/next/create/data-and-providers/).
+- The daemon serves six topics (`system.cpu`, `system.memory`, `system.load`, `system.time`, `system.temp`, `battery.status`). The listing catalog also lists topics no provider serves yet. The skills tell the assistant to use only served topics. Plans that need other providers will be marked as waiting. See [Data and providers](/docs/next/create/data-and-providers/).
 - The validators are in the website repository. The assistant needs a checkout of it and `bun`.
 - The skills are guidance. Nothing in CI checks that an assistant followed them.
 - An assistant can misread a skill. Check the plan before development, and the report before you trust it.

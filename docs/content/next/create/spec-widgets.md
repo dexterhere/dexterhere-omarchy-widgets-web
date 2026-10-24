@@ -7,7 +7,7 @@ description: Write a widget as JSON with no code. layout.json v0 node types, bin
 
 <Callout type="planned">
 
-The schema is DRAFT v0 and can change. The website emulator and the registry build already read `layout.json`. The desktop renderer does not exist yet, so a spec widget cannot run on a real desktop today.
+The schema is DRAFT v0 and can change. The website emulator and the registry build already read `layout.json`. The desktop plugin draws spec widgets and has been run offscreen in a sandbox, but it has not run in a real shell and cannot be loaded with `omarchy plugin add` yet. See [What works today](/docs/next/start/what-works-today/).
 
 </Callout>
 

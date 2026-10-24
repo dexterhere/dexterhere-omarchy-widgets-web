@@ -14,8 +14,8 @@ describe('provider catalog', () => {
         expect(p.topics[topic], `${name}: ${pair}`).toContain(field);
       }
   });
-  it('lists exactly the topics and fields owd serves today (system only)', () => {
-    // Keep in step with crates/ow-providers/src/system.rs in the code repository.
+  it('lists exactly the topics and fields owd serves today (system and battery)', () => {
+    // Keep in step with crates/ow-providers (system.rs, battery.rs) and crates/ow/data/providers.json in the code repository.
     expect(cat.providers.system.serving?.slice().sort()).toEqual(
       [
         'system.cpu.usage_pct',
@@ -24,10 +24,18 @@ describe('provider catalog', () => {
         'system.load.load15',
         'system.memory.total_mib',
         'system.memory.used_mib',
-        'system.memory.used_pct'
+        'system.memory.used_pct',
+        'system.temp.celsius',
+        'system.time.date',
+        'system.time.hm',
+        'system.time.hms',
+        'system.time.tz'
       ].sort()
     );
+    expect(cat.providers.battery.serving?.slice().sort()).toEqual(
+      ['battery.status.percent', 'battery.status.state', 'battery.status.timeLeft'].sort()
+    );
     for (const [name, p] of Object.entries(cat.providers))
-      if (name !== 'system') expect(p.serving ?? []).toEqual([]);
+      if (name !== 'system' && name !== 'battery') expect(p.serving ?? []).toEqual([]);
   });
 });

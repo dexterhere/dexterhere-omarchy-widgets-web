@@ -107,7 +107,7 @@
   "size": "wide",
   "color": "accent"
 }`;
-  const docsHref = docsUrl('/docs/next/create/choose-a-path/');
+  const docsHref = docsUrl('/docs/v0.1/create/choose-a-path/');
   const doors = [
     {
       name: 'Tweak a template',

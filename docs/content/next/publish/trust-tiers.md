@@ -39,7 +39,7 @@ A tier describes review, not isolation. Code widgets are not sandboxed, even at 
 
 ## Why `spec` is different
 
-A spec widget has no code of its own. Only the trusted renderer talks to the daemon, so the grants you approve limit what it can read. The web emulator renders spec widgets from `layout.json`. The desktop renderer does not exist yet, so no spec widget runs on a desktop today.
+A spec widget has no code of its own. Only the trusted renderer talks to the daemon, so the grants you approve limit what it can read. The web emulator renders spec widgets from `layout.json`. The desktop plugin draws spec widgets too, but it has only run offscreen in a sandbox, so no spec widget runs on a real desktop today.
 
 ## Where the records live
 

@@ -9,7 +9,7 @@ Short answers to the questions people ask first. Each links to the page with the
 
 ## Can I use it today?
 
-Not as an end user. The daemon, vault and `ow status` / `ow vault` commands work. The desktop canvas, Widget Center and real widgets are in development, and every listing on the site is planned and not installable yet. See [How it works](/docs/next/start/how-it-works/) and [Install](/docs/next/start/install/).
+Not as an end user. The daemon, vault and `ow` commands work, and a developer can try three widgets in a sandbox. There is no package, no Widget Center and no way to place a widget on your real desktop yet. Every widget is Planned: listed with sample data, not installable yet. See [What works today](/docs/next/start/what-works-today/) and [Try it safely](/docs/next/start/try-it-safely/).
 
 ## Is it safe?
 
@@ -46,11 +46,11 @@ Nothing. Both repositories are under the MIT license. The site has no ads, accou
 
 ## Does it work offline?
 
-The daemon and local data such as `system.cpu` need no network. Browsing the site, finding widgets and installing from a repository need one. Providers for web services (planned) need network access to their own hosts, and show stale data with its age when they fail.
+The daemon and local data such as `system.cpu` need no network. Browsing the site, finding widgets and installing from a repository need one. Providers for web services (not built) need network access to their own hosts, and show stale data with its age when they fail.
 
 ## What data leaves my machine?
 
-Today, none from the daemon. The website sets no cookies and has no analytics. Installing a widget downloads its code from its repository. See [How it works](/docs/next/start/how-it-works/#what-data-leaves-your-machine).
+Today, none from the daemon. The website sets no cookies and has no analytics. `ow install` downloads a widget's three JSON files from GitHub after you ask it to. See [How it works](/docs/next/start/how-it-works/#what-data-leaves-your-machine).
 
 ## Does it work on my distro?
 
@@ -58,7 +58,7 @@ It targets Omarchy 4 and later. Nothing else is a goal. The daemon and CLI are L
 
 ## How do I make a widget?
 
-Start with [Choose a path](/docs/next/create/choose-a-path/) or follow [Your first widget, end to end](/docs/next/create/your-first-widget-end-to-end/).
+Start with the [guided builder](/make/). It runs in your browser. Or read [Choose a path](/docs/next/create/choose-a-path/) and [Your first widget, end to end](/docs/next/create/your-first-widget-end-to-end/).
 
 ## How do I list a widget, and how long does it take?
 
@@ -78,8 +78,6 @@ Yes. In the website repository run `bun run registry -- --strict`. See [Contribu
 
 ## How do I report a problem?
 
-- A bug, a wrong doc or a widget that misbehaves: open an issue in the repository it affects (code repository for the daemon and CLI, website repository for the site, docs and listings). Include the command, the exact message and your Omarchy version. Never include secrets.
-- A vulnerability: do not open a public issue. Follow the private process in `SECURITY.md`. See [Security](/docs/next/project/security/).
-- A dangerous or misleading listing: report it privately first. A maintainer can take a listing down.
+See [Report a problem](/docs/next/project/report-a-problem/). It says where to file a site or docs problem, a widget listing problem, a daemon or CLI problem, and a security problem (privately).
 
 For fixes to common errors, see [Troubleshooting](/docs/next/use/troubleshooting/).

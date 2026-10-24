@@ -45,5 +45,12 @@
         }
       ]
     }
+  ],
+  "redirects": [
+    {
+      "source": "/docs/v0.1-draft/:path*",
+      "destination": "/docs/v0.1/:path*",
+      "permanent": true
+    }
   ]
 }

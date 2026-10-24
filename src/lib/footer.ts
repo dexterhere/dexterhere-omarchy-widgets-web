@@ -6,6 +6,8 @@ export interface FooterLink {
   href: string;
   /** Leaves this site (https, another origin): gets "external" in its accessible name. */
   external?: boolean;
+  /** Opens in a new tab (target=_blank): the accessible name says so. */
+  newTab?: boolean;
 }
 export interface FooterColumn {
   id: string;
@@ -24,6 +26,10 @@ export interface BuildInfo {
 
 export const CODE_REPO = 'https://github.com/dexterhere/omarchy-widgets';
 export const SITE_REPO = 'https://github.com/dexterhere/dexterhere-omarchy-widgets-web';
+/** The issue chooser of this site's repository ("Report an issue" in the header and the footer). */
+export const ISSUES_URL = 'https://github.com/dexterhere/omarchy-widgets-web/issues/new/choose';
+/** Screen reader text after the "Report an issue" link text. */
+export const ISSUES_HINT = ' (opens GitHub in a new tab)';
 
 /** Accepts a full or short hash (7 to 40 hex digits); returns the first 7, else ''. */
 export function shortCommit(v: string | undefined): string {
@@ -78,7 +84,7 @@ export function footerColumns(
       id: 'community',
       title: 'Community',
       links: [
-        ext('Report a problem', `${CODE_REPO}/issues/new?template=bug_report.yml`),
+        { label: 'Report an issue', href: ISSUES_URL, external: true, newTab: true },
         ext('Request a feature', `${CODE_REPO}/issues/new?template=feature_request.yml`),
         { label: 'Submit a widget', href: d('publish/submit-a-widget/') },
         { label: 'Governance', href: d('project/governance/') }

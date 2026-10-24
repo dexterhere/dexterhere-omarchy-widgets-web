@@ -5,6 +5,6 @@ description: Every widget in the registry, generated from the registry index, wi
 
 <script>import WidgetCatalog from '$lib/docs/WidgetCatalog.svelte';</script>
 
-This list is generated from the registry at build time. Until the desktop layer and `ow install` exist, entries marked planned have public code but are not installable.
+This list is generated from the registry at build time. Every entry is Planned: listed with sample data, not installable yet. The code is public. A developer can try three of them in a sandbox. See [What works today](/docs/next/start/what-works-today/).
 
 <WidgetCatalog />
