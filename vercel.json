@@ -48,8 +48,13 @@
   ],
   "redirects": [
     {
-      "source": "/docs/v0.1-draft/:path*",
-      "destination": "/docs/v0.1/:path*",
+      "source": "/docs/v0.1-draft/(.*)",
+      "destination": "/docs/v0.1/$1",
+      "permanent": true
+    },
+    {
+      "source": "/docs/v0.1-draft",
+      "destination": "/docs/v0.1/",
       "permanent": true
     }
   ]
