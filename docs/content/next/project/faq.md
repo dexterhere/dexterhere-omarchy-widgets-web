@@ -9,7 +9,7 @@ Short answers to the questions people ask first. Each links to the page with the
 
 ## Can I use it today?
 
-Not as an end user. The daemon, vault and `ow status` / `ow vault` commands work. The desktop canvas, Widget Center and real widgets are in development, and every listing on the site is a concept. See [How it works](/docs/next/start/how-it-works/) and [Install](/docs/next/start/install/).
+Not as an end user. The daemon, vault and `ow status` / `ow vault` commands work. The desktop canvas, Widget Center and real widgets are in development, and every listing on the site is planned and not installable yet. See [How it works](/docs/next/start/how-it-works/) and [Install](/docs/next/start/install/).
 
 ## Is it safe?
 

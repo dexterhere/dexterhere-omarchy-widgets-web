@@ -44,13 +44,14 @@ export const categoryLabels: Record<Category, string> = {
 };
 
 export const statusLabels: Record<Status, string> = {
-  planned: 'Concept, not installable',
+  planned: 'Planned, not installable yet',
   alpha: 'Alpha',
   stable: 'Stable'
 };
 
 // Tiers describe how much a human reviewed, never how isolated the code is.
 export const tierLabels: Record<Tier, { label: string; text: string }> = {
+  // Only for maintainer test fixtures. Real listings are never shown as this tier.
   concept: {
     label: 'Concept',
     text: 'A design idea, not installable. Nothing has been built or reviewed.'

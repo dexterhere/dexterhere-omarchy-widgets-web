@@ -88,7 +88,7 @@ export type InitialWidget =
 
 /** What a host page can do with the widget layer once the emulator is ready. */
 export interface WidgetsApi {
-  /** Install (a preview, for concepts) a registry widget and place it at the first free slot. */
+  /** Install (a preview, for planned ones) a registry widget and place it at the first free slot. */
   install: (reg: string) => void;
   /** Place a draft spec widget from the builder. In memory only. Returns false when not ready. */
   /** Enter or leave edit mode (selects the first widget so it can be dragged). */

@@ -102,19 +102,19 @@ test('Discover states needs before install; installing places at the first free 
   await openCenter(page);
   await page.getByRole('tab', { name: 'Discover' }).click();
   const card = page.locator(`[data-discover="${DOCKER}"]`);
-  await expect(card).toContainText('Concept, not installable');
+  await expect(card).toContainText('Planned, not installable yet');
   for (const k of ['Data', 'Network', 'Files', 'Programs', 'Secrets'])
     await expect(card.locator('dt', { hasText: k })).toBeVisible();
   await expect(card).toContainText('none');
   await expect(card).toContainText('docker.containers'); // the topic it needs, no host of its own
   await expect(widget(page, DOCKER)).toHaveCount(0);
-  await card.getByRole('button', { name: /Install Docker.*concept preview/ }).click();
+  await card.getByRole('button', { name: /Install Docker.*preview/ }).click();
   const w = widget(page, DOCKER);
   await expect(w).toBeVisible();
   await expect(w).toHaveAttribute('data-x', '16');
   await expect(w).toHaveAttribute('data-y', '16');
   await expect(w).toContainText('sample');
-  await expect(live(page)).toContainText('Docker (concept preview) installed');
+  await expect(live(page)).toContainText('Docker (preview) installed');
   // remove from desktop keeps it installed
   await card.getByRole('button', { name: /Remove from desktop/ }).click();
   await expect(w).toHaveCount(0);
@@ -309,7 +309,7 @@ test('widget detail page: Try it on a desktop preloads the widget, Expand works'
   await expect(page.getByRole('heading', { name: 'Preview' })).toBeVisible();
 });
 
-test('every widget page has the section (concept widgets work too)', async ({ page }) => {
+test('every widget page has the section (planned widgets work too)', async ({ page }) => {
   await page.goto('/widgets/io.github.dexterhere.ai-usage/');
   const section = page.locator('[data-try-desktop]');
   await section.scrollIntoViewIfNeeded();

@@ -43,7 +43,7 @@ pending maintainer approval: no entry in registry/lock.json
 
 This is not a CI failure. A green pull request can still be pending. The lock is keyed on the numeric ids, so renaming your repository is fine. Deleting and re-creating it, or transferring it, excludes the listing until a maintainer approves again.
 
-Today `lock.json` is empty, so no third-party widget is published yet. Only the maintainer's seven fixture listings are.
+Today `lock.json` is empty, so no third-party widget is published yet. Only the maintainer's seven planned widgets are, each fetched from its GitHub repository.
 
 ## Steps
 

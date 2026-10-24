@@ -9,7 +9,7 @@ Find a widget in the [catalog](/widgets/), read what it can access, then install
 
 <Callout type="planned">
 
-`ow install` does not exist yet, and there are no installable widgets: every current listing is a concept from the approved design. The steps below show how it will work. The page you read on the site is real.
+`ow install` does not exist yet, and there are no installable widgets: every current listing is planned. The code is public on GitHub, but nothing installs yet. The steps below show how it will work. The page you read on the site is real.
 
 </Callout>
 
@@ -21,13 +21,13 @@ Open [Widgets](/widgets/). Search, or filter by category, status, trust tier, su
 
 Each widget page tells you what you are agreeing to. Read these parts before you install.
 
-| Section            | What to check                                                                                                                                           |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Trust              | The tier. `community` means no maintainer read the code. `spec` and `verified` mean a maintainer reviewed the pinned commit. `concept` means not built. |
-| What it can access | Data topics and fields, network hosts, files, programs it starts, and secrets. "None" means it declares none.                                           |
-| Install            | The install command, the pinned commit, and what it needs (Omarchy version, kit version, surfaces).                                                     |
-| Author and source  | The repository link. Read the code of any code widget before you install it.                                                                            |
-| Settings           | The options you can change after install.                                                                                                               |
+| Section            | What to check                                                                                                                                                     |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Trust              | The tier. `community` means no maintainer read the code. `spec` and `verified` mean a maintainer reviewed the pinned commit. `concept` is only for test fixtures. |
+| What it can access | Data topics and fields, network hosts, files, programs it starts, and secrets. "None" means it declares none.                                                     |
+| Install            | The install command, the pinned commit, and what it needs (Omarchy version, kit version, surfaces).                                                               |
+| Author and source  | The repository link. Read the code of any code widget before you install it.                                                                                      |
+| Settings           | The options you can change after install.                                                                                                                         |
 
 The access list is generated from the widget's own files at the pinned commit. It is a declaration, not proof. For a code widget, only reading the code tells you what it really does. See [Trust tiers](/docs/next/publish/trust-tiers/).
 

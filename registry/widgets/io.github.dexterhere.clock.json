@@ -1,10 +1,9 @@
 {
   "id": "io.github.dexterhere.clock",
   "repo": "https://github.com/dexterhere/omarchy-widget-clock",
-  "commit": "0000000000000000000000000000000000000000",
+  "commit": "471d822bf16e39e4a7ad08176097e2f5626c8874",
   "categories": ["time-calendar", "ambient-fun"],
   "tags": ["clock", "time", "world-clock"],
   "summary": "Shows the time and date as digital, analog or binary numerals, or as several world time zones.",
-  "status": "planned",
-  "source": "fixture"
+  "status": "planned"
 }

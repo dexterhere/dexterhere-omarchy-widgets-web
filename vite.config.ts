@@ -87,7 +87,11 @@ export default defineConfig(({ mode }) => {
           handleHttpError: ({ path, message }) => {
             if (origins.site && /^\/(next|v\d[^/]*)\//.test(path)) return;
             throw new Error(message);
-          }
+          },
+          // No widget pages exist when the registry build excluded every listing (GitHub
+          // unreachable or rate limited). The registry step prints each exclusion; the site then
+          // builds with an empty gallery instead of failing.
+          handleUnseenRoutes: 'ignore'
         },
         // Static CSP as a <meta> tag: same-origin only. The theme bootstrap (static/theme-boot.js)
         // is an external same-origin script; the one hashed inline script is SvelteKit's bootstrap.

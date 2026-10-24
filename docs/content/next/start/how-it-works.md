@@ -46,7 +46,7 @@ Read it top to bottom. The website and registry only describe widgets. Everythin
 
 | Part          | What it is                                                                                                      | State                        |
 | ------------- | --------------------------------------------------------------------------------------------------------------- | ---------------------------- |
-| Registry      | A folder of small JSON listings in Git. Each one points at a widget repository and one exact commit.            | Exists, with concept entries |
+| Registry      | A folder of small JSON listings in Git. Each one points at a widget repository and one exact commit.            | Exists, with planned entries |
 | Website       | A static site that shows the registry: tier, permissions, author and install command. No cookies, no analytics. | Exists                       |
 | `ow`          | The command line tool. Today it checks the daemon (`ow status`) and manages the vault (`ow vault`).             | Partly exists                |
 | `owd`         | The daemon. A background program that owns credentials, fetches data, caches it and answers widgets.            | Exists                       |

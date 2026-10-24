@@ -33,7 +33,7 @@
     stats?: Stats | null;
   } = $props();
 
-  const ICON = { planned: 'concept', alpha: 'alpha', stable: 'stable' } as const;
+  const ICON = { planned: 'planned', alpha: 'alpha', stable: 'stable' } as const;
   const tier = $derived(tierLabels[widget.tier].label);
   const names = $derived(widget.providers.map((p) => p.name));
   const cats = $derived(widget.categories.map((c) => categoryLabels[c]).join(', '));

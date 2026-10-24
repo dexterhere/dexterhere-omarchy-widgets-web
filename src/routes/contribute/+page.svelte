@@ -215,7 +215,8 @@
       </li>
     </ol>
     <p class="small text-2">
-      Today <code>lock.json</code> is empty, so only the maintainers' concept entries are published.
+      Today <code>lock.json</code> holds only the maintainers' seven widgets, all still planned and not
+      installable.
     </p>
   </section>
 

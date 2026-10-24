@@ -1,6 +1,6 @@
 <script lang="ts" module>
   export type IconName =
-    'arrow' | 'code' | 'play' | 'shield' | 'monitor' | 'plug' | 'concept' | 'alpha' | 'stable';
+    'arrow' | 'code' | 'play' | 'shield' | 'monitor' | 'plug' | 'planned' | 'alpha' | 'stable';
 </script>
 
 <script lang="ts">
@@ -33,7 +33,7 @@
     <path d="M1.5 2.5h13v8.5h-13zM5.5 14h5M8 11v3" />
   {:else if name === 'plug'}
     <path d="M5.5 1.5v3.5M10.5 1.5v3.5M3.5 5h9v2.5a4.5 4.5 0 0 1-9 0zM8 12v2.5" />
-  {:else if name === 'concept'}
+  {:else if name === 'planned'}
     <circle cx="8" cy="8" r="5.5" stroke-dasharray="2.2 2.2" />
   {:else if name === 'alpha'}
     <circle cx="8" cy="8" r="5.5" /><path d="M8 2.5v11a5.5 5.5 0 0 1 0-11z" fill="currentColor" />

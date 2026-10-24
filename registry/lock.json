@@ -1,1 +1,30 @@
-{}
+{
+  "io.github.dexterhere.ai-usage": {
+    "repoId": 1431108370,
+    "ownerId": 129100572
+  },
+  "io.github.dexterhere.battery": {
+    "repoId": 1431107782,
+    "ownerId": 129100572
+  },
+  "io.github.dexterhere.clock": {
+    "repoId": 1431107480,
+    "ownerId": 129100572
+  },
+  "io.github.dexterhere.docker": {
+    "repoId": 1431108064,
+    "ownerId": 129100572
+  },
+  "io.github.dexterhere.github-activity": {
+    "repoId": 1431107924,
+    "ownerId": 129100572
+  },
+  "io.github.dexterhere.system-monitor": {
+    "repoId": 1431107623,
+    "ownerId": 129100572
+  },
+  "io.github.dexterhere.tasks": {
+    "repoId": 1431108219,
+    "ownerId": 129100572
+  }
+}

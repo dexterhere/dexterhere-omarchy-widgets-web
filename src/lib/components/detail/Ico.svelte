@@ -44,7 +44,7 @@
     <path d="M2 2.5h5l1 1.5 1-1.5h5v10h-5l-1 1.5-1-1.5H2zM8 4v9.5" />
   {:else if name === 'alert'}
     <path d="M8 1.5 14.5 13h-13zM8 6v3.5M8 11.2v.6" />
-  {:else if name === 'concept'}
+  {:else if name === 'planned'}
     <circle cx="8" cy="8" r="6" stroke-dasharray="2.5 2.5" />
   {:else if name === 'spec'}
     <path d="M3.5 1.5h9v13h-9zM6 5h4M6 8h4M6 11h2" />

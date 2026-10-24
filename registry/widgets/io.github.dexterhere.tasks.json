@@ -1,10 +1,9 @@
 {
   "id": "io.github.dexterhere.tasks",
   "repo": "https://github.com/dexterhere/omarchy-widget-tasks",
-  "commit": "0000000000000000000000000000000000000000",
+  "commit": "ff65f02b411599fd3e5949a0b06d6c19fed50a6f",
   "categories": ["productivity", "time-calendar"],
   "tags": ["tasks", "todo"],
   "summary": "Shows your open tasks and how many are due today, from a local task file.",
-  "status": "planned",
-  "source": "fixture"
+  "status": "planned"
 }

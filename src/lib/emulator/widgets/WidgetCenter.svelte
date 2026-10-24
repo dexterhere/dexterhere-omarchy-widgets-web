@@ -6,7 +6,7 @@
   import { sheetIn } from '../fx';
   import Inspector from './Inspector.svelte';
   import { miniRects } from './model';
-  import { isConcept, labelOf, type TabId, type WidgetLayerState } from './store.svelte';
+  import { isPreviewOnly, labelOf, type TabId, type WidgetLayerState } from './store.svelte';
 
   // The proposed Widget Center: a bottom sheet over the desktop. Opening it enters edit mode.
   let {
@@ -81,8 +81,8 @@
   const health = (reg: string) =>
     wl.count(reg) === 0
       ? 'Not on the desktop (sample)'
-      : isConcept(reg)
-        ? 'Concept preview, no real data (sample)'
+      : isPreviewOnly(reg)
+        ? 'Preview, sample data, not real data'
         : 'Healthy, updated 2 s ago (sample)';
 
   const accessRows = (w: (typeof all)[number]) =>
@@ -188,7 +188,7 @@
                 onclick={() => pickInstalled(reg)}
               >
                 <strong>{labelOf(reg)}</strong><span class="sr">, inspect</span>
-                {#if isConcept(reg)}<span class="tag">concept preview</span>{/if}
+                {#if isPreviewOnly(reg)}<span class="tag">preview</span>{/if}
                 <span class="meta">{health(reg)}</span>
               </button>
               <span class="count" data-count={n}>{n} on desktop</span>
@@ -237,7 +237,7 @@
                     class="btn primary"
                     data-install={w.id}
                     onclick={() => wl.install(w.id)}
-                    >Install {labelOf(w.id)}{w.installable ? '' : ' (concept preview)'}</button
+                    >Install {labelOf(w.id)}{w.installable ? '' : ' (preview)'}</button
                   >
                 {:else}
                   <span class="tag">Installed</span>

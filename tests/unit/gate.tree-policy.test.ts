@@ -175,9 +175,9 @@ describe('checkPolicy truth table', () => {
 
 describe('checkProviders against registry/providers.json', () => {
   const cat = JSON.parse(readFileSync('registry/providers.json', 'utf8')) as Catalog;
-  it('every fixture widget matches the catalog', () => {
-    for (const d of readdirSync('registry/fixtures')) {
-      const w = JSON.parse(readFileSync(`registry/fixtures/${d}/widget.json`, 'utf8'));
+  it('every sample widget matches the catalog', () => {
+    for (const d of readdirSync('tests/fixtures/widgets')) {
+      const w = JSON.parse(readFileSync(`tests/fixtures/widgets/${d}/widget.json`, 'utf8'));
       expect(checkProviders(w, cat).problems, d).toEqual([]);
     }
   });
