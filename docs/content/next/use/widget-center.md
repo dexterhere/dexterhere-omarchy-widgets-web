@@ -7,7 +7,7 @@ description: The planned manager panel for installing, arranging and configuring
 
 <Callout type="planned">
 
-The Widget Center does not exist yet. This page describes the approved design so you can see where the project is going. Details can change.
+The Widget Center is not built. This page describes the approved design so you can see where the project is going. Details can change. For what is built, see [What works today](/docs/next/start/what-works-today/).
 
 </Callout>
 

@@ -59,7 +59,7 @@ bun run dev                # preview the site and docs
 bun run build              # static build
 ```
 
-Expected result: each command exits with no error. `bun run registry -- --offline` only works for fixtures. The `ow new`, `ow check` and `ow publish` commands are planned and do not exist yet.
+Expected result: each command exits with no error. `bun run registry -- --offline` only works for fixtures. The `ow new`, `ow check`, `ow publish` and `ow doctor` commands are not built.
 
 ## Honest wording
 

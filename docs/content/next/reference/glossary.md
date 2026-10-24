@@ -5,7 +5,7 @@ description: 'Short definitions of the terms used in these docs: grant, topic, p
 
 **Audit log.** A local file where the daemon records each access decision. It never holds data values.
 
-**Bridge.** The planned QML service plugin that connects widgets to the daemon's socket. Not built yet.
+**Bridge.** The part of the desktop plugin that connects widgets to the daemon's socket. Built and tested offscreen, not packaged.
 
 **Capability.** What a widget declares it needs outside the daemon: network hosts, file paths and programs to start.
 

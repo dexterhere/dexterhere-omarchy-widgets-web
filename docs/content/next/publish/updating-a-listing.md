@@ -45,12 +45,12 @@ A review applies only to the commit that was reviewed. The new commit is `commun
 
 ## Status values
 
-| Status    | Meaning                                                                 |
-| --------- | ----------------------------------------------------------------------- |
-| `planned` | Announced, not usable.                                                  |
-| `alpha`   | Usable but unfinished.                                                  |
-| `stable`  | Considered finished.                                                    |
-| `removed` | Takedown. The listing is not published and the build stops fetching it. |
+| Status    | Meaning                                                                   |
+| --------- | ------------------------------------------------------------------------- |
+| `planned` | Listed with sample data, not installable yet. Use this for a new listing. |
+| `alpha`   | Usable but unfinished.                                                    |
+| `stable`  | Considered finished.                                                      |
+| `removed` | Takedown. The listing is not published and the build stops fetching it.   |
 
 ## Remove a listing
 

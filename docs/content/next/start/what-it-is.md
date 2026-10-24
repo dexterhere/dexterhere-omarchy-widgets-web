@@ -1,6 +1,6 @@
 ---
 title: What it is
-description: Omarchy Widgets is a data layer and package format for any desktop widget you can think of on Omarchy 4. What exists today and what is planned.
+description: Omarchy Widgets lets you install, place and make desktop widgets on Omarchy 4 with your credentials kept out of the widgets. What it is and where to start.
 ---
 
 <script>import Callout from '$lib/docs/Callout.svelte';</script>
@@ -11,7 +11,7 @@ Widgets are not limited to a fixed set. Anything that can show data or respond t
 
 <Callout type="planned">
 
-This is early development. The data layer works and is tested. The desktop canvas, the Widget Center and every real widget are not built yet, so there is nothing to install for end users today. See [Install](/docs/next/start/install/).
+This is pre-release software. The data layer works and is tested, but nobody can install a widget on a normal desktop yet. Every widget is Planned: listed with sample data, not installable yet. See [What works today](/docs/next/start/what-works-today/).
 
 </Callout>
 
@@ -34,26 +34,15 @@ widget (QML or JSON spec)  ->  bridge plugin  ->  owd daemon  ->  encrypted vaul
 ```
 
 - `owd` is the daemon. It owns credentials, polls data sources, caches in memory and answers widgets over a private local socket. A widget gets a topic and field only if you granted it. Every access goes to a local audit log that never contains values.
-- `ow` is the command line tool. Today it manages the vault and asks the daemon for its status.
+- `ow` is the command line tool. It installs, lists and removes spec widgets, manages the vault and asks the daemon for its status.
 - Widgets never see tokens and never open network connections themselves.
 
 ## What exists and what is planned
 
-| Part                                                                                                   | State   |
-| ------------------------------------------------------------------------------------------------------ | ------- |
-| `owd` daemon: socket, grants, audit log, provider hub                                                  | Exists  |
-| `system` provider (CPU, memory, load)                                                                  | Exists  |
-| Passphrase vault and `ow vault init/status/list/set/remove/rotate/wipe`                                | Exists  |
-| `ow status`                                                                                            | Exists  |
-| `PKGBUILD` (build blocked until a signing key is pinned)                                               | Exists  |
-| Sandboxed systemd user unit for `owd` (verified offline as a transient unit, not as an installed unit) | Exists  |
-| QML bridge and widget kit                                                                              | Planned |
-| Desktop canvas with edit mode                                                                          | Planned |
-| Widget Center                                                                                          | Planned |
-| `ow new`, `ow check`, `ow install`, `ow place`, `ow publish`                                           | Planned |
-| Real widgets, spec-widget renderer                                                                     | Planned |
-| Keyring and TPM vault modes                                                                            | Planned |
-| Network providers (GitHub, Gmail and others)                                                           | Planned |
+The full table, with a way to check each line, is on [What works today](/docs/next/start/what-works-today/). In short:
+
+- Built and tested: the daemon, the vault, `ow install|list|remove`, the data topics for time, CPU, memory, load, temperature and battery, and a desktop plugin that draws spec widgets.
+- Not built: the Widget Center, placing and resizing on the desktop, `ow new|check|publish|doctor`, network data (GitHub, Docker, tasks, AI usage), unlock at login, a package and signed releases.
 
 The roadmap and open questions live in the code repository: `README.md` and `docs/OPEN_QUESTIONS.md`.
 
@@ -68,10 +57,11 @@ The full picture is in the [threat model](/docs/next/reference/threat-model/).
 
 ## Where to go next
 
-- [How it works](/docs/next/start/how-it-works/): the parts and what data goes where.
-- [Browse and install](/docs/next/start/browse-and-install/): find and install a widget.
-- [Create](/docs/next/create/choose-a-path/): make your own.
-- [FAQ](/docs/next/project/faq/): short answers.
+1. [What works today](/docs/next/start/what-works-today/): the honest status.
+2. [Try it safely in 10 minutes](/docs/next/start/try-it-safely/): run it in a throwaway folder.
+3. [How it works](/docs/next/start/how-it-works/): the parts and what data goes where.
+4. [Make your own](/make/): build a widget in your browser, then [publish it](/docs/next/publish/submit-a-widget/).
+5. [FAQ](/docs/next/project/faq/) and [Report a problem](/docs/next/project/report-a-problem/).
 
 ## Independence
 

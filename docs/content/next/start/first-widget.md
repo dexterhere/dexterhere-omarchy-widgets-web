@@ -1,17 +1,19 @@
 ---
 title: Your first widget
-description: The path from nothing to a widget on your desktop, and which steps work today. Placing a widget is planned.
+description: The path from nothing to a widget on your desktop, and which steps work today. Placing a widget on a real desktop is not built.
 ---
 
 <script>import Callout from '$lib/docs/Callout.svelte';</script>
 
 <Callout type="planned">
 
-Putting a widget on the desktop needs the QML bridge, the desktop canvas and the Widget Center. None of them exist yet, so you cannot complete this page today.
+You cannot put a widget on your real desktop yet. There is no package, no Widget Center and no edit mode. Every widget is Planned. See [What works today](/docs/next/start/what-works-today/).
 
 </Callout>
 
 ## The intended flow
+
+This is the design. It is not built.
 
 1. Open the Widget Center with a shortcut key or the bar icon.
 2. Pick a widget in Discover. The card lists the data it asks for before you install.
@@ -25,4 +27,4 @@ See [Browse and install](/docs/next/start/browse-and-install/) for how to read a
 
 ## What you can do today
 
-If you want to see the data layer work, follow the developer build on the [Install](/docs/next/start/install/) page. To make a widget instead of using one, follow [Your first widget, end to end](/docs/next/create/your-first-widget-end-to-end/) or start at [Choose a path](/docs/next/create/choose-a-path/).
+To see the chain work, follow [Try it safely in 10 minutes](/docs/next/start/try-it-safely/). It installs three widgets into a throwaway folder and draws them offscreen. To make a widget instead of using one, use the [guided builder](/make/), or read [Choose a path](/docs/next/create/choose-a-path/).

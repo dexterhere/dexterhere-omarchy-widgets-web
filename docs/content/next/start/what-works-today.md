@@ -21,39 +21,39 @@ This is pre-release software. Nobody can install a widget on a normal desktop ye
 
 ## Built and tested
 
-| Feature | Status | How to check |
-| --- | --- | --- |
-| Daemon `owd`: private socket, deny-by-default grants, audit log, rate limits | Built, tested | Start `owd`, then run `ow status`. It prints one line of JSON. |
-| Data topics `system.cpu`, `system.memory`, `system.load`, `system.time`, `system.temp` | Built, tested | Install the system monitor or clock in the [sandbox](/docs/next/start/try-it-safely/) and draw them. |
-| Data topic `battery.status` | Built, tested | Install the battery widget in the sandbox. A desktop PC without a battery shows an empty state. |
-| Encrypted vault and `ow vault init`, `status`, `list`, `set`, `remove`, `rotate`, `wipe` | Built, tested | `ow vault status` in a [throwaway folder](/docs/next/use/set-up-a-widget/). |
-| Vault unlock in the daemon: `ow vault unlock` and `ow vault lock` | Built, tested | `ow vault unlock`, then `ow vault status`. No widget uses a secret yet. |
-| `ow install`, `ow list`, `ow remove` for spec widgets (you type `yes` to consent) | Built, tested | Steps 4 to 7 of [Try it safely](/docs/next/start/try-it-safely/). |
-| Grants reload (`grants.reload`) | Built, tested | After `ow install`, the output says the running daemon reloaded the grants. |
-| Network guard (the `ow-egress` crate): the only code that may use the network | Built, tested | `ow install` uses it. It reaches only the registry host and `raw.githubusercontent.com`. |
-| Desktop widget plugin (QML) that draws installed spec widgets | Built, tested offscreen | Step 8 of [Try it safely](/docs/next/start/try-it-safely/). |
-| Clicks pass through the widget layer; the lock screen hides it | Checked by a person on 2026-10-24 | See the [appendix](/docs/next/start/try-it-safely/#appendix-checks-that-need-a-person). |
-| This website: widget gallery, home search, theme picker, emulator previews, the [guided builder](/make/), a "Report an issue" link | Built, tested | Open [Widgets](/widgets/) and [Make your own](/make/). |
+| Feature                                                                                                                            | Status                            | How to check                                                                                         |
+| ---------------------------------------------------------------------------------------------------------------------------------- | --------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Daemon `owd`: private socket, deny-by-default grants, audit log, rate limits                                                       | Built, tested                     | Start `owd`, then run `ow status`. It prints one line of JSON.                                       |
+| Data topics `system.cpu`, `system.memory`, `system.load`, `system.time`, `system.temp`                                             | Built, tested                     | Install the system monitor or clock in the [sandbox](/docs/next/start/try-it-safely/) and draw them. |
+| Data topic `battery.status`                                                                                                        | Built, tested                     | Install the battery widget in the sandbox. A desktop PC without a battery shows an empty state.      |
+| Encrypted vault and `ow vault init`, `status`, `list`, `set`, `remove`, `rotate`, `wipe`                                           | Built, tested                     | `ow vault status` in a [throwaway folder](/docs/next/use/set-up-a-widget/).                          |
+| Vault unlock in the daemon: `ow vault unlock` and `ow vault lock`                                                                  | Built, tested                     | `ow vault unlock`, then `ow vault status`. No widget uses a secret yet.                              |
+| `ow install`, `ow list`, `ow remove` for spec widgets (you type `yes` to consent)                                                  | Built, tested                     | Steps 4 to 7 of [Try it safely](/docs/next/start/try-it-safely/).                                    |
+| Grants reload (`grants.reload`)                                                                                                    | Built, tested                     | After `ow install`, the output says the running daemon reloaded the grants.                          |
+| Network guard (the `ow-egress` crate): the only code that may use the network                                                      | Built, tested                     | `ow install` uses it. It reaches only the registry host and `raw.githubusercontent.com`.             |
+| Desktop widget plugin (QML) that draws installed spec widgets                                                                      | Built, tested offscreen           | Step 8 of [Try it safely](/docs/next/start/try-it-safely/).                                          |
+| Clicks pass through the widget layer; the lock screen hides it                                                                     | Checked by a person on 2026-10-24 | See the [appendix](/docs/next/start/try-it-safely/#appendix-checks-that-need-a-person).              |
+| This website: widget gallery, home search, theme picker, emulator previews, the [guided builder](/make/), a "Report an issue" link | Built, tested                     | Open [Widgets](/widgets/) and [Make your own](/make/).                                               |
 
 ## Built, but not usable by you yet
 
-| Feature | Status | What is missing |
-| --- | --- | --- |
-| The desktop plugin in a real shell | Never enabled in a real shell | It is not packaged and `omarchy plugin add` cannot load it yet. |
-| Keyboard focus and Escape on an overlay | Unresolved | The first check did not show the Escape key arriving. It needs a re-run by a person. |
-| Registry and widget pages | Built | Every widget is **Planned**. None is installable by a normal user. |
+| Feature                                 | Status                        | What is missing                                                                      |
+| --------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------ |
+| The desktop plugin in a real shell      | Never enabled in a real shell | It is not packaged and `omarchy plugin add` cannot load it yet.                      |
+| Keyboard focus and Escape on an overlay | Unresolved                    | The first check did not show the Escape key arriving. It needs a re-run by a person. |
+| Registry and widget pages               | Built                         | Every widget is **Planned**. None is installable by a normal user.                   |
 
 ## Not built
 
-| Feature | Status |
-| --- | --- |
-| Widget Center (browse, install and configure in a panel) | Not built |
-| Placing, moving and resizing widgets on the desktop (edit mode) | Not built |
-| `ow new`, `ow check`, `ow publish`, `ow doctor` | Not built |
-| Data for GitHub, Docker, tasks and AI usage (no provider exists) | Not built |
-| Keyring or TPM vault modes, and unlock at login | Not built |
-| Package, autostart service, signed releases | Not built |
-| Code widgets (QML) on the desktop | Not built. Only spec widgets are drawn. |
+| Feature                                                          | Status                                  |
+| ---------------------------------------------------------------- | --------------------------------------- |
+| Widget Center (browse, install and configure in a panel)         | Not built                               |
+| Placing, moving and resizing widgets on the desktop (edit mode)  | Not built                               |
+| `ow new`, `ow check`, `ow publish`, `ow doctor`                  | Not built                               |
+| Data for GitHub, Docker, tasks and AI usage (no provider exists) | Not built                               |
+| Keyring or TPM vault modes, and unlock at login                  | Not built                               |
+| Package, autostart service, signed releases                      | Not built                               |
+| Code widgets (QML) on the desktop                                | Not built. Only spec widgets are drawn. |
 
 ## The seven widgets
 

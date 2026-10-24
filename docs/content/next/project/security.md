@@ -19,7 +19,7 @@ Do not open a public issue or pull request for a vulnerability. Follow the priva
 - Code widgets are not sandboxed. A malicious or buggy code widget can read what you can read. Tiers and review reduce the risk and do not remove it.
 - A malicious program already running as your user can reach an unlocked vault.
 - The vault does not detect replacing the file with an older valid copy.
-- The vault format and protocol have not had an independent external review yet. That is planned before a public beta.
+- The vault format and protocol have not had an independent external review yet. That is planned before a public beta; it has not started.
 
 Details are in the [threat model](/docs/next/reference/threat-model/) and the [vault format](/docs/next/reference/vault-format/).
 
