@@ -39,7 +39,8 @@ test('/docs/ is a hub with a card per section that links into the docs', async (
   for (const t of ['Start', 'Use', 'Create', 'Publish', 'Reference'])
     await expect(page.getByRole('heading', { level: 2, name: t, exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'What it is' }).click();
-  await page.waitForURL('**' + START);
+  // the hub links into the latest stable version, not into next
+  await page.waitForURL('**/docs/v0.1/start/what-it-is/');
   await expect(page.getByRole('heading', { level: 1, name: 'What it is' })).toBeVisible();
 });
 
