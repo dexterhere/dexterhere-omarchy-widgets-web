@@ -110,7 +110,9 @@
         );
         place(false);
         ready = true;
+        // the highlight starts at rest: show the live layer now, not only after the first move
         liveId = active.id;
+        liveOn = true;
         await tick();
         stage?.querySelector<HTMLElement>('.card[data-o="0"]')?.focus();
       });
