@@ -101,6 +101,9 @@
       original = untrack(() => theme.current);
       applied = false;
       dialog.showModal();
+      // showModal focuses the first button (an arrow), where Enter would step instead of apply;
+      // park focus on the dialog until the centre card is ready to take it.
+      dialog.focus();
       void import('../emulator/widgets/WidgetEmulator.svelte').then((m) => (Emu = m.default));
       void loadGsap().then(async (g) => {
         gsap = g;
@@ -218,6 +221,7 @@
   bind:this={dialog}
   class="picker"
   aria-label="Choose a theme"
+  tabindex="-1"
   {onclose}
   {onclick}
   onpointerdown={ondown}
