@@ -11,6 +11,7 @@
   import { getAll } from '../lib/registry';
   import { docsUrl, sitePath } from '../lib/site';
   import { theme } from '../lib/themes/store.svelte';
+  import { PRE_RELEASE } from '../lib/status';
 
   const stage = new HomeStage();
   const widgets = getAll();
@@ -81,8 +82,7 @@
         <p class="small text-2">Spec widgets are JSON, no code. Code widgets run as you.</p>
       </div>
       <p class="status small text-2">
-        Pre-release: the daemon, vault and CLI work; the desktop canvas and Widget Center do not
-        yet.
+        {PRE_RELEASE}
       </p>
     </div>
   </section>

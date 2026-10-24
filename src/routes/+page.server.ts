@@ -1,6 +1,7 @@
 // Home page text that only the prerendered HTML needs: the JSON-LD. Loading it
 // here keeps these strings out of the page's JavaScript bundle (the home JS budget is tight).
 import { urls } from '../lib/site';
+import { PRE_RELEASE } from '../lib/status';
 
 export function load() {
   const description =
@@ -10,8 +11,7 @@ export function load() {
     {
       '@type': 'SoftwareApplication',
       name: 'Omarchy Widgets',
-      description:
-        'Open-source toolkit and registry for desktop widgets on Omarchy. Pre-release: the daemon, vault and CLI exist; the desktop canvas and Widget Center are in development.',
+      description: `Open-source toolkit and registry for desktop widgets on Omarchy. ${PRE_RELEASE}`,
       url: urls.site('/'),
       applicationCategory: 'DesktopEnhancementApplication',
       operatingSystem: 'Linux (Omarchy)',

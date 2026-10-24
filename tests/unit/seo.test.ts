@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { PRE_RELEASE } from '../../src/lib/status';
 import {
   buildLlmsFull,
   buildLlmsTxt,
@@ -77,6 +78,12 @@ describe('llms.txt claims', () => {
     expect(t).toContain('Widgets are open-ended');
     expect(t).toContain('Widgets are not limited to a fixed set');
     expect(t).toContain('Spec widgets are JSON');
+  });
+  it('uses the shared pre-release sentence and never calls a widget installable', () => {
+    const t = buildLlmsTxt(makeUrls('https://x.test', ''), [page], [widget]);
+    expect(t).toContain(PRE_RELEASE);
+    expect(PRE_RELEASE).toMatch(/no installable release/i);
+    expect(PRE_RELEASE).toContain('every widget is marked Planned');
   });
 });
 

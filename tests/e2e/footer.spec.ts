@@ -23,7 +23,7 @@ for (const path of PAGES) {
       footer(page).getByText('Independent of Omarchy and 37signals. MIT licensed.')
     ).toBeVisible();
     await expect(
-      footer(page).getByText('Pre-release: the daemon, vault and CLI work today')
+      footer(page).getByText('Pre-release: the daemon, vault, CLI (including ow install)')
     ).toBeVisible();
   });
 }

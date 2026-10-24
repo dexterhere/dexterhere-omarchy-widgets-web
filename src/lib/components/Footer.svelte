@@ -8,6 +8,7 @@
   import LogoMark from './LogoMark.svelte';
   import SiteIcon from './SiteIcon.svelte';
   import { shortcuts } from '../shortcuts.svelte';
+  import { PRE_RELEASE } from '../status';
 
   // `info` is missing when SvelteKit renders an error page after a client navigation: the footer
   // still renders, with the docs root instead of the latest version and no build details.
@@ -54,8 +55,7 @@
         >
       </p>
       <p class="small status">
-        Pre-release: the daemon, vault and CLI work today; widgets and the desktop canvas are in
-        development.
+        {PRE_RELEASE}
         <a href={statusHref(links, version)}>Read the status in the docs</a>
       </p>
     </div>
