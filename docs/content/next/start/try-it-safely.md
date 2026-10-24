@@ -334,15 +334,15 @@ sed -i 's/interval: 4200/interval: 30000/' "$S/s2/shell.qml"
 spikes/run-safe.sh "$S/s2" 35
 ```
 
-A small translucent panel appears near the top left (at 120, 120). Click once inside it, then press Escape. The log must contain `S2 ESCAPE -> exit`. Run it again and try the arrow keys after clicking. The box inside should move, and the log shows `S2 SAVED` lines.
+A small translucent panel appears near the top left (at 120, 120). Click once inside it, wait about two seconds so the keyboard focus arrives, then press Escape. The log must contain `S2 ESCAPE -> exit`. Run it again and try the arrow keys after clicking. The box inside should move, and the log shows `S2 SAVED` lines.
 
 ### Results so far
 
-| Check                                | What to look for               | Result         | Measured                                                                                                                                                                                                        |
-| ------------------------------------ | ------------------------------ | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Click in box reaches the surface     | `S1 CLICK in box on <monitor>` | PASS           | 2026-10-24: 2 clicks on eDP-1, 27 on HDMI-A-1                                                                                                                                                                   |
-| Click outside the box passes through | no `S1 LEAK click outside box` | PASS           | 2026-10-24: eDP-1 and HDMI-A-1                                                                                                                                                                                  |
-| Lock screen hides the surface        | no blue box on the lock screen | PASS           | 2026-10-24: `SUPER + CTRL + L`, the 90 s run ended with exit 124 (the time limit)                                                                                                                               |
-| Escape reaches the overlay surface   | `S2 ESCAPE -> exit`            | **UNRESOLVED** | The first run did not show the line. That run closed itself after 4 s, so the person may have run out of time. A key not reaching an on-demand layer surface is also possible. Re-run with the 30 s copy above. |
+| Check                                | What to look for               | Result | Measured                                                                                                                                             |
+| ------------------------------------ | ------------------------------ | ------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Click in box reaches the surface     | `S1 CLICK in box on <monitor>` | PASS   | 2026-10-24: 2 clicks on eDP-1, 27 on HDMI-A-1                                                                                                        |
+| Click outside the box passes through | no `S1 LEAK click outside box` | PASS   | 2026-10-24: eDP-1 and HDMI-A-1                                                                                                                       |
+| Lock screen hides the surface        | no blue box on the lock screen | PASS   | 2026-10-24: `SUPER + CTRL + L`, the 90 s run ended with exit 124 (the time limit)                                                                    |
+| Escape reaches the overlay surface   | `S2 ESCAPE -> exit`            | PASS   | 2026-10-24: one click gave the surface keyboard focus, three key presses arrived, then Escape. Wait about two seconds after the click before typing. |
 
 Please send your result as an issue: PASS or FAIL, the monitor names, and the lines from the log. Do not paste anything else from the log. See [Report a problem](/docs/next/project/report-a-problem/).
