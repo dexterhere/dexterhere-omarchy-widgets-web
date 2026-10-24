@@ -3,13 +3,13 @@ import { listing } from '../../src/lib/make/validators.generated.js';
 import { idOf, repoOf } from '../../src/lib/make/draft';
 import {
   COMMIT_PLACEHOLDER,
-  aiPrompt,
   commitOk,
   listingOf,
   listingText,
   terminalSteps,
   tidyCommit
 } from '../../src/lib/make/publish';
+import { aiPrompt } from '../../src/lib/make/ai';
 import { draftOf } from './make.helpers';
 
 const HASH = 'ab12'.repeat(10);

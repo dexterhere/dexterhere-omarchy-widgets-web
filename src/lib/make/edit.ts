@@ -45,6 +45,8 @@ export function kindOf(n: LayoutNode): Kind {
     case 'row':
     case 'grid':
       return 'spacer';
+    case 'sparkline':
+      return 'bar';
     default:
       return n.type;
   }

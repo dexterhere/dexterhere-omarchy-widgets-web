@@ -101,7 +101,9 @@ export const FIELDS: Field[] = Object.entries(catalog.providers).flatMap(([provi
   Object.entries(p.topics).flatMap(([topic, fields]) =>
     fields.map((field) => {
       const id = `${topic}.${field}`;
-      const [label, kind, sample] = Object.hasOwn(INFO, id) ? INFO[id] : [field, 'text', 'sample'];
+      const [label, kind, sample] = Object.hasOwn(INFO, id)
+        ? INFO[id]
+        : ([field, 'text', 'sample'] as const);
       return {
         id,
         topic,
