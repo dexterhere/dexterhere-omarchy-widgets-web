@@ -17,6 +17,8 @@ description: Make a no-code spec widget from an empty folder to a validated, lis
   ];
 </script>
 
+This page is the manual route. If you would rather click than type, the [guided builder](/make/) makes the same files in your browser. Come back here to see what each file means.
+
 You will write a CPU and memory widget as JSON, check it with the registry's own validators, and get it ready to list. A spec widget has no code, so it is the easiest kind to make and to trust.
 
 <Callout type="planned">

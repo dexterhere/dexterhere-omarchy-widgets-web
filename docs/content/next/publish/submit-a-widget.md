@@ -25,6 +25,8 @@ Listing a widget means adding one small JSON file to the registry by pull reques
 
 </Callout>
 
+The [guided builder](/make/) writes your listing file and the exact commands for steps 1 and 2 below. You can use it instead of typing them. The manual steps below stay valid.
+
 ## What happens, and who does it
 
 <Flow {steps} label="From your repository to a published listing" />
