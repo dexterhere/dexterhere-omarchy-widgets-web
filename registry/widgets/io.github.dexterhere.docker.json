@@ -1,10 +1,9 @@
 {
   "id": "io.github.dexterhere.docker",
   "repo": "https://github.com/dexterhere/omarchy-widget-docker",
-  "commit": "0000000000000000000000000000000000000000",
+  "commit": "53d157061987ca7934737023ee07c865594a339f",
   "categories": ["network-containers", "dev-git"],
   "tags": ["docker", "containers"],
   "summary": "Shows how many containers are running, stopped or unhealthy, read-only.",
-  "status": "planned",
-  "source": "fixture"
+  "status": "planned"
 }

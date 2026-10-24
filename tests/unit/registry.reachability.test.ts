@@ -171,11 +171,21 @@ describe('build integration', () => {
 describe('ci config', () => {
   const ci = readFileSync('.github/workflows/ci.yml', 'utf8');
   it('never uses --skip-reachability', () => expect(ci).not.toContain('skip-reachability'));
-  it('passes GITHUB_TOKEN to the registry step only, with read-only permissions', () => {
+  it('passes GITHUB_TOKEN only to the three steps that run the registry build, read-only', () => {
+    // `bun run build` and `bun run build:hosts` run the registry step again; without the token
+    // they would use the shared unauthenticated rate limit and could silently list no widgets.
     expect(ci).toMatch(
       /- run: bun run registry -- .*\n\s+env:\n\s+GITHUB_TOKEN: \$\{\{ secrets\.GITHUB_TOKEN \}\}/
     );
-    expect(ci.match(/GITHUB_TOKEN:/g)).toHaveLength(1);
+    expect(ci).toMatch(
+      /- run: bun run build\n\s+env:\n\s+GITHUB_TOKEN: \$\{\{ secrets\.GITHUB_TOKEN \}\}/
+    );
+    expect(ci).toMatch(
+      /run: bun run build:hosts\n\s+env:\n\s+GITHUB_TOKEN: \$\{\{ secrets\.GITHUB_TOKEN \}\}/
+    );
+    expect(ci.match(/GITHUB_TOKEN:/g)).toHaveLength(3);
+    // no other secret is referenced anywhere in the workflow
+    expect([...new Set(ci.match(/secrets\.[A-Za-z_]+/g))]).toEqual(['secrets.GITHUB_TOKEN']);
     expect(ci).toMatch(/permissions:\n {2}contents: read/);
   });
 });

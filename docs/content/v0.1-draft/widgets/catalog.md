@@ -5,6 +5,6 @@ description: Every widget in the registry, generated from the registry index, wi
 
 <script>import WidgetCatalog from '$lib/docs/WidgetCatalog.svelte';</script>
 
-This list is generated from the registry at build time. Until real widgets exist, entries marked as concepts come from the approved design and are not installable.
+This list is generated from the registry at build time. Until the desktop layer and `ow install` exist, entries marked planned have public code but are not installable.
 
 <WidgetCatalog />

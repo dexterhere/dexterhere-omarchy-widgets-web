@@ -12,7 +12,7 @@
     type WInst
   } from './model';
   import { refocus } from './focus';
-  import { isConcept, type WidgetLayerState } from './store.svelte';
+  import { isPreviewOnly, type WidgetLayerState } from './store.svelte';
 
   // Properties of the selected instance. Every control is a native element with a name.
   let { wl, inst }: { wl: WidgetLayerState; inst: WInst } = $props();
@@ -38,8 +38,8 @@
   <header>
     <h3>Inspector</h3>
     <p class="who">
-      {wl.instLabel(inst)}{#if isConcept(inst.reg)}
-        <span class="tag">concept preview</span>{/if}
+      {wl.instLabel(inst)}{#if isPreviewOnly(inst.reg)}
+        <span class="tag">preview</span>{/if}
     </p>
   </header>
 

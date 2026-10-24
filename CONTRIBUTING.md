@@ -127,7 +127,7 @@ A spec widget has no code, so `layout.json` is how it draws. Version 0 shape: `{
 - Data binds are `{ "topic": "...", "field": "..." }`. Every bind must be declared in `widget.json` `providers` and have `sampleData` of the right shape (`bar` and `ring`: a number, `sparkline`: at least two numbers, `list`: strings).
 - Colour roles are only `accent`, `foreground`, `secondary`, `muted`. Sizes `sm`, `md`, `lg`, `xl`; gaps `sm`, `md`, `lg`. Icons: `cpu`, `memory`, `battery`, `clock`, `list`, `git`, `container`, `disk`, `network`, `bolt`, `calendar`, `check`.
 - Limits: depth 8, 200 nodes, 20 children per node, strings up to 120 characters, file up to 64 KB.
-- Copy a working example from `registry/fixtures/*/layout.json`. The exact rules are in `src/lib/registry/layout.ts`. The web emulator renders spec widgets from this file; the desktop renderer does not exist yet.
+- Copy a working example from a published widget, for example `layout.json` in https://github.com/dexterhere/omarchy-widget-docker. The exact rules are in `src/lib/registry/layout.ts`. The web emulator renders spec widgets from this file; the desktop renderer does not exist yet.
 
 ### From pull request to published
 
@@ -172,6 +172,7 @@ bun run registry -- --strict      # what CI runs
 ```
 
 - The build fetches `manifest.json`, `widget.json` and (spec widgets) `layout.json` from `raw.githubusercontent.com` at your pinned commit: https only, no redirects, 10 second timeout, 256 KB cap, JSON only. It also asks api.github.com whether the commit is on the default branch and what license GitHub detects. The token is sent only to api.github.com. Use a token with no scopes.
+- Local builds need network access to GitHub now that every widget is listed from its repository, and ideally a `GITHUB_TOKEN`. Without network or with the rate limit used up, the affected listings are excluded (with the reason printed), `bun run build` still succeeds, and the gallery is empty or partial. The Vercel project needs a `GITHUB_TOKEN` environment variable (sensitive, read-only public data) so production builds do not hit the unauthenticated limit. Never commit a token.
 - `--offline` works only for the maintainers' fixtures.
 - One bad listing does not fail the build. It is left out and listed under `excluded` in `registry/dist/index.json` with its reason, and printed at the end of the run.
 - `--strict` makes the run exit non-zero for any exclusion except `pending maintainer approval`. That is why a pull request can be green and still not be published.
@@ -225,7 +226,7 @@ This is a small project and review has no promised turnaround. A listing waits f
 | `spec`      | A maintainer reviewed a schema-valid JSON widget with no custom code at that exact commit. | Maintainers only, in `registry/review/<id>.json` |
 | `community` | Not reviewed. **The default for every listing**, spec widgets included. Code runs as you.  | Automatic when there is no matching review       |
 
-A tier applies only while `reviewedCommit` equals the listing's commit. A new commit resets the tier to `community`. A `widget.json` may declare `tier: "spec"`; the site shows that as "declared, not reviewed". Maintainer concept entries are labelled `concept`. `registry/review/` is empty today. A tier describes review, not isolation, and a `community` code widget can read anything you can read.
+A tier applies only while `reviewedCommit` equals the listing's commit. A new commit resets the tier to `community`. A `widget.json` may declare `tier: "spec"`; the site shows that as "declared, not reviewed". Test fixtures, which are never published, use the `concept` tier. `registry/review/` is empty today. A tier describes review, not isolation, and a `community` code widget can read anything you can read.
 
 ### Security rules for submissions
 

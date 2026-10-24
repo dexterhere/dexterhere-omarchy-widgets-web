@@ -55,6 +55,6 @@ describe('generic sample rows and status words', () => {
     expect(sampleRows({ id: 'x', providers: [] })).toHaveLength(1);
   });
   it('maps every status to one word', () => {
-    expect(STATUS_WORD).toEqual({ planned: 'Concept', alpha: 'Alpha', stable: 'Stable' });
+    expect(STATUS_WORD).toEqual({ planned: 'Planned', alpha: 'Alpha', stable: 'Stable' });
   });
 });

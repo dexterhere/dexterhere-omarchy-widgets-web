@@ -167,7 +167,8 @@ describe('gates in the registry build', () => {
   });
   it('fixtures never touch the network', async () => {
     const id = 'io.github.dexterhere.clock';
-    const rd = (n: string) => JSON.parse(readFileSync(`registry/fixtures/${id}/${n}.json`, 'utf8'));
+    const rd = (n: string) =>
+      JSON.parse(readFileSync(`tests/fixtures/widgets/${id}/${n}.json`, 'utf8'));
     const m = mockFetch({});
     const r = await buildRegistry({
       listings: [

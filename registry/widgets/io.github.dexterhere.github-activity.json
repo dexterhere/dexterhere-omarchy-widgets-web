@@ -1,10 +1,9 @@
 {
   "id": "io.github.dexterhere.github-activity",
   "repo": "https://github.com/dexterhere/omarchy-widget-github-activity",
-  "commit": "0000000000000000000000000000000000000000",
+  "commit": "7d7fd69ecdd8f64ecddcd553dfdc70cf59b8e217",
   "categories": ["dev-git", "productivity"],
   "tags": ["github", "pull-requests"],
   "summary": "Shows how many of your pull requests are open and how many reviews are waiting for you.",
-  "status": "planned",
-  "source": "fixture"
+  "status": "planned"
 }
