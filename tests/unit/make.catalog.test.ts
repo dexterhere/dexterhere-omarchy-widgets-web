@@ -34,7 +34,7 @@ describe('catalog mirrors the registry', () => {
       FIELDS.filter((f) => f.served)
         .map((f) => f.id)
         .sort()
-    ).toEqual([...catalog.providers.system.serving!].sort());
+    ).toEqual([...catalog.providers.system.serving!, ...catalog.providers.battery.serving!].sort());
   });
 });
 
@@ -60,10 +60,10 @@ describe('templates', () => {
       ])
     );
     expect(state.blank).toEqual(['served']);
-    expect(new Set(state.clock)).toEqual(new Set(['planned'])); // system.time is not served yet
-    expect(new Set(state.battery)).toEqual(new Set(['planned']));
+    expect(new Set(state.clock)).toEqual(new Set(['served'])); // system.time is served by the daemon now
+    expect(new Set(state.battery)).toEqual(new Set(['served'])); // so is battery.status
     expect(state['system-monitor'].slice(0, 1)).toEqual(['served']);
-    expect(state['system-monitor']).toContain('partial'); // the cpu-temp variant
+    expect(new Set(state['system-monitor'])).toEqual(new Set(['served'])); // system.temp too
   });
   it('the four others really need a provider the daemon does not serve', () => {
     for (const n of NEEDS_PROVIDER) {
