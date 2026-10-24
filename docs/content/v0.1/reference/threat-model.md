@@ -3,10 +3,10 @@
 title: "Threat model"
 description: "What the project defends against, what it does not, and why."
 synced: true
-source: "https://github.com/dexterhere/omarchy-widgets/blob/main/docs/threat-model.md"
+source: "https://github.com/dexterhere/omarchy-widgets/blob/v0.1.0/docs/threat-model.md"
 ---
 
-> Synced from dexterhere/omarchy-widgets@main (docs/threat-model.md); do not edit here. Change the file in the code repository.
+> Synced from dexterhere/omarchy-widgets@v0.1.0 (docs/threat-model.md); do not edit here. Change the file in the code repository.
 
 Status: draft. Covers what is built today (daemon, grants, audit, vault, CLI). Items marked **unverified** wait for Phase 0 spikes and must not be promised in the UI or docs until measured.
 

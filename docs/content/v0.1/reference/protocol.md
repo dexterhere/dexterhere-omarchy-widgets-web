@@ -3,10 +3,10 @@
 title: "Protocol and daemon specification"
 description: "The owd daemon, its socket protocol, grants, audit log and providers."
 synced: true
-source: "https://github.com/dexterhere/omarchy-widgets/blob/main/docs/DAEMON_SPEC.md"
+source: "https://github.com/dexterhere/omarchy-widgets/blob/v0.1.0/docs/DAEMON_SPEC.md"
 ---
 
-> Synced from dexterhere/omarchy-widgets@main (docs/DAEMON_SPEC.md); do not edit here. Change the file in the code repository.
+> Synced from dexterhere/omarchy-widgets@v0.1.0 (docs/DAEMON_SPEC.md); do not edit here. Change the file in the code repository.
 
 > **Status (checked against `crates/` on 2026-10-23).** This is a design document; the code is the source of truth. Each section below ends with an **Implemented / Not implemented** note. Summary: the Unix socket server, protocol ops `hello`/`snapshot`/`subscribe`/`unsubscribe`/`status`, grants, audit log, rate limiting, process hardening, the passphrase-mode vault (library plus `ow vault`) and the `system` provider are implemented. Admin ops `vault.unlock`, `vault.lock` and `vault.status` (passphrase mode) and `grants.reload` are implemented. `ow install|list|remove` manage spec widgets and their grants (`docs/INSTALL_DESIGN.md`). Not implemented: `config.toml`, the other admin ops, vault keyring/TPM modes and keyring auto-unlock, every provider except `system`, any network access or egress allow-list, `tracing`. The design text is kept as intent; where it differs from the code, the status note says so. The unit in `packaging/owd.service` has been verified only offline and as a transient unit, not as an installed unit. Nothing here makes code widgets sandboxed: they run as the user.
 

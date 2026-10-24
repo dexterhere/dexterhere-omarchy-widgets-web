@@ -3,10 +3,10 @@
 title: "Vault format"
 description: "How the encrypted vault is laid out on disk and how it is opened."
 synced: true
-source: "https://github.com/dexterhere/omarchy-widgets/blob/main/docs/VAULT_FORMAT.md"
+source: "https://github.com/dexterhere/omarchy-widgets/blob/v0.1.0/docs/VAULT_FORMAT.md"
 ---
 
-> Synced from dexterhere/omarchy-widgets@main (docs/VAULT_FORMAT.md); do not edit here. Change the file in the code repository.
+> Synced from dexterhere/omarchy-widgets@v0.1.0 (docs/VAULT_FORMAT.md); do not edit here. Change the file in the code repository.
 
 Status: v0.1 after Codex design review (10 findings, all addressed below). Reviewed before implementation. Implements DAEMON_SPEC section 7. Nothing here is novel cryptography: it composes XChaCha20-Poly1305 and Argon2id from RustCrypto, with a random 32-byte data key wrapped by a master key.
 
