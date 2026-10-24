@@ -67,7 +67,7 @@ export function terminalSteps(d: Draft, year = new Date().getFullYear()): Cmd[] 
       lines: [`gh repo create ${user}/${repo} --public --source . --push`]
     },
     {
-      say: 'Print the commit hash. Paste the 40 characters into the box above.',
+      say: 'Print the commit hash. Paste the 40 characters into the box below.',
       lines: ['git rev-parse HEAD']
     },
     {

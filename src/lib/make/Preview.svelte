@@ -42,6 +42,10 @@
     w: Math.round((c.min[0] + c.max[0]) / 2),
     h: Math.round((c.min[1] + c.max[1]) / 2)
   });
+  // With the Default style selected, a size class that has a style of its own name (chip, compact,
+  // wide) shows that style, the way a desktop would; picking a style shows it at every size.
+  const styleFor = (c: SizeClassDef) =>
+    variant === '' && Object.hasOwn(layout.variants ?? {}, c.name) ? c.name : variant;
   const zoom = (w: number) => (cw > 0 ? Math.min(1.25, Math.max(0.4, (cw - 34) / w)) : 1);
 </script>
 
@@ -52,12 +56,24 @@
       <div class="seg" role="radiogroup" aria-label="Size to preview">
         {#if !compact}
           <label class:on={pick === 'all'}
-            ><input type="radio" name="pv-size" value="all" bind:group={pick} />All sizes</label
+            ><input
+              type="radio"
+              name="pv-size"
+              value="all"
+              checked={pick === 'all'}
+              onchange={() => (pick = 'all')}
+            />All sizes</label
           >
         {/if}
         {#each sizeClasses as c (c.name)}
           <label class:on={pick === c.name}
-            ><input type="radio" name="pv-size" value={c.name} bind:group={pick} />{c.name}</label
+            ><input
+              type="radio"
+              name="pv-size"
+              value={c.name}
+              checked={pick === c.name}
+              onchange={() => (pick = c.name)}
+            />{c.name}</label
           >
         {/each}
       </div>
@@ -72,10 +88,12 @@
       <figure>
         <div class="slot" style:height="{s.h * z}px">
           <div class="live" style:width="{s.w}px" style:height="{s.h}px" style:zoom={z} inert>
-            <LayoutView layout={good} {data} title={s.h >= 60 ? title : ''} {variant} />
+            <LayoutView layout={good} {data} title={s.h >= 60 ? title : ''} variant={styleFor(c)} />
           </div>
         </div>
-        <figcaption class="tiny muted">{c.name}, {s.w} by {s.h}</figcaption>
+        <figcaption class="tiny muted">
+          {c.name}, {s.w} by {s.h}{styleFor(c) ? `, style ${styleFor(c)}` : ''}
+        </figcaption>
       </figure>
     {/each}
   </div>
