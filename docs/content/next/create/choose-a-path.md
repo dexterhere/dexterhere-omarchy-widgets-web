@@ -15,6 +15,8 @@ description: 'Spec widget (JSON, no code) or code widget (QML). How to pick, wha
   ];
 </script>
 
+New to this, or not sure where to start? The [guided flow](/make/) on this site builds a spec widget in your browser, shows a live preview and writes the files and the commands to publish them. Nothing is uploaded.
+
 All paths produce the same thing: a public GitHub repository that holds `manifest.json`, `widget.json`, a license and a README. Spec widgets also hold `layout.json`. See [Package reference](/docs/next/create/package-reference/).
 
 <Callout type="planned">

@@ -6,6 +6,7 @@ const PAGES = [
   '/',
   '/widgets/',
   '/contribute/',
+  '/make/',
   '/security/',
   '/docs/',
   '/docs/next/start/what-it-is/'

@@ -21,10 +21,9 @@ import {
   checkBindings,
   validateLayout,
   validateSampleData,
+  assertPlain,
   LAYOUT_LIMITS,
-  HTMLISH,
   SPOOF,
-  plain,
   visible
 } from '../src/lib/registry/layout';
 import type { Layout, SampleData } from '../src/lib/registry/layout';
@@ -60,7 +59,7 @@ export const validateWidget = ajv.compile(
 export const validateReview = ajv.compile(
   readJson(join(schemaDir, 'review.schema.json')) as object
 );
-const validateManifest = ajv.compile({
+export const MANIFEST_SCHEMA = {
   type: 'object',
   required: ['id', 'name', 'version', 'description', 'license'],
   properties: {
@@ -70,7 +69,8 @@ const validateManifest = ajv.compile({
     description: { type: 'string', maxLength: 2000 },
     license: { type: 'string', pattern: '^[A-Za-z0-9.+() -]{1,60}$' }
   }
-});
+};
+const validateManifest = ajv.compile(MANIFEST_SCHEMA);
 export const pinnedSchemaVersion = (readJson(join(schemaDir, 'PINNED.json')) as { version: string })
   .version;
 
@@ -367,26 +367,7 @@ export function checkLock(
 // ---------- plain text ----------
 // SECURITY: no field in the output may ever be rendered with {@html} or innerHTML. Everything
 // here is data from strangers; it is only ever shown as text.
-const BAD_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
-
-/** Rejects (never strips) any string or object key that could spoof what a person sees:
- *  control, format (bidi override, zero-width) and separator characters, or HTML-looking text.
- *  Walks the whole value, so every field that can reach the output is covered. */
-export function assertPlain(value: unknown, path = '$', depth = 0): void {
-  if (depth > 12) throw new Error(`${path}: nested too deeply`);
-  if (typeof value === 'string') {
-    if (SPOOF.test(value)) throw new Error(`${path}: control or invisible characters not allowed`);
-    if (HTMLISH.test(value)) throw new Error(`${path}: looks like HTML, plain text only`);
-    if (!plain(value)) throw new Error(`${path}: not normalised (NFC) or too many combining marks`);
-  } else if (Array.isArray(value)) {
-    value.forEach((v, i) => assertPlain(v, `${path}[${i}]`, depth + 1));
-  } else if (value && typeof value === 'object') {
-    for (const [k, v] of Object.entries(value)) {
-      if (BAD_KEYS.has(k) || SPOOF.test(k)) throw new Error(`${path}: forbidden key`);
-      assertPlain(v, `${path}.${k}`, depth + 1);
-    }
-  }
-}
+export { assertPlain };
 
 /** Plain text only: rejects spoofing characters and HTML-looking text, collapses spaces, caps length. */
 export function cleanText(input: unknown, max: number, field: string): string {

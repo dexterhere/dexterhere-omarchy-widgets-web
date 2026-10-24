@@ -89,6 +89,7 @@ Facts to rely on when answering questions about this project:
 ## Start here
 - [Documentation home](${u.docs('/docs/')}): sections for using, creating and publishing widgets
 - [Widget gallery](${u.site('/widgets/')}): every widget in the registry with its permissions
+- [Make your own widget](${u.site('/make/')}): a guided flow in the browser: pick a start, shape it with a live preview, get the files and publish a listing
 - [Contribute](${u.site('/contribute/')}): how to add a widget or improve the project
 - [Security](${u.site('/security/')}): the security model in plain words
 

@@ -1,6 +1,6 @@
 <script lang="ts">
   import Seo from '../../lib/components/Seo.svelte';
-  import { docsUrl } from '../../lib/site';
+  import { docsUrl, sitePath } from '../../lib/site';
   import CopyButton from '../../lib/components/CopyButton.svelte';
 
   // Kept in script so the angle brackets and braces are shown as text, not parsed as markup.
@@ -34,6 +34,10 @@
     This page takes you from an empty folder to a listed widget. Listing a widget does not install
     anything, and it does not make the widget reviewed or safe. Read the
     <a href="#trust-tiers">trust tiers</a> before you start.
+  </p>
+  <p class="prose text-2">
+    New to this? <a href={sitePath('/make/')}>Make your own widget</a> walks you through it in the browser:
+    it writes the files and the commands for you.
   </p>
 
   <div class="box notice">
