@@ -43,7 +43,7 @@ test('every footer link resolves; external ones are well formed', async ({ page,
   for (const l of links) {
     if (l.href.startsWith('https://')) {
       expect(l.rel, l.href).toBe('noopener noreferrer');
-      expect(l.name, l.href).toContain('(external site)');
+      expect(l.name, l.href).toMatch(/\(external site\)|opens GitHub in a new tab/);
     } else {
       // SvelteKit may emit "./" for "/": resolve against the page like a browser does.
       const abs = new URL(l.href, page.url());
@@ -160,3 +160,55 @@ for (const id of ['tokyo-night', 'catppuccin-latte', 'white']) {
     });
   }
 }
+
+const ISSUES = 'https://github.com/dexterhere/omarchy-widgets-web/issues/new/choose';
+
+test('the footer has a Report an issue link that opens GitHub in a new tab', async ({ page }) => {
+  await page.goto('/');
+  const a = footer(page).getByRole('link', { name: /Report an issue/ });
+  await expect(a).toHaveAttribute('href', ISSUES);
+  await expect(a).toHaveAttribute('target', '_blank');
+  await expect(a).toHaveAttribute('rel', 'noopener noreferrer');
+  await expect(a).toHaveAccessibleName('Report an issue (opens GitHub in a new tab)');
+  await expect(a.locator('svg')).toBeVisible();
+});
+
+test.describe('header: Report an issue', () => {
+  const link = (page: Page) =>
+    page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: /Report an issue/ });
+
+  test('desktop: external link with a cue and an accessible name', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    const a = link(page);
+    await expect(a).toBeVisible();
+    await expect(a).toHaveAttribute('href', ISSUES);
+    await expect(a).toHaveAttribute('target', '_blank');
+    await expect(a).toHaveAttribute('rel', 'noopener noreferrer');
+    await expect(a).toHaveAccessibleName('Report an issue (opens GitHub in a new tab)');
+    await expect(a.locator('svg')).toBeVisible();
+  });
+
+  test('phone: it is in the menu, and the page stays one column wide', async ({ page }) => {
+    await page.setViewportSize({ width: 360, height: 800 });
+    await page.goto('/');
+    await expect(link(page)).toBeHidden();
+    await page.getByRole('button', { name: 'Menu' }).click();
+    await expect(link(page)).toBeVisible();
+    await expect(link(page)).toHaveAttribute('target', '_blank');
+    const over = await page.evaluate(
+      () => document.documentElement.scrollWidth - document.documentElement.clientWidth
+    );
+    expect(over).toBeLessThanOrEqual(0);
+  });
+
+  test('the link is not a request: the page loads nothing from GitHub', async ({ page }) => {
+    const foreign: string[] = [];
+    page.on('request', (r) => {
+      if (!/^(localhost|127\.0\.0\.1)$/.test(new URL(r.url()).hostname)) foreign.push(r.url());
+    });
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    expect(foreign).toEqual([]);
+  });
+});

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { CODE_REPO, footerColumns, statusHref, type BuildInfo } from '../footer';
+  import { CODE_REPO, ISSUES_HINT, footerColumns, statusHref, type BuildInfo } from '../footer';
   import { prefersReducedMotion } from '../motion';
   import { THEMES } from '../themes/themes';
   import { theme } from '../themes/store.svelte';
@@ -67,8 +67,13 @@
           <ul>
             {#each col.links as l, i (`${i}:${l.href}`)}
               <li>
-                <a href={l.href} rel={l.external ? 'noopener noreferrer' : undefined}
-                  >{l.label}{#if l.external}<span class="sr-only"> (external site)</span>{/if}</a
+                <a
+                  href={l.href}
+                  rel={l.external ? 'noopener noreferrer' : undefined}
+                  target={l.newTab ? '_blank' : undefined}
+                  >{l.label}{#if l.newTab}<SiteIcon name="external" size={12} /><span
+                      class="sr-only">{ISSUES_HINT}</span
+                    >{:else if l.external}<span class="sr-only"> (external site)</span>{/if}</a
                 >
               </li>
             {/each}
@@ -186,6 +191,7 @@
   li a {
     display: flex;
     align-items: center;
+    gap: 6px;
     min-height: 44px;
     font-size: var(--fs-2);
     text-decoration: none;
