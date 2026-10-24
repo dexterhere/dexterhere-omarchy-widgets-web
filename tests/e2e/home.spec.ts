@@ -51,17 +51,16 @@ test('hero is short, says widgets are open-ended, and there is no privacy sectio
   await expect(page.getByText('How a widget gets made')).toHaveCount(0);
 });
 
-test('sections come in order: hero, stage, widgets, ideas, make your own', async ({ page }) => {
+test('sections come in order: hero, stage, widgets, make your own', async ({ page }) => {
   await ready(page);
   const ys = await page.evaluate(() =>
-    ['[data-home-stage]', '[data-home-widgets]', '[data-home-ideas]', '[data-home-make]'].map(
+    ['[data-home-stage]', '[data-home-widgets]', '[data-home-make]'].map(
       (q) => document.querySelector(q)!.getBoundingClientRect().top
     )
   );
   expect(ys).toEqual([...ys].sort((a, b) => a - b));
-  const ideas = page.locator('[data-home-ideas] li a');
-  await expect(ideas).toHaveCount(10);
-  await expect(ideas.first()).toHaveAttribute('href', /\/widgets\/?\?cat=/);
+  await expect(page.locator('[data-home-ideas]')).toHaveCount(0);
+  await expect(page.getByText('What could you build?')).toHaveCount(0);
 });
 
 test('the emulator stage is visible without scrolling and starts with widgets and no windows', async ({
@@ -300,7 +299,7 @@ test.describe('widget cards', () => {
     await ready(page);
     test.skip((await registryCount(page)) <= 6, 'needs more than six widgets');
     const y = () =>
-      page.locator('[data-home-ideas]').evaluate((e) => e.getBoundingClientRect().top + scrollY);
+      page.locator('[data-home-make]').evaluate((e) => e.getBoundingClientRect().top + scrollY);
     const before = await y();
     await next(page).click();
     await expect(shownText(page)).toContainText('Showing 7');
