@@ -39,7 +39,8 @@ describe('emit-host-config', () => {
     ).toEqual(SECURITY_HEADERS);
     // no host rules (those need a domain and live in deploy/vercel.json), only the retired draft path
     expect(cfg.redirects).toEqual([
-      { source: '/docs/v0.1-draft/:path*', destination: '/docs/v0.1/:path*', permanent: true }
+      { source: '/docs/v0.1-draft/(.*)', destination: '/docs/v0.1/$1', permanent: true },
+      { source: '/docs/v0.1-draft', destination: '/docs/v0.1/', permanent: true }
     ]);
     expect(cfg.rewrites).toBeUndefined();
   });
