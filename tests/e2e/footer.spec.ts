@@ -60,7 +60,7 @@ test('build info is a labelled list', async ({ page }) => {
   expect(await dl.locator('dt').allTextContents()).toEqual(
     expect.arrayContaining(['Docs', 'Widget schema'])
   );
-  await expect(dl.locator('dd').nth(0)).toContainText('next');
+  await expect(dl.locator('dd').nth(0)).toContainText('v0.1'); // the latest stable docs, no longer next (unreleased)
   await expect(dl.locator('dd').nth(1)).toContainText('draft-');
 });
 

@@ -223,11 +223,11 @@
             is no one-click install yet, because the desktop plugin is not packaged. Developers can
             try it in a sandbox with <code>ow install {w.id} --allow-planned</code>: see
             <!-- eslint-disable-next-line svelte/no-navigation-without-resolve --><a
-              href={docsUrl('/docs/next/start/try-it-safely/')}>Try it safely</a
+              href={docsUrl('/docs/v0.1/start/try-it-safely/')}>Try it safely</a
             >.
             {setupNote[w.id] ?? ''}
             {#if setupNote[w.id]}<!-- eslint-disable-next-line svelte/no-navigation-without-resolve --><a
-                href={docsUrl('/docs/next/project/security/')}>Security docs</a
+                href={docsUrl('/docs/v0.1/project/security/')}>Security docs</a
               >.{/if}
           </p>
           {#if repo}

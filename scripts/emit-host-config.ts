@@ -281,7 +281,11 @@ export function vercelProjectJson(): string {
     buildCommand: 'bun run registry -- --strict && bun run build',
     outputDirectory: 'build',
     trailingSlash: true,
-    headers: vercelHeaders()
+    headers: vercelHeaders(),
+    // The v0.1 draft snapshot was replaced by the stable v0.1 docs; keep old links and search hits alive.
+    redirects: [
+      { source: '/docs/v0.1-draft/:path*', destination: '/docs/v0.1/:path*', permanent: true }
+    ]
   };
   return JSON.stringify(config, null, 2) + '\n';
 }

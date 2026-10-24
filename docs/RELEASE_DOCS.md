@@ -1,5 +1,7 @@
 # Cutting the v0.1 docs snapshot
 
+> Done on 2026-10-24 for v0.1 (see DOCS-V0.1 in docs/DECISIONS.md). Keep this file as the recipe for the next snapshot; the draft rows in section 4 and section 5 are historical now.
+
 For the maintainer. Do this only after the tag `v0.1.0` exists on the code repository (`dexterhere/omarchy-widgets`). Until then `docs/content/next` is the working copy (status `unreleased`) and `docs/content/v0.1-draft` is a pre-release snapshot. Do not run `docs:snapshot` before the tag exists: the snapshot pins `codeRepoRef` to the tag, and `docs:sync` reads the code repo at that ref.
 
 ## 0. Before the snapshot: make `next` true for the release

@@ -6,7 +6,7 @@ import { expect, test, type Page } from '@playwright/test';
 const PORT = Number(process.env.PW_HOSTS_PORT ?? Number(process.env.PW_PORT ?? 4173) + 1);
 const SITE = `http://localhost:${PORT}`;
 const DOCS = `http://docs.localhost:${PORT}`;
-const START = '/next/start/what-it-is/';
+const START = '/v0.1/start/what-it-is/'; // the latest stable docs; next is the unreleased working copy
 const LOCAL = new Set(['localhost', 'docs.localhost']);
 
 test.use({ colorScheme: 'dark' });
@@ -67,14 +67,14 @@ test('every header and footer link on the site is absolute and on the right host
   expect(main.filter((h) => !h.startsWith('https://github.com/'))).toEqual([
     `${SITE}/widgets/`,
     `${DOCS}/`,
-    `${DOCS}/next/create/`,
+    `${DOCS}/v0.1/create/`,
     `${SITE}/make/`,
     `${SITE}/contribute/`
   ]);
   expect(await hrefs('Footer')).toContain(`${SITE}/security/`);
   await expect(page.getByRole('link', { name: 'Install' })).toHaveAttribute(
     'href',
-    `${DOCS}/next/start/install/`
+    `${DOCS}/v0.1/start/install/`
   );
   await expect(
     page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Widgets' })
@@ -103,7 +103,7 @@ test('site /docs/* redirects to the docs host, nothing is taken from the request
   expect(back.status()).toBe(308);
   expect(back.headers()['location']).toBe(`${DOCS}/next/use/themes/`);
   const browser = await request.get(`${SITE}/docs/next/start/what-it-is/`);
-  expect(browser.url()).toBe(`${DOCS}${START}`);
+  expect(browser.url()).toBe(`${DOCS}/next/start/what-it-is/`);
   expect(browser.status()).toBe(200);
 });
 
@@ -175,15 +175,15 @@ test('client-side navigation works on the docs host (no full reload, URL has no 
     .last()
     .click();
   await page.waitForURL((u) => u.pathname !== START);
-  expect(new URL(page.url()).pathname).toMatch(/^\/next\/start\/[a-z-]+\/$/);
+  expect(new URL(page.url()).pathname).toMatch(/^\/v0\.1\/start\/[a-z-]+\/$/);
   await expect(page.locator('article.docs h1')).toBeVisible();
   expect(await page.evaluate(() => (window as unknown as { __kept?: number }).__kept)).toBe(1);
 
   // version switcher
   await page.getByRole('button', { name: /Version:/ }).click();
   await page.getByRole('link', { name: /v0\.1/ }).click();
-  await page.waitForURL(/\/v0\.1-draft\//);
-  expect(page.url().startsWith(`${DOCS}/v0.1-draft/`)).toBe(true);
+  await page.waitForURL(/\/v0\.1\//);
+  expect(page.url().startsWith(`${DOCS}/v0.1/`)).toBe(true);
   await expect(page.locator('article.docs h1')).toBeVisible();
   expect(problems).toEqual([]);
 });
@@ -225,9 +225,9 @@ test('assets and search (pagefind index and wasm) work on the docs host', async 
   ).toBe(true);
   expect(seen.some((s) => s.url.includes('/pagefind/index/'))).toBe(true);
   const hrefs = await hits.evaluateAll((as) => as.map((a) => a.getAttribute('href')!));
-  for (const h of hrefs) expect(h).toMatch(/^\/next\//);
+  for (const h of hrefs) expect(h).toMatch(/^\/v0\.1\//);
   await page.keyboard.press('Enter');
-  await page.waitForURL(/docs\.localhost:\d+\/next\/.+/);
+  await page.waitForURL(/docs\.localhost:\d+\/v0\.1\/.+/);
   await expect(page.locator('article.docs h1')).toBeVisible();
   expect(problems).toEqual([]);
 });
@@ -308,7 +308,7 @@ test('footer links: Docs links on docs.localhost, Site links on localhost, both 
         .locator('a')
         .evaluateAll((as) => as.map((a) => a.getAttribute('href')!));
     const docs = await col('Docs');
-    for (const h of docs) expect(h, from).toMatch(new RegExp(`^${DOCS}/next/`));
+    for (const h of docs) expect(h, from).toMatch(new RegExp(`^${DOCS}/v0\\.1/`));
     const explore = await col('Explore');
     expect(explore).toContain(`${SITE}/widgets/`);
     expect(explore).toContain(`${SITE}/rss.xml`);

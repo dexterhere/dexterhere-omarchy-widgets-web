@@ -89,7 +89,7 @@
     <p class="callout">
       This guide needs JavaScript to run in your browser. Without it, read
       <a href={sitePath('/contribute/')}>how to publish a widget</a> and the
-      <a href={docsUrl('/docs/next/create/choose-a-path/')}>create guide</a>.
+      <a href={docsUrl('/docs/v0.1/create/choose-a-path/')}>create guide</a>.
     </p>
   </noscript>
 

@@ -186,7 +186,7 @@
     <p class="small">
       Changed your widget later? Push to your repository and open a new pull request that changes
       only the <code>commit</code> line. More detail: the
-      <a href={docsUrl('/docs/next/publish/submit-a-widget/')}>submit guide</a>, the
+      <a href={docsUrl('/docs/v0.1/publish/submit-a-widget/')}>submit guide</a>, the
       <a href={CONTRIB} rel="noopener noreferrer">contributing rules</a> and the
       <a href={sitePath('/contribute/')}>Contribute page</a>.
     </p>
