@@ -17,7 +17,7 @@ description: 'Plan, develop, test and publish a widget with a coding assistant, 
 
 <Callout type="planned">
 
-The project is pre-release. The daemon, the vault and the `ow status` and `ow vault` commands exist, and so does the registry build (`bun run registry`) that validates spec widgets. The desktop canvas, Widget Center, `ow new`, `ow check`, `ow publish --listing`, the QML kit and the desktop renderer are planned or in development. An assistant can write and validate the files today, but nobody can run the result on a desktop yet. The project name is a placeholder.
+This is pre-release software. See [What works today](/docs/next/start/what-works-today/). An assistant can write and validate the files today, but nobody can run the result on a real desktop yet. `ow new`, `ow check`, `ow publish` and `ow doctor` are not built. The project name is a placeholder.
 
 </Callout>
 
@@ -60,7 +60,7 @@ A QML code widget is not sandboxed. It runs as you and can read anything you can
 
 - Decide the final name, open the listing pull request or contact maintainers.
 - Approve its own widget. Merging a listing is not publishing: a maintainer records the repository in `registry/lock.json` first.
-- Verify a feature that does not exist yet. If it claims `ow check` passed, it did not run, because the command is planned.
+- Verify a feature that does not exist yet. If it claims `ow check` passed, it did not run, because the command is not built.
 
 ## Reading list for the assistant
 

@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
+import { PRE_RELEASE } from '../../src/lib/status';
 import {
   buildLlmsFull,
   buildLlmsTxt,
@@ -42,6 +43,7 @@ describe('discovery files', () => {
     expect(t).toContain('/skills/omarchy-widget-plan/SKILL.md');
     expect(t).toContain('unsandboxed');
     expect(t).toContain('llms-full.txt');
+    expect(t).toContain('[Make your own widget](https://x.test/make/)');
   });
   it('llms-full.txt joins every page with its source', () => {
     const t = buildLlmsFull(makeUrls('https://x.test', ''), [{ ...page, body: 'Body.' }]);
@@ -68,6 +70,12 @@ describe('discovery files', () => {
   });
 });
 
+describe('the sitemap lists /make/', () => {
+  it('is in the generated sitemap', () => {
+    expect(readFileSync('src/lib/seo.server.ts', 'utf8')).toContain("urls.site('/make/')");
+  });
+});
+
 describe('llms.txt claims', () => {
   it('derives the skill count from the SKILLS array and says widgets are open-ended', () => {
     const t = buildLlmsTxt(makeUrls('https://x.test', ''), [page], [widget]);
@@ -77,6 +85,12 @@ describe('llms.txt claims', () => {
     expect(t).toContain('Widgets are open-ended');
     expect(t).toContain('Widgets are not limited to a fixed set');
     expect(t).toContain('Spec widgets are JSON');
+  });
+  it('uses the shared pre-release sentence and never calls a widget installable', () => {
+    const t = buildLlmsTxt(makeUrls('https://x.test', ''), [page], [widget]);
+    expect(t).toContain(PRE_RELEASE);
+    expect(PRE_RELEASE).toMatch(/no installable release/i);
+    expect(PRE_RELEASE).toContain('every widget is marked Planned');
   });
 });
 

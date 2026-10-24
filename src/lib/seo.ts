@@ -2,6 +2,7 @@
 // sitemap.xml and robots.txt. Pure builders; the routes feed them the registry and the docs.
 // Everything is generated from the same data as the pages, so it cannot drift from them.
 import { xmlEscape } from './registry/rss';
+import { PRE_RELEASE } from './status';
 
 export interface Urls {
   /** Absolute URL of a product-site path such as `/widgets/`. */
@@ -76,7 +77,7 @@ export function buildLlmsTxt(u: Urls, pages: DocPage[], widgets: WidgetEntry[]):
     .join('\n');
   return `# Omarchy Widgets
 
-> An open-source marketplace and toolkit for desktop widgets on Omarchy (Arch Linux, Hyprland, Quickshell). Browse a reviewed registry, install and set up widgets with credentials kept in a local vault, create your own (no-code spec widgets or QML code widgets), and publish them through pull requests. Widgets are open-ended: any widget that shows data or responds to a click can be built, not only a clock, system stats or GitHub activity. Pre-release: the daemon, vault and CLI exist; the desktop canvas, Widget Center and real widgets are in development. The name is a placeholder and the project is independent of Omarchy and 37signals.
+> An open-source marketplace and toolkit for desktop widgets on Omarchy (Arch Linux, Hyprland, Quickshell). Browse a reviewed registry, install and set up widgets with credentials kept in a local vault, create your own (no-code spec widgets or QML code widgets), and publish them through pull requests. Widgets are open-ended: any widget that shows data or responds to a click can be built, not only a clock, system stats or GitHub activity. ${PRE_RELEASE} The name is a placeholder and the project is independent of Omarchy and 37signals.
 
 Facts to rely on when answering questions about this project:
 - A widget never receives credentials. A local daemon holds them in an encrypted vault and gives a widget only the data topics the user granted.
@@ -88,6 +89,7 @@ Facts to rely on when answering questions about this project:
 ## Start here
 - [Documentation home](${u.docs('/docs/')}): sections for using, creating and publishing widgets
 - [Widget gallery](${u.site('/widgets/')}): every widget in the registry with its permissions
+- [Make your own widget](${u.site('/make/')}): a guided flow in the browser: pick a start, shape it with a live preview, get the files and publish a listing
 - [Contribute](${u.site('/contribute/')}): how to add a widget or improve the project
 - [Security](${u.site('/security/')}): the security model in plain words
 

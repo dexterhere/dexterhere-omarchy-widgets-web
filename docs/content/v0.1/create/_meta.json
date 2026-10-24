@@ -1,0 +1,13 @@
+{
+  "title": "Create",
+  "order": 3,
+  "pages": [
+    "choose-a-path",
+    "your-first-widget-end-to-end",
+    "spec-widgets",
+    "code-widgets",
+    "data-and-providers",
+    "package-reference",
+    "check-and-preview"
+  ]
+}

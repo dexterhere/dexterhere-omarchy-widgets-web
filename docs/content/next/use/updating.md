@@ -1,13 +1,13 @@
 ---
 title: Updating
-description: How widgets and the daemon are meant to be updated, with pinned commits and a capability diff. Planned; no update tooling exists yet.
+description: How widgets and the daemon are meant to be updated, with pinned commits and a capability diff. Design only; no update command exists yet.
 ---
 
 <script>import Callout from '$lib/docs/Callout.svelte';</script>
 
 <Callout type="planned">
 
-There is nothing to update yet. This page describes the design.
+There is no update tool. This page describes the design. Today, running `ow install <id>` again for an id that is already installed replaces it, and the summary shows the old and new commit and any topics added or removed. See [What works today](/docs/next/start/what-works-today/).
 
 </Callout>
 

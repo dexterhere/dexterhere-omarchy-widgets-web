@@ -13,6 +13,7 @@ const PAGES = [
   '/widgets/',
   '/widgets/io.github.dexterhere.clock/',
   '/contribute/',
+  '/make/',
   '/security/',
   '/docs/next/start/what-it-is/',
   '/404/'

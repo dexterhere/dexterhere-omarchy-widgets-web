@@ -1,13 +1,13 @@
 ---
 title: Placing and resizing
-description: How widgets are meant to be placed, snapped and resized on the desktop, and how size classes work. Planned; the canvas is not built.
+description: How widgets are meant to be placed, snapped and resized on the desktop, and how size classes work. Design only; edit mode is not built.
 ---
 
 <script>import Callout from '$lib/docs/Callout.svelte';</script>
 
 <Callout type="planned">
 
-The desktop canvas does not exist yet. This page describes the design.
+Edit mode, drag and resize are not built. The widget layer itself exists in the desktop plugin, and a person checked on 2026-10-24 that clicks pass through it and that the lock screen hides it. The plugin has not run in a real shell. This page describes the design.
 
 </Callout>
 

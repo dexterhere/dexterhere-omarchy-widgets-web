@@ -39,7 +39,8 @@ test('/docs/ is a hub with a card per section that links into the docs', async (
   for (const t of ['Start', 'Use', 'Create', 'Publish', 'Reference'])
     await expect(page.getByRole('heading', { level: 2, name: t, exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'What it is' }).click();
-  await page.waitForURL('**' + START);
+  // the hub links into the latest stable version, not into next
+  await page.waitForURL('**/docs/v0.1/start/what-it-is/');
   await expect(page.getByRole('heading', { level: 1, name: 'What it is' })).toBeVisible();
 });
 
@@ -83,25 +84,27 @@ test('version switcher keeps the same page, else goes to the start page', async 
   const button = page.getByRole('button', { name: /Version:/ });
   await expect(button).toContainText('next (unreleased)');
   await button.click();
-  await page.getByRole('link', { name: 'v0.1 (draft snapshot)' }).click();
-  await page.waitForURL('**/docs/v0.1-draft/start/install/');
+  await page.getByRole('link', { name: 'v0.1', exact: true }).click();
+  await page.waitForURL('**/docs/v0.1/start/install/');
   await expect(page.locator('nav[aria-label="Docs"] a[aria-current="page"]')).toHaveText('Install');
   await page.getByRole('button', { name: /Version:/ }).click();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('link', { name: 'next (unreleased)' })).toBeHidden();
 });
 
-test('next shows the unreleased banner, the draft snapshot its own', async ({ page }) => {
+test('next shows the unreleased banner and points to v0.1; v0.1 is the latest and has none', async ({
+  page
+}) => {
   await page.goto(START);
   const banner = page.getByRole('complementary', { name: 'Version notice' });
   await expect(banner).toContainText('next (unreleased)');
   await expect(banner).toContainText('Planned do not exist yet');
-  await page.goto('/docs/v0.1-draft/start/what-it-is/');
-  await expect(banner).toContainText('pre-release snapshot');
-  await expect(banner.getByRole('link', { name: /next docs/ })).toHaveAttribute(
+  await expect(banner.getByRole('link', { name: 'Read the v0.1 docs' })).toHaveAttribute(
     'href',
-    '/docs/next/'
+    '/docs/v0.1/'
   );
+  await page.goto('/docs/v0.1/start/what-it-is/');
+  await expect(banner).toHaveCount(0);
 });
 
 test('footer records the code repo ref and the widget schema version', async ({ page }) => {
@@ -177,13 +180,13 @@ test('search: loads lazily, finds a term, scopes to the version, Esc closes', as
   await expect(dialog).toBeHidden();
 
   // another version only returns its own pages
-  await page.goto('/docs/v0.1-draft/start/what-it-is/');
+  await page.goto('/docs/v0.1/start/what-it-is/');
   await page.waitForLoadState('networkidle');
   await page.keyboard.press('/');
   await page.keyboard.type('vault');
   await expect(hits.first()).toBeVisible();
   for (const h of await hits.evaluateAll((as) => as.map((a) => a.getAttribute('href')!)))
-    expect(h).toMatch(/^\/docs\/v0\.1-draft\//);
+    expect(h).toMatch(/^\/docs\/v0\.1\//);
   expect(errors).toEqual([]);
 });
 
@@ -201,7 +204,7 @@ test('Callout shows its type as text', async ({ page }) => {
   await page.goto(START);
   const planned = page.locator('aside.callout.planned');
   await expect(planned.locator('.label')).toHaveText('Planned');
-  await expect(planned).toContainText('early development');
+  await expect(planned).toContainText('pre-release software');
 });
 
 test('Widgets catalog lists every registry widget with working links', async ({
@@ -315,11 +318,7 @@ test('no request leaves localhost, search and version switcher included', async 
     if (!u.protocol.startsWith('http')) return;
     if (u.hostname !== 'localhost' || u.port !== String(PORT)) external.push(r.url());
   });
-  for (const path of [
-    START,
-    '/docs/next/widgets/catalog/',
-    '/docs/v0.1-draft/reference/protocol/'
-  ]) {
+  for (const path of [START, '/docs/next/widgets/catalog/', '/docs/v0.1/reference/protocol/']) {
     await page.goto(path);
     await page.waitForLoadState('networkidle');
   }
@@ -349,9 +348,39 @@ test('synced reference pages render as text, no injected markup', async ({ page 
   await page.goto('/docs/next/reference/protocol/');
   await expect(page.getByText(/Synced from dexterhere\/omarchy-widgets@main/)).toBeVisible();
   await expect(page.locator('article.docs script')).toHaveCount(0);
+  // the released snapshot is synced from the tag, not from main
+  await page.goto('/docs/v0.1/reference/protocol/');
+  await expect(page.getByText(/Synced from dexterhere\/omarchy-widgets@v0\.1\.0/)).toBeVisible();
+  await page.goto('/docs/next/reference/protocol/');
   await expect(page.getByRole('link', { name: 'View the source file' })).toHaveAttribute(
     'href',
     /^https:\/\/github\.com\/dexterhere\/omarchy-widgets\/blob\/main\/docs\/DAEMON_SPEC\.md$/
   );
   expect(errors).toEqual([]);
+});
+
+test('the start section reads in newcomer order and the new guides render', async ({ page }) => {
+  await page.goto(START);
+  const nav = page.locator('nav[aria-label="Docs"]');
+  const titles = await nav.getByRole('link').allInnerTexts();
+  const at = (t: string) => titles.indexOf(t);
+  expect(at('What it is')).toBeGreaterThanOrEqual(0);
+  expect(at('What works today')).toBeGreaterThan(at('What it is'));
+  expect(at('Try it safely in 10 minutes')).toBeGreaterThan(at('What works today'));
+  expect(titles).toContain('Report a problem');
+  for (const [path, h1] of [
+    ['/docs/next/start/what-works-today/', 'What works today'],
+    ['/docs/next/start/try-it-safely/', 'Try it safely in 10 minutes'],
+    ['/docs/next/project/report-a-problem/', 'Report a problem']
+  ]) {
+    await page.goto(path);
+    await expect(page.locator('article.docs h1')).toHaveText(h1);
+  }
+  await page.goto('/docs/next/project/report-a-problem/');
+  await expect(
+    page.getByRole('link', { name: 'Private advisory, code repository' })
+  ).toHaveAttribute(
+    'href',
+    'https://github.com/dexterhere/omarchy-widgets/security/advisories/new'
+  );
 });

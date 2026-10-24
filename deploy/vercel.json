@@ -62,7 +62,7 @@
           "value": "^docs\\.example\\.com$"
         }
       ],
-      "destination": "https://docs.example.com/next/start/what-it-is/",
+      "destination": "https://docs.example.com/v0.1/start/what-it-is/",
       "statusCode": 302
     },
     {

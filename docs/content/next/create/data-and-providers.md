@@ -11,17 +11,22 @@ Widgets get data from the `owd` daemon. This page describes what exists today. T
 
 A provider is a module in the daemon that fetches data from one source. It publishes topics. A topic has a name, a list of fields, a sensitivity and a polling interval.
 
-Today there is one provider, `system`, which reads `/proc`:
+Today there are two providers, `system` and `battery`:
 
-| Topic           | Fields                              | Interval  |
-| --------------- | ----------------------------------- | --------- |
-| `system.cpu`    | `usage_pct`                         | 2 seconds |
-| `system.memory` | `total_mib`, `used_mib`, `used_pct` | 5 seconds |
-| `system.load`   | `load1`, `load5`, `load15`          | 5 seconds |
+| Topic            | Fields                              | Interval   |
+| ---------------- | ----------------------------------- | ---------- |
+| `system.cpu`     | `usage_pct`                         | 2 seconds  |
+| `system.memory`  | `total_mib`, `used_mib`, `used_pct` | 5 seconds  |
+| `system.load`    | `load1`, `load5`, `load15`          | 5 seconds  |
+| `system.time`    | `hm`, `hms`, `date`, `tz`           | 1 second   |
+| `system.temp`    | `celsius`                           | 5 seconds  |
+| `battery.status` | `percent`, `state`, `timeLeft`      | 10 seconds |
+
+`system.*` reads your own computer. `battery.status` answers `unavailable` on a machine without a battery.
 
 <Callout type="planned">
 
-Battery, media, AI usage, GitHub, Docker, Gmail, calendar and tasks providers are planned. Network providers will use a per-provider host allow-list. The final list is not decided.
+Providers for GitHub, Docker, tasks and AI usage are not built, so those widgets would show "not served". Media, Gmail and calendar providers are not built either. Network providers will use a per-provider host allow-list. The final list is not decided.
 
 </Callout>
 
@@ -29,15 +34,15 @@ Battery, media, AI usage, GitHub, Docker, Gmail, calendar and tasks providers ar
 
 Two files describe providers, and they are meant to differ: one is what is built, the other is what listings may use.
 
-- **The daemon** (`owd`) serves what is in the table above: `system.cpu` with `usage_pct`, `system.memory` with `total_mib`, `used_mib`, `used_pct`, and `system.load` with `load1`, `load5`, `load15`.
-- **The listing catalog** `registry/providers.json` in the website repository lists every topic and field a listing may declare, in classes (`local-system`, `personal`, `host-control`, `private-content`; the gate also knows `public`). It includes planned topics such as `system.time`, `system.temp`, `battery.status`, `github.prs`, `docker.containers`, `ai-usage.sessions` and `tasks.list`. Each provider has a `serving` list: the `topic.field` pairs the shipped daemon serves today. Today only `system` has one, and it matches the daemon exactly (a unit test keeps the list consistent with the catalog).
+- **The daemon** (`owd`) serves what is in the table above.
+- **The listing catalog** `registry/providers.json` in the website repository lists every topic and field a listing may declare, in classes (`local-system`, `personal`, `host-control`, `private-content`; the gate also knows `public`). It includes topics the daemon does not serve yet, such as `github.prs`, `docker.containers`, `ai-usage.sessions` and `tasks.list`. Each provider has a `serving` list: the `topic.field` pairs the shipped daemon serves today. The website's copy and the copy compiled into `ow` list the same served fields: `system.cpu`, `system.memory`, `system.load`, `system.time`, `system.temp` and `battery.status`, and a unit test pins the website copy to that list (it is kept in step by hand). The daemon is the source of truth: it serves all six topics in the table above.
 
 What this means for you:
 
 - The registry build (`bun run registry`) does not check your topics against either list. It only checks that your layout binds match your own `providers` entries and `sampleData`.
 - The registry build runs the catalog check (`scripts/gate/check-providers.ts`) for approved listings: a provider, topic or field that is not in `registry/providers.json` excludes the listing.
-- To run on the real daemon today, use only `serving` pairs, for example `system.cpu` `usage_pct`, `system.memory` `used_pct` or `system.load` `load1`. The example in [Your first widget](/docs/next/create/your-first-widget-end-to-end/) does exactly that.
-- A widget that uses a catalog-only topic such as `battery.status` can be listed with status `planned`. It cannot run until the daemon serves it.
+- To run on the real daemon today, use topics from the table above, for example `system.cpu` `usage_pct`, `system.time` `hm` or `battery.status` `percent`. The example in [Your first widget](/docs/next/create/your-first-widget-end-to-end/) does exactly that.
+- A widget that uses a catalog-only topic such as `github.prs` can be listed with status `planned`. It cannot run until the daemon serves it.
 - Only maintainers change the catalog (`registry/providers.json` is a guarded path).
 
 Output is trimmed to the topic's declared fields. A topic accepts only the request parameters it declares, and anything else is rejected.
@@ -65,7 +70,7 @@ The example uses a `github.prs` topic that does not exist yet. Use `system.cpu` 
 
 <Callout type="planned">
 
-Setting grants from the Widget Center and a `grants.set` request are planned. Today you edit the file.
+Setting grants from the Widget Center and a `grants.set` request are not built. Today `ow install` writes the grant for a spec widget, and otherwise you edit the file.
 
 </Callout>
 
@@ -93,7 +98,7 @@ See [Configuration](/docs/next/reference/configuration/) for the location and ro
 
 <Callout type="planned">
 
-Reading the log through `ow audit tail` or the Widget Center is planned. Today you read the file.
+Reading the log through `ow audit tail` or the Widget Center is not built. Today you read the file.
 
 </Callout>
 

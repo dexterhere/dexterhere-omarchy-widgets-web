@@ -1,5 +1,5 @@
-name: Feature or widget idea
-description: Suggest an improvement to the site or docs, or a widget
+name: Feature request
+description: Suggest an improvement to the site or docs
 labels: [enhancement]
 body:
   - type: textarea

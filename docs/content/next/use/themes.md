@@ -7,7 +7,7 @@ description: Widgets follow the active Omarchy theme and never choose their own 
 
 <Callout type="planned">
 
-Widgets do not exist yet, so nothing follows your theme today. This page describes the rules widgets must obey.
+The desktop plugin maps four colour roles to the shell theme and draws them in an offscreen test. It has not run in a real shell, so no widget follows your live theme yet. This page describes the rules widgets must obey. See [What works today](/docs/next/start/what-works-today/).
 
 </Callout>
 
@@ -27,4 +27,4 @@ If you want a different look, pick a variant of the widget. A variant is another
 
 ## Ejecting
 
-The design includes `ow eject <id>`, which copies a widget into your own plugin directory under your id, keeps its position and settings, shows an ejected badge and offers a diff against the original. It is planned and undecided in detail.
+The design includes `ow eject <id>`, which copies a widget into your own plugin directory under your id, keeps its position and settings, shows an ejected badge and offers a diff against the original. It is not built and is undecided in detail.

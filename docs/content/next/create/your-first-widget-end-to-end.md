@@ -17,11 +17,13 @@ description: Make a no-code spec widget from an empty folder to a validated, lis
   ];
 </script>
 
+This page is the manual route. If you would rather click than type, the [guided builder](/make/) makes the same files in your browser. Come back here to see what each file means.
+
 You will write a CPU and memory widget as JSON, check it with the registry's own validators, and get it ready to list. A spec widget has no code, so it is the easiest kind to make and to trust.
 
 <Callout type="planned">
 
-The `widget.json` schema is DRAFT v0. `ow new`, `ow check` and `ow publish --listing` are planned and do not exist. The desktop renderer does not exist either, so you cannot see the widget on a real desktop yet. What works today: validating the files, and previewing a spec widget in the website emulator.
+The `widget.json` schema is DRAFT v0. `ow new`, `ow check` and `ow publish --listing` are not built. You cannot place a widget on a real desktop yet, and `ow install` only installs widgets that are listed in the registry. What works today: validating the files, and previewing a spec widget in the website emulator.
 
 </Callout>
 
@@ -164,7 +166,7 @@ Run the checks yourself with the helper from [Check and preview](/docs/next/crea
 2. `layout.json` has no hex colours, and `capabilities` stays empty.
 3. `omarchy plugin validate .` passes, if Omarchy is installed. It may ask for keys the registry does not need, such as `kinds`.
 
-`ow check` is planned. Do not run it.
+`ow check` is not built. Do not run it.
 
 ## 6. Preview
 
@@ -186,7 +188,7 @@ Push to a public repository, note the 40-character commit SHA on the default bra
   "categories": ["system"],
   "tags": ["cpu", "memory"],
   "summary": "CPU use as a ring, memory as a bar.",
-  "status": "alpha"
+  "status": "planned"
 }
 ```
 
@@ -196,7 +198,7 @@ Merging does not publish. A maintainer records your repository in `registry/lock
 
 <Callout type="warning">
 
-`omarchy plugin add <git-url>` changes your real shell configuration, and the widget would not render until the renderer exists. Back up `~/.config/omarchy` first or use a spare account. Whether Omarchy accepts a plain local folder is not verified here. Planned: `ow install` with a local path.
+`omarchy plugin add <git-url>` changes your real shell configuration, and the widget would not render, because the desktop plugin cannot be loaded into a real shell yet. Back up `~/.config/omarchy` first or use a spare account. Whether Omarchy accepts a plain local folder is not verified here. `ow install` with a local path is not built.
 
 </Callout>
 

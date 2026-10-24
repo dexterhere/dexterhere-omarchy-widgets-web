@@ -7,7 +7,7 @@ description: Write a widget in QML with the widgets kit. What a code widget rece
 
 <Callout type="planned">
 
-The QML bridge, the widgets kit and `ow new` do not exist yet, so a code widget cannot run on a desktop today. This page describes the contract the project is building toward. The listing rules in the next section run in the registry build.
+The widgets kit and `ow new` are not built. The desktop plugin draws spec widgets only and drops anything else, so a code widget cannot run on a desktop today. This page describes the contract the project is building toward. The listing rules in the next section run in the registry build.
 
 </Callout>
 
@@ -110,6 +110,6 @@ Widgets are click-through by default. List the rectangles that take input in `in
 
 <Callout type="planned">
 
-`ow new <id> --template <name>` is planned, with templates for a text item, an item with a popup, a chart, a list and a service. Until it exists, create the folder by hand. See [Package reference](/docs/next/create/package-reference/).
+`ow new <id> --template <name>` is not built. The plan is templates for a text item, an item with a popup, a chart, a list and a service. Until it exists, create the folder by hand. See [Package reference](/docs/next/create/package-reference/).
 
 </Callout>

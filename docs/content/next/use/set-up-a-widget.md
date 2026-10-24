@@ -1,6 +1,6 @@
 ---
 title: Set up a widget
-description: Connect a data source, store a credential in the vault, grant topics, revoke access and troubleshoot. What works today is the daemon, vault and grants file.
+description: Connect a data source, store a credential in the vault, grant topics, revoke access and troubleshoot. What works today is the daemon, the vault, the grants file and ow install.
 ---
 
 <script>import Callout from '$lib/docs/Callout.svelte';</script>
@@ -9,7 +9,7 @@ A widget needs two things before it shows data: a grant that lets it read a topi
 
 <Callout type="planned">
 
-Today you do this by hand with `ow vault` and by editing `grants.toml`. The Widget Center will do the same thing with buttons. No widget can read the daemon yet, because the bridge is not built, and the only data source is `system`. The steps are still real and tested.
+For a spec widget, `ow install` writes the grant for you after you type `yes`. See [Try it safely](/docs/next/start/try-it-safely/). This page shows the same thing by hand, with `ow vault` and `grants.toml`, which is how you develop and debug. The Widget Center, which will do this with buttons, is not built. The steps are real and tested.
 
 </Callout>
 
@@ -23,7 +23,7 @@ cargo run -p ow -- --config-dir "$D" status
 
 ## 1. Know the topic you need
 
-A topic is a named stream of data, such as `system.cpu`. It has fields, such as `usage_pct`. The widget's page lists the topics and fields it asks for. Today the daemon serves three topics. See [Data and providers](/docs/next/create/data-and-providers/).
+A topic is a named stream of data, such as `system.cpu`. It has fields, such as `usage_pct`. The widget's page lists the topics and fields it asks for. Today the daemon serves six topics from two providers (`system` and `battery`). See [Data and providers](/docs/next/create/data-and-providers/).
 
 ## 2. Store a credential in the vault
 
@@ -46,7 +46,7 @@ Back up the passphrase. There is no recovery if you lose it. More in [Vault and 
 
 <Callout type="planned">
 
-The daemon cannot unlock the vault yet, so no provider can use a stored secret today.
+`ow vault unlock` makes the daemon hold the vault open, but no built-in provider reads a secret yet. Network providers (GitHub and others) are not built, and neither is unlock at login.
 
 </Callout>
 
@@ -65,7 +65,7 @@ fields = ["usage_pct"]
 TOML
 ```
 
-Then tell the running daemon to re-read it:
+Then tell the running daemon to re-read it. (`ow install` and `ow remove` do this for you.)
 
 ```bash
 kill -HUP "$(pgrep -nx owd)"

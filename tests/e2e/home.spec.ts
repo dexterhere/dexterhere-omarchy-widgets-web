@@ -24,11 +24,6 @@ async function ready(page: Page, theme?: string) {
 }
 const registryCount = async (page: Page) =>
   ((await (await page.request.get('/registry.json')).json()).widgets as unknown[]).length;
-async function toBuilder(page: Page) {
-  await page.locator('[data-home-make]').scrollIntoViewIfNeeded();
-  await expect(page.locator('[data-builder]')).toBeVisible();
-}
-
 test('hero is short, says widgets are open-ended, and there is no privacy section', async ({
   page
 }) => {
@@ -41,7 +36,9 @@ test('hero is short, says widgets are open-ended, and there is no privacy sectio
       'Clocks, stats, git, music, or anything with data. They follow your theme and see only what you allow.'
     )
   ).toBeVisible();
-  await expect(page.getByText('Pre-release: the daemon, vault and CLI work;')).toBeVisible();
+  await expect(
+    page.locator('#main .status').getByText('every widget is marked Planned.')
+  ).toBeVisible();
   await expect(
     page.getByText('Spec widgets are JSON, no code. Code widgets run as you.')
   ).toBeVisible();
@@ -51,17 +48,16 @@ test('hero is short, says widgets are open-ended, and there is no privacy sectio
   await expect(page.getByText('How a widget gets made')).toHaveCount(0);
 });
 
-test('sections come in order: hero, stage, widgets, ideas, make your own', async ({ page }) => {
+test('sections come in order: hero, stage, widgets, make your own', async ({ page }) => {
   await ready(page);
   const ys = await page.evaluate(() =>
-    ['[data-home-stage]', '[data-home-widgets]', '[data-home-ideas]', '[data-home-make]'].map(
+    ['[data-home-stage]', '[data-home-widgets]', '[data-home-make]'].map(
       (q) => document.querySelector(q)!.getBoundingClientRect().top
     )
   );
   expect(ys).toEqual([...ys].sort((a, b) => a - b));
-  const ideas = page.locator('[data-home-ideas] li a');
-  await expect(ideas).toHaveCount(10);
-  await expect(ideas.first()).toHaveAttribute('href', /\/widgets\/?\?cat=/);
+  await expect(page.locator('[data-home-ideas]')).toHaveCount(0);
+  await expect(page.getByText('What could you build?')).toHaveCount(0);
 });
 
 test('the emulator stage is visible without scrolling and starts with widgets and no windows', async ({
@@ -203,18 +199,30 @@ test('Things to try run in the emulator and announce', async ({ page }) => {
   await expect(page.locator('[data-try="center"]')).toBeHidden();
 });
 
-test('the builder loads near the viewport, not before', async ({ page }) => {
+test('"Make your own" is a short teaser that leads to /make/ and loads nothing extra', async ({
+  page
+}) => {
   const bodies: Promise<string>[] = [];
   page.on('response', (r) => {
     if (/\.js(\?|$)/.test(r.url())) bodies.push(r.text().catch(() => ''));
   });
   await ready(page);
+  const make = page.locator('[data-home-make]');
+  await make.scrollIntoViewIfNeeded();
+  await expect(make.getByRole('heading', { name: 'Make your own' })).toBeVisible();
+  const go = make.getByRole('link', { name: 'Start making a widget' });
+  await expect(go).toHaveAttribute('href', /\/make\/$/);
+  await expect(make.getByRole('link', { name: 'Read the create guide' })).toHaveAttribute(
+    'href',
+    /create/
+  );
+  expect(await make.locator('a, button').count()).toBeLessThanOrEqual(2);
   await page.waitForLoadState('networkidle');
-  const has = async (m: string) => (await Promise.all(bodies)).some((b) => b.includes(m));
-  expect(await has('b-template')).toBe(false);
-  await toBuilder(page);
-  await page.waitForLoadState('networkidle');
-  expect(await has('b-template')).toBe(true);
+  const all = await Promise.all(bodies);
+  expect(all.some((b) => b.includes('b-template') || b.includes('m-commit'))).toBe(false);
+  await go.click();
+  await expect(page).toHaveURL(/\/make\/$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Make your own widget');
 });
 
 test.describe('widget cards', () => {
@@ -300,11 +308,71 @@ test.describe('widget cards', () => {
     await ready(page);
     test.skip((await registryCount(page)) <= 6, 'needs more than six widgets');
     const y = () =>
-      page.locator('[data-home-ideas]').evaluate((e) => e.getBoundingClientRect().top + scrollY);
+      page.locator('[data-home-make]').evaluate((e) => e.getBoundingClientRect().top + scrollY);
     const before = await y();
     await next(page).click();
     await expect(shownText(page)).toContainText('Showing 7');
     expect(Math.abs((await y()) - before)).toBeLessThan(2);
+  });
+
+  test('search filters the cards live, resets to page 1, counts, clears and links to the gallery', async ({
+    page
+  }) => {
+    await ready(page);
+    const total = await registryCount(page);
+    const box = page.getByRole('search').getByRole('textbox', { name: 'Search widgets' });
+    const count = page.locator('[data-home-count]');
+    await expect(count).toHaveText(`${total} of ${total} widgets`);
+    if (total > 6) {
+      await next(page).click();
+      await expect(shownText(page)).toContainText('Showing 7');
+    }
+    await box.fill('clock');
+    await expect(cards(page).first()).toBeVisible();
+    const n = await cards(page).count();
+    expect(n).toBeGreaterThan(0);
+    await expect(count).toHaveText(`${n} of ${total} widgets`);
+    await expect(page.locator('[data-home-gallery-link]')).toHaveAttribute(
+      'href',
+      /\/widgets\/?\?q=clock$/
+    );
+    await page.getByRole('button', { name: 'Clear search' }).click();
+    await expect(box).toBeFocused();
+    await expect(box).toHaveValue('');
+    await expect(count).toHaveText(`${total} of ${total} widgets`);
+    await box.fill('zzzz-no-such-widget');
+    await expect(cards(page)).toHaveCount(0);
+    await expect(page.locator('[data-home-empty]')).toContainText('No widgets match');
+    await expect(page.locator('[data-home-gallery-link]')).toHaveCount(0);
+    await expect(count).toHaveText(`0 of ${total} widgets`);
+  });
+
+  test('Enter goes to the gallery with the query; / focuses the search', async ({ page }) => {
+    await ready(page);
+    const box = page.getByRole('textbox', { name: 'Search widgets' });
+    await page.locator('[data-home-widgets]').click({ position: { x: 5, y: 5 } });
+    await page.keyboard.press('/');
+    await expect(box).toBeFocused();
+    await box.fill('clock');
+    await box.press('Enter');
+    await page.waitForURL(/\/widgets\/?\?q=clock/);
+    await expect(page.getByRole('combobox', { name: 'Search widgets' })).toHaveValue('clock');
+  });
+
+  test('the search form works without JavaScript', async ({ browser }) => {
+    const ctx = await browser.newContext({ javaScriptEnabled: false });
+    const page = await ctx.newPage();
+    await page.goto('/');
+    const form = page.getByRole('search');
+    await expect(form).toHaveAttribute('method', 'get');
+    await expect(form.getByRole('textbox', { name: 'Search widgets' })).toHaveAttribute(
+      'name',
+      'q'
+    );
+    await form.getByRole('textbox').fill('clock');
+    await form.getByRole('button', { name: 'Search' }).click();
+    await page.waitForURL(/\/widgets\/?\?q=clock/);
+    await ctx.close();
   });
 
   test('clicking a card opens its detail page', async ({ page }) => {
@@ -355,105 +423,6 @@ test.describe('widget cards', () => {
   });
 });
 
-test.describe('builder', () => {
-  const json = (p: Page) => p.getByTestId('spec-json');
-  const preview = (p: Page) => p.getByTestId('spec-preview');
-
-  test('template, blocks, binding, role and size change the preview and the JSON', async ({
-    page
-  }) => {
-    await ready(page);
-    await toBuilder(page);
-    await expect(page.getByText('DRAFT v0')).toBeVisible();
-    await expect(json(page)).toContainText('"bind": "time.hm"');
-    await expect(preview(page)).toContainText('10:09');
-
-    await page.getByRole('radio', { name: 'Battery', exact: true }).check({ force: true });
-    await expect(json(page)).toContainText('"block": "ring"');
-    await expect(json(page)).toContainText('"bind": "battery.level_pct"');
-    await expect(preview(page)).toContainText('72%');
-    await expect(preview(page).locator('svg.ring')).toBeVisible();
-
-    await page.getByLabel('bar', { exact: true }).check({ force: true });
-    await expect(json(page)).toContainText('"block": "bar"');
-    await page.getByLabel('bar', { exact: true }).uncheck({ force: true });
-    await expect(json(page)).not.toContainText('"block": "bar"');
-
-    await page.getByLabel('Foreground').check({ force: true });
-    await expect(json(page)).toContainText('"color": "foreground"');
-    await page.getByLabel('wide', { exact: true }).check({ force: true });
-    await expect(page.getByText(/size class wide/)).toBeVisible();
-    await expect(json(page)).not.toContainText('#');
-  });
-
-  test('invalid combinations are prevented', async ({ page }) => {
-    await ready(page);
-    await toBuilder(page);
-    // time is text: a ring cannot show it
-    await expect(page.getByLabel('ring', { exact: true })).toBeDisabled();
-    // a list binding drops blocks it cannot show
-    await page.getByLabel('Binding (sample topic)').selectOption('sample.items.titles');
-    await expect(page.getByLabel('list', { exact: true })).toBeEnabled();
-    await expect(page.getByLabel('value', { exact: true })).toBeDisabled();
-    // the last block cannot be removed
-    const checked = page.locator('input[name="b-block"]:checked');
-    while ((await checked.count()) > 1) await checked.first().uncheck({ force: true });
-    await expect(checked.first()).toBeDisabled();
-    // sizes the template does not have are not offered
-    await page.getByRole('radio', { name: 'Battery', exact: true }).check({ force: true });
-    await expect(page.getByLabel('tall', { exact: true })).toHaveCount(0);
-  });
-
-  test('copy puts the JSON on the clipboard', async ({ page, context }) => {
-    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
-    await ready(page);
-    await toBuilder(page);
-    const text = await json(page).innerText();
-    await page.getByRole('button', { name: 'Copy JSON' }).click();
-    await expect(page.getByText('Copied')).toBeVisible();
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(text);
-    expect(JSON.parse(text).providers).toEqual(['time']);
-  });
-
-  test('"Place it" adds the built widget to the emulated desktop and focuses it', async ({
-    page
-  }) => {
-    await ready(page);
-    await toBuilder(page);
-    await page.getByRole('radio', { name: 'Battery', exact: true }).check({ force: true });
-    await page.getByRole('button', { name: 'Place it on the emulated desktop above' }).click();
-    const w = page.locator('[data-home-stage] [data-widget][data-reg="spec:custom"]');
-    await expect(w).toBeAttached();
-    await expect(w).toContainText('Custom widget (draft)');
-    await expect(page.getByText('Placed on the emulated desktop')).toBeVisible();
-    await expect
-      .poll(() => page.evaluate(() => !!document.activeElement?.closest('[data-emulator]')))
-      .toBe(true);
-    await expect(live(page)).toContainText(/Custom widget \(draft\) added/);
-  });
-
-  test('the three paths link into the docs and contribute', async ({ page }) => {
-    await ready(page);
-    await toBuilder(page);
-    await expect(page.getByRole('link', { name: 'Spec widget guide' })).toHaveAttribute(
-      'href',
-      /spec-widgets/
-    );
-    await expect(page.getByRole('link', { name: 'Code widget guide' })).toHaveAttribute(
-      'href',
-      /code-widgets/
-    );
-    await expect(page.getByRole('link', { name: 'Choose a path' })).toHaveAttribute(
-      'href',
-      /choose-a-path/
-    );
-    await expect(page.getByRole('link', { name: 'Read how to contribute it' })).toHaveAttribute(
-      'href',
-      /\/contribute\/?$/
-    );
-  });
-});
-
 for (const id of ['tokyo-night', 'catppuccin-latte', 'vantablack']) {
   test(`axe: no serious or critical violations on the home page in ${id}`, async ({ browser }) => {
     const ctx = await browser.newContext({
@@ -462,7 +431,6 @@ for (const id of ['tokyo-night', 'catppuccin-latte', 'vantablack']) {
     });
     const page = await ctx.newPage();
     await ready(page, id);
-    await toBuilder(page);
     await page.locator('[data-home-widgets]').scrollIntoViewIfNeeded();
     await expect(page.locator('html')).toHaveAttribute('data-theme', id);
     const { violations } = await new AxeBuilder({ page }).analyze();
@@ -477,7 +445,6 @@ test('360 px: no horizontal overflow, static desktop, one card per row, 44px pag
 }) => {
   await page.setViewportSize({ width: 360, height: 740 });
   await ready(page);
-  await toBuilder(page);
   const over = await page.evaluate(
     () => document.documentElement.scrollWidth > document.documentElement.clientWidth
   );
@@ -502,7 +469,6 @@ test('makes no request to any origin other than the site', async ({ page }) => {
     if (u.protocol === 'http:' || u.protocol === 'https:') hosts.add(u.host);
   });
   await ready(page);
-  await toBuilder(page);
   await page.locator('[data-home-widgets]').scrollIntoViewIfNeeded();
   await cards(page)
     .first()

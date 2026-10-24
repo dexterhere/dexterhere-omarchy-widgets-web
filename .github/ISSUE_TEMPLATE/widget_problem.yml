@@ -1,0 +1,27 @@
+name: Widget or listing problem
+description: A widget page or registry listing is wrong, or you are stuck listing your widget
+labels: [registry]
+body:
+  - type: markdown
+    attributes:
+      value: 'Security problem? Do not post it here; use the private links on the previous page. Remove secrets and personal data from anything you paste.'
+  - type: input
+    id: widget
+    attributes:
+      label: Widget id or page URL
+      description: 'For example io.github.example.clock, or the address of its page'
+    validations: { required: true }
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: 'What is wrong, or where are you stuck? Include any error or CI output.'
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes: { label: What you expected }
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and system
+      description: 'Only if the problem is how the page looks or behaves'

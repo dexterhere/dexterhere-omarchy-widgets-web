@@ -15,13 +15,14 @@ The vault is one encrypted file. Today there is one mode: a passphrase you type 
 ow vault init          # create the vault, prompts for a passphrase
 ow vault set github-main   # prompts for the value, no echo
 ow vault list
+ow vault unlock        # the daemon holds the vault open; ow vault lock closes it
 ```
 
 Secrets are read from a no-echo prompt or from stdin, never from command-line arguments. There is deliberately no command that prints a secret. See the [CLI reference](/docs/next/reference/cli/).
 
 <Callout type="planned">
 
-Keyring and TPM-bound modes are planned and wait for a measurement of how the Secret Service behaves under Omarchy's automatic login. The daemon cannot unlock the vault yet, so no provider can use a stored secret today.
+Keyring and TPM-bound modes, and unlock at login, are not built. They wait for a measurement of how the Secret Service behaves under Omarchy's automatic login. You can unlock the daemon by hand with `ow vault unlock` and lock it with `ow vault lock`. It also locks itself after 15 minutes without use. No built-in provider reads a secret yet.
 
 </Callout>
 
@@ -40,11 +41,11 @@ A grant says that one widget may read some fields of one or more topics. Everyth
 - Reads are rate limited per widget and topic.
 - Every decision is written to the audit log, without any data values.
 
-Today you edit `grants.toml` by hand and send the daemon a reload signal. A walk-through is in [Set up a widget](/docs/next/use/set-up-a-widget/). See [Configuration](/docs/next/reference/configuration/) for the file and [Data and providers](/docs/next/create/data-and-providers/) for the details.
+`ow install` writes the grant for a spec widget after you type `yes`, and `ow remove` deletes it. Otherwise you edit `grants.toml` by hand and send the daemon a reload signal. A walk-through is in [Set up a widget](/docs/next/use/set-up-a-widget/). See [Configuration](/docs/next/reference/configuration/) for the file and [Data and providers](/docs/next/create/data-and-providers/) for the details.
 
 <Callout type="planned">
 
-Approving a grant in the Widget Center, the `ow grants` and `ow audit` commands, and showing the audit log in the Center are planned. None of them exist yet.
+Approving a grant in the Widget Center, the `ow grants` and `ow audit` commands, and showing the audit log in the Center are not built.
 
 </Callout>
 

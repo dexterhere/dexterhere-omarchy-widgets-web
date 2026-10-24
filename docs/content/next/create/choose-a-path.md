@@ -15,11 +15,26 @@ description: 'Spec widget (JSON, no code) or code widget (QML). How to pick, wha
   ];
 </script>
 
+## Start here: the guided builder
+
+New to this, or not sure where to start? Use the [guided builder](/make/). It runs in your browser and builds a spec widget in four steps:
+
+1. **Start.** Pick a template, name your widget, give your GitHub username and one line about it.
+2. **Shape it.** See a live preview at each size, pick a style and add or change parts.
+3. **Get your files.** Copy or download the five files (`manifest.json`, `widget.json`, `layout.json`, `LICENSE`, `README.md`) or one zip. A check says when they are ready.
+4. **Publish.** It writes the exact commands and the listing file for you.
+
+Nothing is uploaded. It also has a route for an AI assistant. If you use the builder you can skip the manual route below, and come back to it when you want to know what the files mean. The manual route stays here as the second path.
+
+## The manual route
+
+Prefer to write the files yourself, or need a code widget? Read on.
+
 All paths produce the same thing: a public GitHub repository that holds `manifest.json`, `widget.json`, a license and a README. Spec widgets also hold `layout.json`. See [Package reference](/docs/next/create/package-reference/).
 
 <Callout type="planned">
 
-The `widget.json` schema is DRAFT v0. `ow new`, `ow check` and `ow publish --listing` do not exist. The QML kit and the desktop renderer do not exist, so nobody can run a widget on a desktop yet. What does work today: validating a spec widget with `bun run registry`, and previewing it in the website emulator.
+The `widget.json` schema is DRAFT v0. `ow new`, `ow check` and `ow publish` are not built. The QML kit is not built, and the desktop plugin has not run in a real shell, so nobody can run a widget on a real desktop yet. What does work today: validating a spec widget with `bun run registry`, and previewing it in the website emulator.
 
 </Callout>
 
@@ -47,7 +62,7 @@ A code widget is QML in a standard Omarchy plugin. It can draw anything and it i
 
 ## Agent-assisted
 
-Give an agent the skills from [Agent skills](/docs/next/ai/skills/) and the [LLM index](/docs/next/ai/llm-index/). There are four: plan, develop, test and submit. They name the commands that exist and the ones that are only planned. Review what an agent writes the way you would review a stranger's code, and never paste secrets into a prompt.
+Give an agent the skills from [Agent skills](/docs/next/ai/skills/) and the [LLM index](/docs/next/ai/llm-index/). There are four: plan, develop, test and submit. They name the commands that exist and the ones that are not built. Review what an agent writes the way you would review a stranger's code, and never paste secrets into a prompt.
 
 ## Every path needs the same package
 
@@ -56,6 +71,6 @@ Give an agent the skills from [Agent skills](/docs/next/ai/skills/) and the [LLM
 - A reverse-domain id outside `omarchy.*`. To list it, the id must start with `io.github.<your-github-login>.`.
 - A license from the allow-list that GitHub detects, a README with install and removal steps.
 
-To try the simplest path now, follow [Your first widget, end to end](/docs/next/create/your-first-widget-end-to-end/).
+To do it by hand, follow [Your first widget, end to end](/docs/next/create/your-first-widget-end-to-end/).
 
 Next: [Data and providers](/docs/next/create/data-and-providers/) and [Check and preview](/docs/next/create/check-and-preview/).
