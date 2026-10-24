@@ -88,7 +88,7 @@
           spellcheck="false"
           maxlength={MAX_Q}
           aria-keyshortcuts="/"
-          placeholder="Name, tag or data topic"
+          placeholder="Name, tag or topic"
         />
         {#if q}
           <button
