@@ -9,7 +9,7 @@ Report only what you ran or saw. If you could not run a check, mark it "not run"
 
 ## Ground truth
 
-Exists today: `owd`, the vault, `ow status`, `ow vault ...`, the `system` provider, and the registry build in the website repository (`bun run registry`) which validates `manifest.json`, `widget.json` and, for spec widgets, `layout.json`. Planned and not available: `ow check`, `ow new`, `ow publish --listing`, desktop rendering, the QML kit, other providers. The schemas are DRAFT v0. Where a check depends on a planned feature, do the manual equivalent below and label it "manual". The gate scripts in `scripts/gate/` (code widget policy) exist but CI does not run them: say "manual" for those too.
+Exists today: `owd`, the vault, `ow status`, `ow vault ...`, `ow install|list|remove`, the `system` and `battery` providers, and the registry build in the website repository (`bun run registry`) which validates `manifest.json`, `widget.json` and, for spec widgets, `layout.json`. Not built: `ow check`, `ow new`, `ow publish`, `ow doctor`, placing widgets on a real desktop, the QML kit, network providers. The schemas are DRAFT v0. Where a check depends on a planned feature, do the manual equivalent below and label it "manual". The gate scripts in `scripts/gate/` (code widget policy) exist but CI does not run them: say "manual" for those too.
 
 Inputs you need: the widget folder and, if available, a checkout of the website repository. If you have no checkout, mark the registry validation "not run" and say why. Never invent a command.
 

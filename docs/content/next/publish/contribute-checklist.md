@@ -9,7 +9,7 @@ Use this as a checklist. The explanations, the diagram and the error table are i
 
 <Callout type="planned">
 
-`ow new`, `ow check` and `ow publish --listing` do not exist yet. Every step is done by hand.
+`ow new`, `ow check` and `ow publish --listing` are not built. Every step is done by hand.
 
 </Callout>
 
@@ -66,7 +66,7 @@ git switch -c feat/list-my-widget upstream/develop
   "categories": ["system"],
   "tags": ["cpu", "monitor"],
   "summary": "CPU usage as a ring.",
-  "status": "alpha"
+  "status": "planned"
 }
 ```
 

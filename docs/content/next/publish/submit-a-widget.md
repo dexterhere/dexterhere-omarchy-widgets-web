@@ -21,9 +21,11 @@ Listing a widget means adding one small JSON file to the registry by pull reques
 
 <Callout type="planned">
 
-`ow new`, `ow check` and `ow publish --listing` are planned and do not exist yet. Every step below is done by hand, and that works today.
+`ow new`, `ow check` and `ow publish --listing` are not built. Every step below is done by hand, and that works today.
 
 </Callout>
+
+The [guided builder](/make/) writes your listing file and the exact commands for steps 1 and 2 below. You can use it instead of typing them. The manual steps below stay valid.
 
 ## What happens, and who does it
 
@@ -43,7 +45,7 @@ pending maintainer approval: no entry in registry/lock.json
 
 This is not a CI failure. A green pull request can still be pending. The lock is keyed on the numeric ids, so renaming your repository is fine. Deleting and re-creating it, or transferring it, excludes the listing until a maintainer approves again.
 
-Today `lock.json` is empty, so no third-party widget is published yet. Only the maintainer's seven planned widgets are, each fetched from its GitHub repository.
+Today `lock.json` is empty, so no third-party widget is published yet. Only the maintainer's seven widgets are, each fetched from its GitHub repository and each Planned (listed with sample data, not installable yet).
 
 ## Steps
 
@@ -81,7 +83,7 @@ Create `registry/widgets/io.github.you.github-activity.json` in a fork of the we
   "categories": ["dev-git", "productivity"],
   "tags": ["github", "pull-requests"],
   "summary": "Open PRs and review requests at a glance.",
-  "status": "alpha"
+  "status": "planned"
 }
 ```
 
@@ -93,7 +95,7 @@ Create `registry/widgets/io.github.you.github-activity.json` in a fork of the we
 | `categories` | One to three of `system`, `time-calendar`, `productivity`, `dev-git`, `ai-agents`, `media`, `communication`, `network-containers`, `ambient-fun`, `utilities`. The category in `widget.json` must be one of them. |
 | `tags`       | Up to 8, each matching `^[a-z0-9-]{1,24}$`.                                                                                                                                                                       |
 | `summary`    | Up to 140 characters, plain text.                                                                                                                                                                                 |
-| `status`     | `planned`, `alpha`, `stable` or `removed`.                                                                                                                                                                        |
+| `status`     | `planned`, `alpha`, `stable` or `removed`. Use `planned` for a new listing: it means listed with sample data, not installable yet.                                                                                |
 
 No other properties are allowed. Do not add a tier or review field. The listing is a pointer. Name, version, capabilities and the rest come from your own files.
 

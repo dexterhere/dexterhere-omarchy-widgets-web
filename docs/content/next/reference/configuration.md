@@ -30,6 +30,7 @@ The daemon refuses to start if its runtime or state directory is accessible by g
 ```text
 DIR/config/owd/grants.toml
 DIR/data/owd/vault.owv
+DIR/data/owd/widgets/<id>/       (files written by ow install)
 DIR/state/owd/audit.jsonl
 DIR/run/owd/owd.sock
 ```

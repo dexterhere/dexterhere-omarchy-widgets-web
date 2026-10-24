@@ -1,6 +1,6 @@
 ---
 title: Check and preview
-description: Validate your package with bun run registry, check what the registry does not check by hand, and capture previews. ow check is planned.
+description: Validate your package with bun run registry, check what the registry does not check by hand, and capture previews. ow check is not built.
 ---
 
 <script>
@@ -18,7 +18,7 @@ description: Validate your package with bun run registry, check what the registr
 
 <Callout type="planned">
 
-`ow check` is planned and does not exist. Do not run it and do not claim it passed. The steps below are what works today.
+`ow check` is not built. Do not run it and do not claim it passed. The steps below are what works today.
 
 </Callout>
 

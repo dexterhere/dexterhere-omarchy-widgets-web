@@ -13,7 +13,7 @@ You prepare a listing. You do not push, open pull requests, merge or contact mai
 - Merging a listing does not publish it. A maintainer must also add the widget to `registry/lock.json` (numeric GitHub repo and owner ids). Until then the build excludes the listing with `pending maintainer approval: no entry in registry/lock.json`. That is not a CI failure, so a green PR can still mean "not published". `lock.json` is empty today: no third-party widget is published yet.
 - The tier is `community` unless a maintainer writes a review record for the exact commit. Nothing in the listing or in `widget.json` can raise it. A new commit resets any review.
 - CI does not post an access summary, build a preview, diff capabilities or run the code-widget gate scripts. A maintainer reads the commit by hand. Never claim otherwise.
-- `ow publish --listing` does not exist (planned). Write the listing file by hand.
+- `ow publish --listing` does not exist (not built). Write the listing file by hand.
 
 ## Inputs (ask, do not guess)
 
@@ -100,7 +100,7 @@ Stop and ask the user when: the commit is not on the default branch; the id owne
 
 ## Never
 
-Invent commands (`ow publish`, `ow check`, `ow install` are planned and do not exist). Put a token, key or password in any file, command, log or PR text. Edit `registry/lock.json`, `registry/review/` or `registry/dist/`. Leave scratch files in `$WEB/registry/`. Describe a code widget as sandboxed or safe.
+Invent commands (`ow publish`, `ow check`, `ow new` and `ow doctor` are not built). Put a token, key or password in any file, command, log or PR text. Edit `registry/lock.json`, `registry/review/` or `registry/dist/`. Leave scratch files in `$WEB/registry/`. Describe a code widget as sandboxed or safe.
 
 ## Definition of done
 

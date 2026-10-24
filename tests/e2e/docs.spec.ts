@@ -201,7 +201,7 @@ test('Callout shows its type as text', async ({ page }) => {
   await page.goto(START);
   const planned = page.locator('aside.callout.planned');
   await expect(planned.locator('.label')).toHaveText('Planned');
-  await expect(planned).toContainText('early development');
+  await expect(planned).toContainText('pre-release software');
 });
 
 test('Widgets catalog lists every registry widget with working links', async ({
@@ -354,4 +354,30 @@ test('synced reference pages render as text, no injected markup', async ({ page 
     /^https:\/\/github\.com\/dexterhere\/omarchy-widgets\/blob\/main\/docs\/DAEMON_SPEC\.md$/
   );
   expect(errors).toEqual([]);
+});
+
+test('the start section reads in newcomer order and the new guides render', async ({ page }) => {
+  await page.goto(START);
+  const nav = page.locator('nav[aria-label="Docs"]');
+  const titles = await nav.getByRole('link').allInnerTexts();
+  const at = (t: string) => titles.indexOf(t);
+  expect(at('What it is')).toBeGreaterThanOrEqual(0);
+  expect(at('What works today')).toBeGreaterThan(at('What it is'));
+  expect(at('Try it safely in 10 minutes')).toBeGreaterThan(at('What works today'));
+  expect(titles).toContain('Report a problem');
+  for (const [path, h1] of [
+    ['/docs/next/start/what-works-today/', 'What works today'],
+    ['/docs/next/start/try-it-safely/', 'Try it safely in 10 minutes'],
+    ['/docs/next/project/report-a-problem/', 'Report a problem']
+  ]) {
+    await page.goto(path);
+    await expect(page.locator('article.docs h1')).toHaveText(h1);
+  }
+  await page.goto('/docs/next/project/report-a-problem/');
+  await expect(
+    page.getByRole('link', { name: 'Private advisory, code repository' })
+  ).toHaveAttribute(
+    'href',
+    'https://github.com/dexterhere/omarchy-widgets/security/advisories/new'
+  );
 });
