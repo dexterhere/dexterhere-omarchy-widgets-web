@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { resolve } from '$app/paths';
   import { slicePage } from '../../paging';
   import type { RegistryWidget } from '../../registry';
   import { DEFAULT_QUERY, MAX_Q, filterWidgets, tokenize } from '../../registry/filter';
@@ -22,7 +23,6 @@
   // Same matching and ranking as the gallery. No search text keeps the registry order.
   const searching = $derived(tokenize(q).length > 0);
   const widgets = $derived(searching ? filterWidgets(all, { ...DEFAULT_QUERY, q }) : all);
-  const galleryHref = $derived(`${sitePath('/widgets/')}?q=${encodeURIComponent(q.trim())}`);
   let stats = $state<Record<string, Stats | null>>({});
   let grid = $state<HTMLUListElement>();
   let mounted = $state(false);
@@ -114,7 +114,12 @@
         >{widgets.length} of {all.length} widgets</span
       >
       {#if searching && widgets.length}
-        <a href={galleryHref} data-home-gallery-link>See all results in the gallery</a>
+        <!-- eslint-disable svelte/no-navigation-without-resolve -- resolved base plus a query string -->
+        <a
+          href={`${sitePath('/widgets/')}?q=${encodeURIComponent(q.trim())}`}
+          data-home-gallery-link>See all results in the gallery</a
+        >
+        <!-- eslint-enable svelte/no-navigation-without-resolve -->
       {/if}
     </p>
   </form>
@@ -124,7 +129,7 @@
       <p class="small text-2">Try a shorter word, a tag or a data topic such as system.cpu.</p>
       <p>
         <button class="btn small" type="button" onclick={() => (q = '')}>Clear search</button>
-        <a class="btn small" href={sitePath('/widgets/')}>Browse the gallery</a>
+        <a class="btn small" href={resolve('/widgets')}>Browse the gallery</a>
       </p>
     </div>
   {/if}

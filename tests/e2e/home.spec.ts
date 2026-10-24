@@ -41,7 +41,9 @@ test('hero is short, says widgets are open-ended, and there is no privacy sectio
       'Clocks, stats, git, music, or anything with data. They follow your theme and see only what you allow.'
     )
   ).toBeVisible();
-  await expect(page.getByText('every widget is marked Planned.')).toBeVisible();
+  await expect(
+    page.locator('#main .status').getByText('every widget is marked Planned.')
+  ).toBeVisible();
   await expect(
     page.getByText('Spec widgets are JSON, no code. Code widgets run as you.')
   ).toBeVisible();
