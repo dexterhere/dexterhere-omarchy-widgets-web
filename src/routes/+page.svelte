@@ -103,7 +103,7 @@
     </p>
     <div class="row">
       <a class="btn-primary" href={sitePath('/make/')}>Start making a widget</a>
-      <a class="btn" href={docsUrl('/docs/next/create/choose-a-path/')}>Read the create guide</a>
+      <a class="btn" href={docsUrl('/docs/v0.1/create/choose-a-path/')}>Read the create guide</a>
     </div>
   </section>
 </div>
