@@ -10,7 +10,7 @@ http://docs.example.com/theme-boot.js /theme-boot.js 200
 http://docs.example.com/robots.txt /robots.txt 200
 http://docs.example.com/docs https://docs.example.com/ 308!
 http://docs.example.com/docs/* https://docs.example.com/:splat 308!
-http://docs.example.com/ https://docs.example.com/next/start/what-it-is/ 302!
+http://docs.example.com/ https://docs.example.com/v0.1/start/what-it-is/ 302!
 http://docs.example.com/* /docs/:splat 200!
 http://example.com/docs https://docs.example.com/ 308!
 http://example.com/docs/* https://docs.example.com/:splat 308!
@@ -25,7 +25,7 @@ https://docs.example.com/theme-boot.js /theme-boot.js 200
 https://docs.example.com/robots.txt /robots.txt 200
 https://docs.example.com/docs https://docs.example.com/ 308!
 https://docs.example.com/docs/* https://docs.example.com/:splat 308!
-https://docs.example.com/ https://docs.example.com/next/start/what-it-is/ 302!
+https://docs.example.com/ https://docs.example.com/v0.1/start/what-it-is/ 302!
 https://docs.example.com/* /docs/:splat 200!
 https://example.com/docs https://docs.example.com/ 308!
 https://example.com/docs/* https://docs.example.com/:splat 308!

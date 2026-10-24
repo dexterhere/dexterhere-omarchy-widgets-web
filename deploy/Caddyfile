@@ -48,7 +48,7 @@ https://docs.example.com {
 	@home path /
 	handle @home {
 		route {
-			uri replace / /next/start/what-it-is/ 1
+			uri replace / /v0.1/start/what-it-is/ 1
 			redir https://docs.example.com{uri} 302
 		}
 	}
