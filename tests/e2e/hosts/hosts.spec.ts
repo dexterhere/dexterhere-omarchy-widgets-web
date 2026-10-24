@@ -182,8 +182,8 @@ test('client-side navigation works on the docs host (no full reload, URL has no 
   // version switcher
   await page.getByRole('button', { name: /Version:/ }).click();
   await page.getByRole('link', { name: /v0\.1/ }).click();
-  await page.waitForURL(/\/v0\.1-draft\//);
-  expect(page.url().startsWith(`${DOCS}/v0.1-draft/`)).toBe(true);
+  await page.waitForURL(/\/v0\.1\//);
+  expect(page.url().startsWith(`${DOCS}/v0.1/`)).toBe(true);
   await expect(page.locator('article.docs h1')).toBeVisible();
   expect(problems).toEqual([]);
 });
