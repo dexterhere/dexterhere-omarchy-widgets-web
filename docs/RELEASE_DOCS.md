@@ -66,9 +66,9 @@ The version list is built from the folders. Order: `next`, then snapshots newest
 `llms.txt` links use `/docs/<latest>/...`, so they move to `v0.1` by themselves. Links written by hand to `/docs/next/` stay valid but point at the working copy. These are the places that hard-code `next`; point them at `/docs/` or `/docs/v0.1/` if you want visitors to land on the release:
 
 - `src/routes/+page.svelte` (home: "Read the create guide")
-- `src/routes/make/+page.svelte` (create guide link)
+- `src/routes/make/+page.svelte` and `src/lib/make/Publish.svelte` (create guide and submit guide links)
+- `src/lib/emulator/widgets/WidgetCenter.svelte` (create guide link)
 - `src/routes/widgets/[id]/+page.svelte` (Security docs link)
-- `src/lib/footer.ts` and `src/lib/components/Footer.svelte` if they carry a docs link (grep for `docs/next`)
 
 ## 4. Tests that depend on the draft snapshot
 
