@@ -193,7 +193,8 @@ test.describe('header: Report an issue', () => {
     await page.setViewportSize({ width: 360, height: 800 });
     await page.goto('/');
     await expect(link(page)).toBeHidden();
-    await page.getByRole('button', { name: 'Menu' }).click();
+    // exact: the home page also has the emulator's "Omarchy menu" button
+    await page.getByRole('button', { name: 'Menu', exact: true }).click();
     await expect(link(page)).toBeVisible();
     await expect(link(page)).toHaveAttribute('target', '_blank');
     const over = await page.evaluate(
