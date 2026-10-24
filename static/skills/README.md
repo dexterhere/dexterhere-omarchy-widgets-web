@@ -1,6 +1,6 @@
 # Omarchy widget skills
 
-Four Agent Skills that help an AI coding assistant plan, develop, test and submit an Omarchy widget. The project is pre-release: the daemon, vault, `ow` status/vault commands and the registry build (`bun run registry`) exist; the desktop canvas, Widget Center, `ow new`, `ow check`, `ow publish --listing` and real widgets are planned or in development. The name "Omarchy Widgets" is a placeholder. The skills say this to the assistant so it does not invent commands.
+Four Agent Skills that help an AI coding assistant plan, develop, test and submit an Omarchy widget. The project is pre-release: the daemon, vault, `ow` status, vault, install, list and remove commands and the registry build (`bun run registry`) exist; the Widget Center, edit mode on the desktop, `ow new`, `ow check`, `ow publish` and `ow doctor` are not built, and every widget is Planned (listed with sample data, not installable yet). The name "Omarchy Widgets" is a placeholder. The skills say this to the assistant so it does not invent commands.
 
 | Skill                  | Use it to                                                                |
 | ---------------------- | ------------------------------------------------------------------------ |
