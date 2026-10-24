@@ -284,7 +284,9 @@ export function vercelProjectJson(): string {
     headers: vercelHeaders(),
     // The v0.1 draft snapshot was replaced by the stable v0.1 docs; keep old links and search hits alive.
     redirects: [
-      { source: '/docs/v0.1-draft/:path*', destination: '/docs/v0.1/:path*', permanent: true }
+      // (.*) so it also matches the trailing-slash form that trailingSlash redirects to; :path* does not
+      { source: '/docs/v0.1-draft/(.*)', destination: '/docs/v0.1/$1', permanent: true },
+      { source: '/docs/v0.1-draft', destination: '/docs/v0.1/', permanent: true }
     ]
   };
   return JSON.stringify(config, null, 2) + '\n';
