@@ -37,11 +37,11 @@ This is pre-release software. Nobody can install a widget on a normal desktop ye
 
 ## Built, but not usable by you yet
 
-| Feature                                 | Status                        | What is missing                                                                      |
-| --------------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------ |
-| The desktop plugin in a real shell      | Never enabled in a real shell | It is not packaged and `omarchy plugin add` cannot load it yet.                      |
-| Keyboard focus and Escape on an overlay | Unresolved                    | The first check did not show the Escape key arriving. It needs a re-run by a person. |
-| Registry and widget pages               | Built                         | Every widget is **Planned**. None is installable by a normal user.                   |
+| Feature                                 | Status                        | What is missing                                                                                |
+| --------------------------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------- |
+| The desktop plugin in a real shell      | Never enabled in a real shell | It is not packaged and `omarchy plugin add` cannot load it yet.                                |
+| Keyboard focus and Escape on an overlay | Checked by a person: passes   | One click gives the surface the keyboard and Escape reaches it. Edit mode itself is not built. |
+| Registry and widget pages               | Built                         | Every widget is **Planned**. None is installable by a normal user.                             |
 
 ## Not built
 
